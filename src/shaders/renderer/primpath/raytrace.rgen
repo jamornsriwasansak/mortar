@@ -1,0 +1,128 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "renderer/primpath/hitpayload.glsl"
+#include "common/onb.glsl"
+#include "common/pcg.glsl"
+#include "common/raycommon.glsl"
+#include "common/material.glsl"
+
+layout(binding = 0, set = 0) uniform accelerationStructureNV tlas;
+layout(binding = 1, set = 0, rgba32f) uniform image2D image;
+layout(binding = 2, set = 0) uniform CameraProperties
+{
+    mat4 m_view;
+    mat4 m_proj;
+    mat4 m_inv_view;
+    mat4 m_inv_proj;
+    uvec4 m_is_moved;
+}
+cam;
+layout(binding = 3, set = 0) uniform sampler2D envmap;
+
+layout(location = RAY_PRD_LOCATION) rayPayloadNV PrimitivePathTracerPayload prd;
+layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
+
+// use bluenoise for rendering
+#include "common/bluenoise.glsl"
+DECLARE_BLUENOISE_LAYOUT(7,8,9)
+
+Ray
+generate_primary_ray()
+{
+    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + vec2(0.5);
+    const vec2 ndc = pixel_center / vec2(gl_LaunchSizeNV.xy);
+    const vec2 d = ndc * 2 - 1;
+
+    const vec3 origin = (cam.m_inv_view * vec4(0, 0, 0, 1)).xyz;
+    const vec3 lookat = (cam.m_inv_proj * vec4(d.x, d.y, 1, 1)).xyz;
+    const vec3 direction = (cam.m_inv_view * vec4(normalize(lookat), 0)).xyz;
+
+    Ray result;
+    result.m_origin = origin;
+    result.m_tmin = DEFAULT_TMIN;
+    result.m_direction = direction;
+    result.m_tmax = DEFAULT_TMAX;
+
+    return result;
+}
+
+vec3 li(Ray ray,
+        const int sample_index)
+{
+    vec3 radiance = vec3(0.0f);
+    vec3 importance = vec3(1.0f);
+
+    int dimension = 0;
+
+    for (int i = 0; i < 3; i++)
+    {
+        // trace ray
+		trace_ray(ray, tlas, 0);
+
+		// determine whether we should temrinate or not
+		if (prd.m_t < 0)
+		{
+            // fetch emissive value from envmap
+            vec2 latlong_texcoord = latlong_texcoord_from_direction(ray.m_direction);
+            vec3 emission = texture(envmap, latlong_texcoord).xyz;
+			radiance += importance * emission;
+			break;
+		}
+
+		// compute position
+		const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
+
+		// generate orthonormal basis and get local incoming direction
+		Onb onb = Onb_create(prd.m_normal);
+
+		// generate outgoing direction
+		const vec3 local_outgoing = Lambert_sample(Onb_to_local(onb, -ray.m_direction),
+                                                   vec2(rnd(sample_index, dimension), rnd(sample_index, dimension + 1)));
+        dimension += 2;
+		const vec3 outgoing = Onb_to_world(onb, local_outgoing);
+
+        // add radiance
+        radiance += importance * prd.m_material.m_emission;
+
+		// attenuate the importance
+		importance *= prd.m_material.m_diffuse_refl;
+
+        // update ray
+        ray.m_origin = position;
+        ray.m_direction = outgoing;
+	}
+    return radiance;
+}
+
+void
+main() 
+{
+    // if camera is not moved reuse accumulated radiance
+    vec3 accumulated_radiance = vec3(0.0f);
+    float num_spp = 0.0f;
+    if (!(cam.m_is_moved.x == 1))
+    {
+		vec4 accumulated_radiance_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
+		accumulated_radiance = accumulated_radiance_and_num_spp.xyz;
+        num_spp = accumulated_radiance_and_num_spp.w;
+    }
+
+    // init rng
+    uint seed = gl_LaunchIDNV.x + gl_LaunchSizeNV.x * gl_LaunchIDNV.y;
+    Pcg32 rng = Pcg_create(seed);
+
+    float sum = 0.0f;
+
+	// trace ray based on camera properties
+	Ray initial_ray = generate_primary_ray();
+
+    // estimate the radiance and accumulate it.
+    vec3 estimated_radiance = li(initial_ray, int(num_spp));
+
+    accumulated_radiance = ((accumulated_radiance * num_spp) + estimated_radiance) / (num_spp + 1.0f);
+
+	// determine whether we should temrinate or not
+	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulated_radiance, num_spp + 1.0f));
+}

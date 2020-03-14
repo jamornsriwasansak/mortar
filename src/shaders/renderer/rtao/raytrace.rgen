@@ -1,0 +1,82 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+#extension GL_GOOGLE_include_directive : enable
+
+#include "renderer/rtao/hitpayload.glsl"
+#include "common/pcg.glsl"
+#include "common/material.glsl"
+#include "common/raycommon.glsl"
+#include "common/onb.glsl"
+
+layout(binding = 0, set = 0) uniform accelerationStructureNV tlas;
+layout(binding = 1, set = 0, rgba32f) uniform image2D image;
+layout(binding = 2, set = 0) uniform CameraProperties
+{
+    mat4 m_view;
+    mat4 m_proj;
+    mat4 m_inv_view;
+    mat4 m_inv_proj;
+}
+cam;
+
+layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;
+layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
+
+Ray
+generate_primary_ray()
+{
+    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + vec2(0.5);
+    const vec2 ndc = pixel_center / vec2(gl_LaunchSizeNV.xy);
+    const vec2 d = ndc * 2 - 1;
+
+    const vec3 origin = (cam.m_inv_view * vec4(0, 0, 0, 1)).xyz;
+    const vec3 lookat = (cam.m_inv_proj * vec4(d.x, d.y, 1, 1)).xyz;
+    const vec3 direction = (cam.m_inv_view * vec4(normalize(lookat), 0)).xyz;
+
+    return Ray_create(origin, direction);
+}
+
+void
+main() 
+{
+    // init rng
+    uint seed = gl_LaunchIDNV.x + gl_LaunchSizeNV.x * gl_LaunchIDNV.y;
+    Pcg32 rng = Pcg_create(seed);
+
+    const int spp = 10;
+    float sum = 0.0f;
+
+	// trace ray based on camera properties
+	Ray ray = generate_primary_ray();
+	trace_ray(ray, tlas, 0);
+
+	// determine whether we should temrinate or not
+	if (prd.m_t < 0)
+	{
+		imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(0.0));
+		return;
+	}
+
+	// compute position
+	const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
+
+	// generate orthonormal basis and get local incoming direction
+	const Onb onb = Onb_create(prd.m_normal);
+
+	for (int i_spp = 0; i_spp < spp; i_spp++)
+	{
+		// sample next direction
+		const vec2 samples = Pcg_next_vec2(rng);
+		const vec3 local_outgoing = Mapping_cosine_hemisphere_from_square(samples);
+		const vec3 outgoing = Onb_to_world(onb, local_outgoing); 
+
+		// check shadow ray
+		Ray shadow_ray = Ray_create(position, outgoing);
+		is_intersect = true;
+		trace_shadow_ray(shadow_ray, tlas, 1);
+		
+		sum += 1.0f - float(is_intersect);
+    }
+    float avg = sum / float(spp);
+	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(vec3(avg), 1.0));
+}
