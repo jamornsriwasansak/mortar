@@ -1,6 +1,6 @@
 # vulkan-mortar
 
-A physically-based renderer utilizing Vulkan raytracing api.
+A physically-based renderer utilizing vulkan raytracing api.
 
 ![The Toilet Scene](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/toilet.png)
 
