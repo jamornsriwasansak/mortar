@@ -119,7 +119,7 @@ struct TriangleMeshStorage
 		}
 		else
 		{
-			return std::make_pair(vec3(color[0], color[1], color[2]), false);
+			return std::make_pair(vec3(color[0], color[1], color[2]), true);
 		}
 	}
 

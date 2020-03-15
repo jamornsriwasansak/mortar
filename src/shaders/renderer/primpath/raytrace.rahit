@@ -48,9 +48,8 @@ void main()
     const uint material_id = material_ids_arrays[gl_InstanceID].material_ids[gl_PrimitiveID];
     Material material = mat.materials[material_id];
 
-    // negative indicates texture index, positive indicates r channel of diffuse_refl
+    // if object is not opaque, the object is definite textured.
     if ((material.m_flags & MATERIAL_FLAG_IS_OPAQUE) != 0) { return; }
-    if (material.m_diffuse_refl.r >= 0.0f) { return; }
     
     // fetch from ssbo
     const uint index0 = faces_arrays[gl_InstanceID].faces[gl_PrimitiveID * 3 + 0];
