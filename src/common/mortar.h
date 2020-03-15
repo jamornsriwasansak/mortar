@@ -286,7 +286,7 @@ raw_ptrs(const std::vector<std::unique_ptr<T>> & ptrs,
 	std::vector<T *> result(end - begin);
 	for (size_t i = begin; i < end; i++)
 	{
-		result[i] = ptrs[i].get();
+		result[i - begin] = ptrs[i].get();
 	}
 	return result;
 }
@@ -301,7 +301,7 @@ raw_ptrs(const std::vector<vk::UniqueHandle<T, U>> & ptrs,
 	std::vector<const T *> result(end - begin);
 	for (size_t i = begin; i < end; i++)
 	{
-		result[i] = &(ptrs[i].get());
+		result[i - begin] = &(ptrs[i].get());
 	}
 	return result;
 }
