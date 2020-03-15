@@ -7,7 +7,7 @@ trace_ray(const in Ray ray,
           const accelerationStructureNV tlas,
           const int miss_index)
 {
-    uint ray_flags = gl_RayFlagsOpaqueNV;
+    uint ray_flags = gl_RayFlagsNoneNV;
     traceNV(tlas,           // accel struct
             ray_flags,      // flag
             0xff,           // face mask
@@ -26,7 +26,7 @@ trace_shadow_ray(const in Ray ray,
                  const accelerationStructureNV tlas,
                  const int miss_index)
 {
-    uint ray_flags = gl_RayFlagsOpaqueNV | gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV;
+    uint ray_flags = gl_RayFlagsNoneNV | gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV;
     traceNV(tlas,           // accel struct
             ray_flags,      // flag
             0xff,           // face mask

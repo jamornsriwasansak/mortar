@@ -5,6 +5,9 @@
 // this is due to vulkan's ssbo standard
 
 // we follow disney materials for now.
+
+#define MATERIAL_FLAG_IS_OPAQUE 8
+
 struct Material
 {
     vec3 m_diffuse_refl;
@@ -14,7 +17,7 @@ struct Material
     float m_sheen;
     //
     vec3 m_emission;
-    float m_clearcoat;
+    int m_flags;
 };
 
 #define DECODE_MATERIAL(MAT, TEXTURES, UV) \
@@ -29,8 +32,6 @@ struct Material
 	MAT.m_sheen = sheen_tex_index >= 0 ? texture(TEXTURES[sheen_tex_index], UV).x : MAT.m_sheen; \
 	int emission_tex_index = -int(MAT.m_emission.x + 1); \
 	MAT.m_emission = emission_tex_index >= 0 ? texture(TEXTURES[emission_tex_index], UV).xyz : MAT.m_emission; \
-    int clearcoat_tex_index = -int(MAT.m_clearcoat + 1); \
-	MAT.m_clearcoat = clearcoat_tex_index >= 0 ? texture(TEXTURES[clearcoat_tex_index], UV).x : MAT.m_clearcoat; \
 }
 
 #endif

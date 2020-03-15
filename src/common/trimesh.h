@@ -12,23 +12,49 @@
 
 struct ImageStorage
 {
-	std::vector<RgbaImage2d<uint8_t>>			m_images;
-	std::map<std::filesystem::path, size_t>		m_image_index_from_path;
+	std::vector<std::pair<RgbaImage2d<uint8_t>, bool>>	m_images; // image and is_opaque flag
+	std::map<std::filesystem::path, size_t>				m_image_index_from_path;
 
-	uint32_t
+	std::vector<const RgbaImage2d<uint8_t> *>
+	get_images()
+	{
+		std::vector<const RgbaImage2d<uint8_t> *> images;
+		for (size_t i = 0; i < m_images.size(); i++)
+		{
+			images.push_back(&m_images[i].first);
+		}
+		return images;
+	}
+
+	// return index to image and whether it contains alpha channel or not
+	std::pair<uint32_t, bool>
 	fetch(const std::filesystem::path & path)
 	{
 		// if could find image return the number
 		if (m_image_index_from_path.find(path) != m_image_index_from_path.end())
 		{
-			return m_image_index_from_path.at(path);
+			const size_t image_index = m_image_index_from_path.at(path);
+			const bool is_opaque = m_images[image_index].second;
+			return std::make_pair(uint32_t(image_index), is_opaque);
 		}
 
+		// check whether it has alpha channel or not
+		const StbiUint8Result raw_image(path);
+		bool is_opaque = true;
+		for (size_t i = 3; i < raw_image.m_width * raw_image.m_height * 4; i += 4)
+		{
+			if (raw_image.m_stbi_data[i] != 255)
+			{
+				is_opaque = false;
+				break;
+			}
+		}
 		// else load the image
-		m_images.emplace_back(path);
+		m_images.emplace_back(std::move(RgbaImage2d<uint8_t>(path)),
+							  is_opaque);
 
 		// and return the index
-		return uint32_t(m_images.size() - 1);
+		return std::make_pair(uint32_t(m_images.size() - 1), is_opaque);
 	}
 
 	void
@@ -38,12 +64,13 @@ struct ImageStorage
 		if (m_images.size() > 0) return;
 
 		std::vector<uint8_t> blank_image(4, 0);
-		m_images.emplace_back(blank_image.data(),
-							  1,
-							  1,
-							  vk::ImageTiling::eOptimal,
-							  RgbaImage2d<uint8_t>::RgbaUsageFlagBits);
-		m_images[0].init_sampler();
+		m_images.emplace_back(std::move(RgbaImage2d<uint8_t>(blank_image.data(),
+															 1,
+															 1,
+															 vk::ImageTiling::eOptimal,
+															 RgbaImage2d<uint8_t>::RgbaUsageFlagBits)),
+							  false);
+		m_images[0].first.init_sampler();
 	}
 };
 
@@ -80,35 +107,35 @@ struct TriangleMeshStorage
 													  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
-	vec3
+	std::pair<vec3, bool>
 	get_encoded_color(const float color[3],
 					  const std::string & texname,
 					  const std::filesystem::path & directory)
 	{
 		if (texname != "")
 		{
-			const uint32_t tex_id = m_image_storage->fetch(directory / texname);
-			return vec3(-float(tex_id) - 1.0f);
+			const auto tex_info = m_image_storage->fetch(directory / texname);
+			return std::make_pair(vec3(-float(tex_info.first) - 1.0f), tex_info.second);
 		}
 		else
 		{
-			return vec3(color[0], color[1], color[2]);
+			return std::make_pair(vec3(color[0], color[1], color[2]), false);
 		}
 	}
 
-	float
+	std::pair<float, bool>
 	get_encoded_color(const float color,
 					  const std::string & texname,
 					  const std::filesystem::path & directory)
 	{
 		if (texname != "")
 		{
-			const uint32_t tex_id = m_image_storage->fetch(directory / texname);
-			return -float(tex_id) - 1.0f;
+			const auto tex_info = m_image_storage->fetch(directory / texname);
+			return std::make_pair(-float(tex_info.first) - 1.0f, tex_info.second);
 		}
 		else
 		{
-			return color;
+			return std::make_pair(color, false);
 		}
 	}
 
@@ -167,12 +194,45 @@ struct TriangleMeshStorage
 		}
 
 		/*
-		* first of we have reorganize the data to make sure that vertex index = texcoord index = normal index
+		* load all materials
+		*/
+
+		const uint32_t material_offset = uint32_t(m_materials.size());
+
+		for (size_t i = 0; i < tmaterials.size(); i++)
+		{
+			const auto & tmat = tmaterials[i];
+
+			Material material;
+			const auto diffuse_refl = get_encoded_color(tmat.diffuse,
+														tmat.diffuse_texname,
+														path.parent_path());
+			const auto spec_refl = get_encoded_color(tmat.specular,
+													 tmat.specular_texname,
+													 path.parent_path());
+			const auto roughness = get_encoded_color(tmat.roughness,
+													 tmat.roughness_texname,
+													 path.parent_path());
+			const auto emission = get_encoded_color(tmat.emission,
+													tmat.emissive_texname,
+													path.parent_path());
+			material.m_diffuse_refl = diffuse_refl.first;
+			material.m_spec_refl = spec_refl.first;
+			material.m_roughness = roughness.first;
+			material.m_emission = emission.first;
+			const bool is_opaque = diffuse_refl.second;
+			material.m_flags = is_opaque ? MATERIAL_FLAG_IS_OPAQUE : 0;
+			m_materials.push_back(material);
+		}
+
+		/*
+		* reorganize the data to make sure that vertex index = texcoord index = normal index
 		*/
 
 		// indices for all shape
-		std::vector<std::vector<uint32_t>> shapes_indices;
-		std::vector<std::vector<uint32_t>> shapes_material_ids;
+		std::vector<std::vector<uint32_t>> shape_indices_arays;
+		std::vector<std::vector<uint32_t>> shape_material_ids_arrays;
+		std::vector<bool> shape_is_opaques;
 
 		// position, normal, and texcoord(u, v) to be reorganized
 		std::vector<vec4> position_and_us;
@@ -192,17 +252,23 @@ struct TriangleMeshStorage
 			std::vector<uint32_t> shape_material_ids;
 
 			// check indices
+			bool is_shape_opaque = true;
 			for (size_t i_index = 0; i_index < shape.mesh.indices.size(); i_index++)
 			{
 				const uint32_t vertex_index = uint32_t(shape.mesh.indices[i_index].vertex_index);
 				const uint32_t normal_index = uint32_t(shape.mesh.indices[i_index].normal_index);
 				const uint32_t texcoord_index = uint32_t(shape.mesh.indices[i_index].texcoord_index);
-				const uint32_t material_id = uint32_t(shape.mesh.material_ids[i_index / 3]) + uint32_t(m_materials.size());
+				const uint32_t material_id = uint32_t(shape.mesh.material_ids[i_index / 3]) + material_offset;
 				const auto tindex_combination = std::make_tuple(vertex_index,
 																normal_index,
 																texcoord_index,
 																material_id);
 				const auto & find_result = index_from_tindex_combination.find(tindex_combination);
+
+				if ((m_materials[material_id].m_flags & MATERIAL_FLAG_IS_OPAQUE) == 0)
+				{
+					is_shape_opaque = false;
+				}
 
 				// cannot find. this combination should be a new index
 				uint32_t index = 0;
@@ -211,12 +277,17 @@ struct TriangleMeshStorage
 					// report index
 					index = index_counter;
 
-					// push new position, normal and texcoord
+					// texcoord
+					vec2 texcoord = texcoord_index == -1 ? vec2(0.0f, 0.0f) : vec2(attrib.texcoords[texcoord_index * 2 + 0],
+																				   attrib.texcoords[texcoord_index * 2 + 1]);
+
+					// push new position
 					vec4 position_and_u(attrib.vertices[vertex_index * 3 + 0],
 										attrib.vertices[vertex_index * 3 + 1],
 										attrib.vertices[vertex_index * 3 + 2],
-										attrib.texcoords[texcoord_index * 2 + 0]);
+										texcoord.x);
 
+					// dealing with normal
 					vec3 normal;
 					if (attrib.normals.size() == 0)
 					{
@@ -242,11 +313,10 @@ struct TriangleMeshStorage
 									  attrib.normals[normal_index * 3 + 1],
 									  attrib.normals[normal_index * 3 + 2]);
 					}
-
 					vec4 normal_and_v(normal.x,
 									  normal.y,
 									  normal.z,
-									  attrib.texcoords[texcoord_index * 2 + 1]);
+									  1.0f - texcoord.y);
 					position_and_us.push_back(position_and_u);
 					normal_and_vs.push_back(normal_and_v);
 
@@ -268,8 +338,9 @@ struct TriangleMeshStorage
 			}
 
 			// push into shapes indices
-			shapes_indices.push_back(std::move(shape_indices));
-			shapes_material_ids.push_back(std::move(shape_material_ids));
+			shape_indices_arays.push_back(std::move(shape_indices));
+			shape_material_ids_arrays.push_back(std::move(shape_material_ids));
+			shape_is_opaques.push_back(is_shape_opaque);
 		}
 
 		/*
@@ -305,7 +376,7 @@ struct TriangleMeshStorage
 			{
 				index_buffer_usage_flag |= vk::BufferUsageFlagBits::eStorageBuffer;
 			}
-			std::shared_ptr<Buffer> index_buffer = std::make_shared<Buffer>(shapes_indices[i_shape],
+			std::shared_ptr<Buffer> index_buffer = std::make_shared<Buffer>(shape_indices_arays[i_shape],
 																			vk::MemoryPropertyFlagBits::eDeviceLocal,
 																			index_buffer_usage_flag);
 
@@ -313,7 +384,7 @@ struct TriangleMeshStorage
 			if (do_ray_tracing)
 			{
 				// create material buffer
-				material_id_buffer = std::make_shared<Buffer>(shapes_material_ids[i_shape],
+				material_id_buffer = std::make_shared<Buffer>(shape_material_ids_arrays[i_shape],
 															  vk::MemoryPropertyFlagBits::eDeviceLocal,
 															  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
 			}
@@ -327,37 +398,15 @@ struct TriangleMeshStorage
 				triangle_mesh->m_material_id_buffer = material_id_buffer;
 				if (do_ray_tracing)
 				{
+					std::cout << std::to_string(shape_is_opaques[i_shape]) << std::endl;
 					triangle_mesh->m_rt_blas = RtBlas(*position_and_u_buffer,
-													  *index_buffer);
+													  *index_buffer,
+													  shape_is_opaques[i_shape]);
 				}
 			}
 			m_triangle_meshes.push_back(std::move(triangle_mesh));
 		}
 		size_t end = m_triangle_meshes.size();
-
-		/*
-		* load all materials
-		*/
-
-		for (size_t i = 0; i < tmaterials.size(); i++)
-		{
-			const auto & tmat = tmaterials[i];
-
-			Material material;
-			material.m_diffuse_refl = get_encoded_color(tmat.diffuse,
-														tmat.diffuse_texname,
-														path.parent_path());
-			material.m_spec_refl = get_encoded_color(tmat.specular,
-													 tmat.specular_texname,
-													 path.parent_path());
-			material.m_roughness = get_encoded_color(tmat.roughness,
-													 tmat.roughness_texname,
-													 path.parent_path());
-			material.m_emission = get_encoded_color(tmat.emission,
-													tmat.emissive_texname,
-													path.parent_path());
-			m_materials.push_back(material);
-		}
 
 		return raw_ptrs(m_triangle_meshes, begin, end);
 	}

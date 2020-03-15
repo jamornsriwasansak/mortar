@@ -42,7 +42,7 @@ struct PrimitivePathTracer
 							  vk::ShaderStageFlagBits::eMissNV);
 		RayTracingPipeline rt_pipeline({ &raygen_shader,
 										 &raychit_shader,
-										 //&rayahit_shader,
+										 &rayahit_shader,
 										 &raymiss_shader,
 										 &shadow_raymiss_shader });
 
@@ -148,7 +148,7 @@ struct PrimitivePathTracer
 
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_6 = rt_pipeline
 			.build_descriptor_sets(6)
-			.set_samplers(0, scene->m_images_cache->m_images)
+			.set_samplers(0, scene->m_images_cache->get_images())
 			.build();
 
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_7 = rt_pipeline

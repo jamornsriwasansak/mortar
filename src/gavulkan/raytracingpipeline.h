@@ -25,15 +25,22 @@ struct RayTracingPipeline
 		// raygen -> miss -> hit
 		// easier for SBT format requirement
 		auto rt_shaders = sort_by_shader_type(unsorted_shaders);
-		auto & shaders = rt_shaders.m_sorted_shaders;
-		create_ray_tracing_pipeline(shaders);
-		m_sbt_buffer = create_sbt_buffer(*m_vk_pipeline, uint32_t(shaders.size()));
+		const uint32_t num_shader_groups = create_ray_tracing_pipeline(rt_shaders.m_raygen_shader,
+																	   rt_shaders.m_miss_shaders,
+																	   rt_shaders.m_closest_hit_shader,
+																	   rt_shaders.m_any_hit_shader);
+		m_sbt_buffer = create_sbt_buffer(*m_vk_pipeline, num_shader_groups);
+
+		// count hit shaders
+		uint32_t num_hit_shaders = 0;
+		num_hit_shaders += rt_shaders.m_any_hit_shader == nullptr ? 1 : 0;
+		num_hit_shaders += rt_shaders.m_closest_hit_shader == nullptr ? 1 : 0;
 
 		// compute all stride
 		const uint32_t shader_group_handle_size = Core::Inst().m_vk_rt_properties.shaderGroupHandleSize;
-		const uint32_t raygen_size = shader_group_handle_size * rt_shaders.m_num_raygen_shaders;
-		const uint32_t miss_size = shader_group_handle_size * rt_shaders.m_num_miss_shaders;
-		const uint32_t hit_size = shader_group_handle_size * rt_shaders.m_num_hit_shaders;
+		const uint32_t raygen_size = shader_group_handle_size;
+		const uint32_t miss_size = shader_group_handle_size * uint32_t(rt_shaders.m_miss_shaders.size());
+		const uint32_t hit_size = shader_group_handle_size * num_hit_shaders;
 
 		// set all offset
 		m_raygen_offset = 0;
@@ -42,19 +49,11 @@ struct RayTracingPipeline
 		m_stride = shader_group_handle_size;
 	}
 
-	RayTracingPipeline(const Shader & raygen_shader,
-					   const Shader & raychit_shader,
-					   const Shader & raymiss_shader):
-		m_descriptor_manager({ &raygen_shader, &raychit_shader, &raymiss_shader })
-	{
-		create_ray_tracing_pipeline({ &raygen_shader,
-								 &raychit_shader,
-								 &raymiss_shader });
-		m_sbt_buffer = create_sbt_buffer(*m_vk_pipeline, uint32_t(3));
-	}
-
-	void
-	create_ray_tracing_pipeline(const std::vector<const Shader *> & shaders)
+	uint32_t
+	create_ray_tracing_pipeline(const Shader * raygen_shader,
+								std::vector<const Shader *> & miss_shaders,
+								const Shader * closest_hit_shader,
+								const Shader * any_hit_shader)
 	{
 		auto & device = Core::Inst().m_vk_device;
 
@@ -75,25 +74,56 @@ struct RayTracingPipeline
 
 		std::vector<vk::PipelineShaderStageCreateInfo> shader_stages;
 		std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_groups;
-		for (size_t i_shader = 0; i_shader < shaders.size(); i_shader++)
+
+		// raygen
+		vk::RayTracingShaderGroupCreateInfoNV raygen_shader_group = raygen_shader->get_raytracing_shader_group_ci(uint32_t(shader_stages.size()));
+		vk::PipelineShaderStageCreateInfo raygen_shader_stage = raygen_shader->get_pipeline_shader_stage_ci();
+		shader_stages.push_back(raygen_shader_stage);
+		shader_groups.push_back(raygen_shader_group);
+
+		// miss shaders
+		for (const Shader * miss_shader : miss_shaders)
 		{
-			vk::PipelineShaderStageCreateInfo shader_stage = shaders[i_shader]->get_pipeline_shader_stage_ci();
-			vk::RayTracingShaderGroupCreateInfoNV shader_group = shaders[i_shader]->get_raytracing_shader_group_ci(i_shader);
-			shader_stages.push_back(shader_stage);
-			shader_groups.push_back(shader_group);
+			vk::RayTracingShaderGroupCreateInfoNV miss_shader_group = miss_shader->get_raytracing_shader_group_ci(uint32_t(shader_stages.size()));
+			vk::PipelineShaderStageCreateInfo miss_shader_stage = miss_shader->get_pipeline_shader_stage_ci();
+			shader_stages.push_back(miss_shader_stage);
+			shader_groups.push_back(miss_shader_group);
 		}
 
-		vk::RayTracingPipelineCreateInfoNV rayPipelineInfo{};
+		// hit shader
+		vk::RayTracingShaderGroupCreateInfoNV hit_shader_group;
+		hit_shader_group.setType(vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup);
+		hit_shader_group.setAnyHitShader(VK_SHADER_UNUSED_NV);
+		hit_shader_group.setClosestHitShader(VK_SHADER_UNUSED_NV);
+		hit_shader_group.setGeneralShader(VK_SHADER_UNUSED_NV);
+		hit_shader_group.setIntersectionShader(VK_SHADER_UNUSED_NV);
+		if (closest_hit_shader)
 		{
-			rayPipelineInfo.setStageCount(uint32_t(shader_stages.size()));
-			rayPipelineInfo.setPStages(shader_stages.data());
-			rayPipelineInfo.setGroupCount(uint32_t(shader_groups.size()));
-			rayPipelineInfo.setPGroups(shader_groups.data());
-			rayPipelineInfo.setMaxRecursionDepth(1);
-			rayPipelineInfo.setLayout(*m_vk_pipeline_layout);
+			vk::PipelineShaderStageCreateInfo closest_hit_shader_stage = closest_hit_shader->get_pipeline_shader_stage_ci();
+			hit_shader_group.setClosestHitShader(uint32_t(shader_stages.size()));
+			shader_stages.push_back(closest_hit_shader_stage);
 		}
+		if (any_hit_shader)
+		{
+			vk::PipelineShaderStageCreateInfo any_hit_shader_stage = any_hit_shader->get_pipeline_shader_stage_ci();
+			hit_shader_group.setAnyHitShader(uint32_t(shader_stages.size()));
+			shader_stages.push_back(any_hit_shader_stage);
+		}
+		shader_groups.push_back(hit_shader_group);
 
-		m_vk_pipeline = device->createRayTracingPipelineNVUnique(nullptr, rayPipelineInfo);
+		// create ray tracing pipeline
+		vk::RayTracingPipelineCreateInfoNV ray_pipeline_ci = {};
+		{
+			ray_pipeline_ci.setStageCount(uint32_t(shader_stages.size()));
+			ray_pipeline_ci.setPStages(shader_stages.data());
+			ray_pipeline_ci.setGroupCount(uint32_t(shader_groups.size()));
+			ray_pipeline_ci.setPGroups(shader_groups.data());
+			ray_pipeline_ci.setMaxRecursionDepth(1);
+			ray_pipeline_ci.setLayout(*m_vk_pipeline_layout);
+		}
+		m_vk_pipeline = device->createRayTracingPipelineNVUnique(nullptr, ray_pipeline_ci);
+
+		return uint32_t(shader_groups.size());
 	}
 
 	DescriptorSetsBuilder
@@ -112,54 +142,48 @@ private:
 
 	struct ReturnType_sort_by_shader_type
 	{
-		std::vector<const Shader *> m_sorted_shaders;
-		uint32_t m_num_raygen_shaders = 0;
-		uint32_t m_num_miss_shaders = 0;
-		uint32_t m_num_hit_shaders = 0;
+		const Shader * m_raygen_shader = nullptr;
+		std::vector<const Shader *> m_miss_shaders;
+		const Shader * m_closest_hit_shader = nullptr;
+		const Shader * m_any_hit_shader = nullptr;
 	};
 	ReturnType_sort_by_shader_type
 	sort_by_shader_type(const std::vector<const Shader *> & shaders)
 	{
 		uint32_t num_raygen_shaders = 0;
 		uint32_t num_miss_shaders = 0;
-		uint32_t num_hit_shaders = 0;
-
-		std::vector<const Shader *> sorted_shaders;
-		for (size_t i_shader = 0; i_shader < shaders.size(); i_shader++)
-		{
-			if (shaders[i_shader]->m_vk_shader_stage & vk::ShaderStageFlagBits::eRaygenNV)
-			{
-				sorted_shaders.push_back(shaders[i_shader]);
-				num_raygen_shaders++;
-			}
-		}
-
-		for (size_t i_shader = 0; i_shader < shaders.size(); i_shader++)
-		{
-			if (shaders[i_shader]->m_vk_shader_stage & vk::ShaderStageFlagBits::eMissNV)
-			{
-				sorted_shaders.push_back(shaders[i_shader]);
-				num_miss_shaders++;
-			}
-		}
-
-		for (size_t i_shader = 0; i_shader < shaders.size(); i_shader++)
-		{
-			if (shaders[i_shader]->m_vk_shader_stage & (vk::ShaderStageFlagBits::eAnyHitNV | vk::ShaderStageFlagBits::eClosestHitNV))
-			{
-				sorted_shaders.push_back(shaders[i_shader]);
-				num_hit_shaders++;
-			}
-		}
-
+		uint32_t num_any_hit_shader = 0;
+		uint32_t num_closest_hit_shader = 0;
 		ReturnType_sort_by_shader_type result;
+		for (const Shader * shader : shaders)
 		{
-			result.m_sorted_shaders = sorted_shaders;
-			result.m_num_raygen_shaders = num_raygen_shaders;
-			result.m_num_miss_shaders = num_miss_shaders;
-			result.m_num_hit_shaders = num_hit_shaders;
-		}
+			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eRaygenNV)
+			{
+				num_raygen_shaders++;
+				result.m_raygen_shader = shader;
+			}
 
+			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eMissNV)
+			{
+				result.m_miss_shaders.push_back(shader);
+			}
+
+			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eAnyHitNV)
+			{
+				num_any_hit_shader++;
+				result.m_any_hit_shader = shader;
+			}
+
+			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eClosestHitNV)
+			{
+				num_closest_hit_shader++;
+				result.m_closest_hit_shader = shader;
+			}
+		}
+		THROW_ASSERT(num_raygen_shaders == 1,
+					 "only one raygen shader per pipeline is expected");
+		THROW_ASSERT(!(num_any_hit_shader == 0 && num_closest_hit_shader == 0),
+					 "atleast one hit shader per pipeline is expected");
 		return result;
 	}
 

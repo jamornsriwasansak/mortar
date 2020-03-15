@@ -49,23 +49,26 @@ void main()
     const uint index0 = faces_arrays[gl_InstanceID].faces[gl_PrimitiveID * 3 + 0];
     const uint index1 = faces_arrays[gl_InstanceID].faces[gl_PrimitiveID * 3 + 1];
     const uint index2 = faces_arrays[gl_InstanceID].faces[gl_PrimitiveID * 3 + 2];
-    const vec4 nv0 = nvs_arrays[gl_InstanceID].normal_and_vs[index0];
-    const vec4 nv1 = nvs_arrays[gl_InstanceID].normal_and_vs[index1];
-    const vec4 nv2 = nvs_arrays[gl_InstanceID].normal_and_vs[index2];
+
+    // position and tex u
     const vec4 pu0 = pus_arrays[gl_InstanceID].position_and_us[index0];
     const vec4 pu1 = pus_arrays[gl_InstanceID].position_and_us[index1];
     const vec4 pu2 = pus_arrays[gl_InstanceID].position_and_us[index2];
-    const vec4 nv = mix_barycoord(attribs.xy, nv0, nv1, nv2);
     const vec4 pu = mix_barycoord(attribs.xy, pu0, pu1, pu2);
+
+    // normal and tex v
+    const vec4 nv0 = nvs_arrays[gl_InstanceID].normal_and_vs[index0];
+    const vec4 nv1 = nvs_arrays[gl_InstanceID].normal_and_vs[index1];
+    const vec4 nv2 = nvs_arrays[gl_InstanceID].normal_and_vs[index2];
+    const vec4 nv = mix_barycoord(attribs.xy, nv0, nv1, nv2);
 
     // organize the values
     const vec3 normal = normalize(nv.xyz);
     const vec3 position = pu.xyz;
-    const vec2 texcoord = vec2(pu.w, 1.0 - nv.w);
+    const vec2 texcoord = vec2(pu.w, nv.w);
 
     const uint material_id = material_ids_arrays[gl_InstanceID].material_ids[gl_PrimitiveID];
     Material material = mat.materials[material_id];
-    //material.m_diffuse_refl = mat[0].materials[material_id].xyz;
 
     DECODE_MATERIAL(material, textures, texcoord);
 

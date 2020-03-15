@@ -238,7 +238,7 @@ struct DescriptorSetsBuilder
 	template <typename T>
 	DescriptorSetsBuilder &
 	set_samplers(const size_t i_binding,
-				 const std::vector<RgbaImage2d<T>> & images)
+				 const std::vector<const RgbaImage2d<T> *> & images)
 	{
 		THROW_ASSERT(images.size() > 0,
 					 "number of sampler must be greater zero");
@@ -247,9 +247,9 @@ struct DescriptorSetsBuilder
 		{
 			// describe what the image is like
 			{
-				descriptor_image_infos[i_image].setImageLayout(images[i_image].m_vk_image_layout);
-				descriptor_image_infos[i_image].setImageView(*images[i_image].m_vk_image_view);
-				descriptor_image_infos[i_image].setSampler(*images[i_image].m_vk_sampler);
+				descriptor_image_infos[i_image].setImageLayout(images[i_image]->m_vk_image_layout);
+				descriptor_image_infos[i_image].setImageView(*images[i_image]->m_vk_image_view);
+				descriptor_image_infos[i_image].setSampler(*images[i_image]->m_vk_sampler);
 			}
 		}
 

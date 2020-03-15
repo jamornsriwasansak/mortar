@@ -37,42 +37,39 @@ layout(set = 5, binding = 0) buffer MaterialBuffer
 
 layout(set = 6, binding = 0) uniform sampler2D textures[];
 
-vec4 mix_barycoord(const vec2 bary, const vec4 a, const vec4 b, const vec4 c)
+vec2 mix_barycoord(const vec2 bary, const vec2 a, const vec2 b, const vec2 c)
 {
     return (1.0f - bary.x - bary.y) * a + bary.x * b + bary.y * c;
 }
 
 void main()
 {
-/*
     // since alpha channel is stored inside diffuse 
     const uint material_id = material_ids_arrays[gl_InstanceID].material_ids[gl_PrimitiveID];
-    vec3 diffuse_refl = mat.materials[material_id].m_diffuse_refl;
+    Material material = mat.materials[material_id];
 
     // negative indicates texture index, positive indicates r channel of diffuse_refl
-    if (diffuse_refl.r >= 0.0f) { return; }
+    if ((material.m_flags & MATERIAL_FLAG_IS_OPAQUE) != 0) { return; }
+    if (material.m_diffuse_refl.r >= 0.0f) { return; }
     
     // fetch from ssbo
     const uint index0 = faces_arrays[gl_InstanceID].faces[gl_PrimitiveID * 3 + 0];
     const uint index1 = faces_arrays[gl_InstanceID].faces[gl_PrimitiveID * 3 + 1];
     const uint index2 = faces_arrays[gl_InstanceID].faces[gl_PrimitiveID * 3 + 2];
-    const vec4 nv0 = nvs_arrays[gl_InstanceID].normal_and_vs[index0];
-    const vec4 nv1 = nvs_arrays[gl_InstanceID].normal_and_vs[index1];
-    const vec4 nv2 = nvs_arrays[gl_InstanceID].normal_and_vs[index2];
-    const vec4 pu0 = pus_arrays[gl_InstanceID].position_and_us[index0];
-    const vec4 pu1 = pus_arrays[gl_InstanceID].position_and_us[index1];
-    const vec4 pu2 = pus_arrays[gl_InstanceID].position_and_us[index2];
-    const vec4 nv = mix_barycoord(attribs.xy, nv0, nv1, nv2);
-    const vec4 pu = mix_barycoord(attribs.xy, pu0, pu1, pu2);
+    const float v0 = nvs_arrays[gl_InstanceID].normal_and_vs[index0].w;
+    const float v1 = nvs_arrays[gl_InstanceID].normal_and_vs[index1].w;
+    const float v2 = nvs_arrays[gl_InstanceID].normal_and_vs[index2].w;
+    const float u0 = pus_arrays[gl_InstanceID].position_and_us[index0].w;
+    const float u1 = pus_arrays[gl_InstanceID].position_and_us[index1].w;
+    const float u2 = pus_arrays[gl_InstanceID].position_and_us[index2].w;
+
+    // since the material is not opaque, we can always assume that it has texture
+    vec2 texcoord = mix_barycoord(attribs.xy, vec2(u0, v0), vec2(u1, v1), vec2(u2, v2));
 
     // organize the values
-    const vec2 texcoord = vec2(pu.w, 1.0 - nv.w);
-
-	float alpha = texture(textures[-int(diffuse_refl.r + 1)], texcoord).a;
+	float alpha = texture(textures[-int(material.m_diffuse_refl.r + 1)], texcoord).a;
     if (alpha <= 0.5)
     {
         ignoreIntersectionNV();
     }
-    */
-    //ignoreIntersectionNV();
 }

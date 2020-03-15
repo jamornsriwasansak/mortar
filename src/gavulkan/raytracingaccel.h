@@ -16,10 +16,12 @@ struct RtBlas
 	}
 
 	RtBlas(const Buffer & vertex_buffer,
-		   const Buffer & index_buffer)
+		   const Buffer & index_buffer,
+		   const bool is_opaque)
 	{
 		vk::GeometryNV geometry_nv = get_geometry_nv(vertex_buffer,
-													 index_buffer);
+													 index_buffer,
+													 is_opaque);
 		auto build_blas_result = build_blas(geometry_nv);
 		m_vk_accel_struct = std::move(build_blas_result.m_vk_accel_struct);
 		m_vk_memory = std::move(build_blas_result.m_vk_memory);
@@ -27,7 +29,8 @@ struct RtBlas
 
 	vk::GeometryNV
 	get_geometry_nv(const Buffer & vertex_buffer,
-					const Buffer & index_buffer)
+					const Buffer & index_buffer,
+					const bool is_opaque)
 	{
 		vk::GeometryTrianglesNV triangles;
 		triangles.setVertexData(*vertex_buffer.m_vk_buffer);
@@ -45,6 +48,14 @@ struct RtBlas
 
 		vk::GeometryNV geometry;
 		geometry.setGeometry(geometry_data);
+		if (is_opaque)
+		{
+			geometry.setFlags(vk::GeometryFlagBitsNV::eOpaque);
+		}
+		else
+		{ 
+			geometry.setFlags(vk::GeometryFlagBitsNV::eNoDuplicateAnyHitInvocation);
+		}
 
 		return geometry;
 	}
