@@ -29,12 +29,20 @@ struct PrimitivePathTracer
 		raychit_shader.m_uniform_from_set_and_binding.at({ 4, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
 		raychit_shader.m_uniform_from_set_and_binding.at({ 5, 0 })->m_num_descriptors = 1;
 		raychit_shader.m_uniform_from_set_and_binding.at({ 6, 0 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+		Shader rayahit_shader("shaders/renderer/primpath/raytrace.rahit",
+							  vk::ShaderStageFlagBits::eAnyHitNV);
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 2, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 3, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 4, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 5, 0 })->m_num_descriptors = 1;
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 6, 0 })->m_num_descriptors = scene.m_images_cache->m_images.size();
 		Shader shadow_raymiss_shader("shaders/renderer/primpath/rayshadow.rmiss",
 									 vk::ShaderStageFlagBits::eMissNV);
 		Shader raymiss_shader("shaders/renderer/primpath/raytrace.rmiss",
 							  vk::ShaderStageFlagBits::eMissNV);
 		RayTracingPipeline rt_pipeline({ &raygen_shader,
 										 &raychit_shader,
+										 //&rayahit_shader,
 										 &raymiss_shader,
 										 &shadow_raymiss_shader });
 
@@ -188,7 +196,8 @@ struct PrimitivePathTracer
 			cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingNV,
 										  *rt_pipeline.m_vk_pipeline_layout,
 										  0,
-										  { rt_descriptor_sets_0[i],
+										  {
+											rt_descriptor_sets_0[i],
 											rt_descriptor_sets_1[i],
 											rt_descriptor_sets_2[i],
 											rt_descriptor_sets_3[i],

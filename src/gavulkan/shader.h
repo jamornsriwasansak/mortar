@@ -117,15 +117,20 @@ struct Shader
 		rsg_ci.setGeneralShader(VK_SHADER_UNUSED_NV);
 		rsg_ci.setIntersectionShader(VK_SHADER_UNUSED_NV);
 
-		if (m_vk_shader_stage == vk::ShaderStageFlagBits::eRaygenNV)
-		{
-			rsg_ci.setType(vk::RayTracingShaderGroupTypeNV::eGeneral);
-			rsg_ci.setGeneralShader(i_shader);
-		}
-		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eClosestHitNV)
+		if (m_vk_shader_stage == vk::ShaderStageFlagBits::eClosestHitNV)
 		{
 			rsg_ci.setType(vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup);
 			rsg_ci.setClosestHitShader(i_shader);
+		}
+		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eAnyHitNV)
+		{
+			rsg_ci.setType(vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup);
+			rsg_ci.setAnyHitShader(i_shader);
+		}
+		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eRaygenNV)
+		{
+			rsg_ci.setType(vk::RayTracingShaderGroupTypeNV::eGeneral);
+			rsg_ci.setGeneralShader(i_shader);
 		}
 		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eMissNV)
 		{
