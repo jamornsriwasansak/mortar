@@ -5,7 +5,7 @@
 #include "renderer/primpath/hitpayload.glsl"
 #include "common/onb.glsl"
 #include "common/pcg.glsl"
-#include "common/raycommon.glsl"
+#include "common/traceray.glsl"
 #include "common/material.glsl"
 
 layout(binding = 0, set = 0) uniform accelerationStructureNV tlas;

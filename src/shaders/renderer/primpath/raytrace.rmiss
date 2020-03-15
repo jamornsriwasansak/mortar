@@ -3,7 +3,7 @@
 #extension GL_GOOGLE_include_directive : enable
 
 #include "renderer/primpath/hitpayload.glsl"
-#include "common/raycommon.glsl"
+#include "common/traceray.glsl"
 
 layout(location = RAY_PRD_LOCATION) rayPayloadInNV PrimitivePathTracerPayload prd;
 

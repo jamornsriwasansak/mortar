@@ -4,7 +4,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 #include "renderer/rtao/hitpayload.glsl"
-#include "common/raycommon.glsl"
+#include "common/traceray.glsl"
 
 layout(location = RAY_PRD_LOCATION) rayPayloadInNV HitPayload prd;
 hitAttributeNV vec3 attribs;

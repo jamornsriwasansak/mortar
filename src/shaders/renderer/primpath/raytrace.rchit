@@ -5,7 +5,7 @@
 
 #include "renderer/primpath/hitpayload.glsl"
 #include "common/material.glsl"
-#include "common/raycommon.glsl"
+#include "common/traceray.glsl"
 #include "shared.glsl.h"
 
 layout(location = RAY_PRD_LOCATION) rayPayloadInNV PrimitivePathTracerPayload prd;
