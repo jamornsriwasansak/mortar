@@ -398,7 +398,6 @@ struct TriangleMeshStorage
 				triangle_mesh->m_material_id_buffer = material_id_buffer;
 				if (do_ray_tracing)
 				{
-					std::cout << std::to_string(shape_is_opaques[i_shape]) << std::endl;
 					triangle_mesh->m_rt_blas = RtBlas(*position_and_u_buffer,
 													  *index_buffer,
 													  shape_is_opaques[i_shape]);
