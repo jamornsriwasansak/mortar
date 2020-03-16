@@ -9,6 +9,7 @@ struct Onb
 Onb
 Onb_create(const vec3 normal)
 {
+#if 1
 	// Building an Orthonormal Basis, Revisited - Pixar Graphics 2017
 
 	// note: sign in glsl is not the same as copysign since it can also return 0
@@ -21,6 +22,22 @@ Onb_create(const vec3 normal)
 	result.m_y = normal;
 	result.m_x = vec3(s + normal.x * normal.x * a, -normal.x, b);
 	result.m_z = vec3(s * b, -s * normal.z, 1.0f + s * normal.z * normal.z * a);
+#else
+	Onb result;
+	if (normal.y >= 0.99)
+	{
+		result.m_y = normal;
+		result.m_x = normalize(cross(normal, vec3(1, 0, 0)));
+		result.m_z = cross(result.m_x, result.m_y);
+	}
+	else
+	{
+		result.m_y = normal;
+		result.m_x = normalize(cross(normal, vec3(0, 1, 0)));
+		result.m_z = cross(result.m_x, result.m_y);
+	}
+#endif
+
 
 	return result;
 }
