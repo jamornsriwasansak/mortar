@@ -203,7 +203,7 @@ struct TriangleMeshStorage
 		{
 			const auto & tmat = tmaterials[i];
 
-			Material material;
+			Material material = Material_create();
 			const auto diffuse_refl = get_encoded_color(tmat.diffuse,
 														tmat.diffuse_texname,
 														path.parent_path());

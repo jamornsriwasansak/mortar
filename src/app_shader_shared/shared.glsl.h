@@ -20,6 +20,19 @@ struct Material
     int m_flags;
 };
 
+Material
+Material_create()
+{
+    Material result;
+    result.m_diffuse_refl = vec3(0.0f);
+    result.m_roughness = 0.0f;
+    result.m_spec_refl = vec3(0.0f);
+    result.m_sheen = 0.0f;
+    result.m_emission = vec3(0.0f);
+    result.m_flags = MATERIAL_FLAG_IS_OPAQUE;
+    return result;
+}
+
 #define DECODE_MATERIAL(MAT, TEXTURES, UV) \
 { \
 	int diffuse_refl_tex_index = -int(MAT.m_diffuse_refl.x + 1); \
