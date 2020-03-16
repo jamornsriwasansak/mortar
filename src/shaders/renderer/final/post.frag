@@ -7,6 +7,14 @@ layout(location = 0) in vec2 uv;
 
 void main()
 {
-    float gamma = 1. / 2.2;
-    fragColor = pow(texture(final, uv).rgba, vec4(gamma));
+    float gamma = 1.0f / 2.2f;
+    vec4 final_tex_color = texture(final, uv).rgba;
+    if (any(isnan(final_tex_color)))
+    {
+		fragColor = vec4(0.0f, 1.0, 0.0f, 1.0f);
+    }
+    else
+    {
+		fragColor = pow(final_tex_color, vec4(gamma));
+    }
 }
