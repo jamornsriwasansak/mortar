@@ -35,7 +35,7 @@ Lambert_eval(const Material material,
 			 const vec3 incoming,
 			 const vec3 outgoing)
 {
-	return material.m_diffuse_refl;// *step(0.0f, incoming.y) * step(0.0f, outgoing.y);
+	return material.m_diffuse_refl * M_1_PI;// *step(0.0f, incoming.y) * step(0.0f, outgoing.y);
 }
 
 //

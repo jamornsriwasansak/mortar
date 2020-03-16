@@ -24,8 +24,8 @@ layout(location = RAY_PRD_LOCATION) rayPayloadNV PrimitivePathTracerPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
 
 // use bluenoise rng for rendering
-#define USE_PCG
-//#define USE_BLUE_RAND
+//#define USE_PCG
+#define USE_BLUE_RAND
 #include "common/bluenoise.glsl"
 #include "common/pcg.glsl"
 DECLARE_BLUENOISE_LAYOUT(7,8,9)
@@ -87,17 +87,15 @@ vec3 li(Ray ray,
                        bsdf_weight,
                        prd.m_material,
                        Onb_to_local(onb, -ray.m_direction),
-                       //vec2(rnd(sample_index, dimension), rnd(sample_index, dimension + 1)));
                        rand2());
 
-        
         /*
 		Ggx_sample(local_outgoing,
 				   bsdf_weight,
 				   prd.m_material,
 				   Onb_to_local(onb, -ray.m_direction),
-				   vec2(rnd(sample_index, dimension), rnd(sample_index, dimension + 1)));
-                   */
+				   rand2());
+                       */
 
         dimension += 2;
 		const vec3 outgoing = Onb_to_world(onb, local_outgoing);
