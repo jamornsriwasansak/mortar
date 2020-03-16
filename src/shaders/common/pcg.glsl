@@ -120,3 +120,23 @@ Pcg_next_vec3(inout Pcg32 rng)
     const uint w = pcg32_random_r(rng.pcg_rng);
     return vec3(u, v, w) / float(UINT32_MAX);
 }
+
+Pcg32 GLOBAL_PCG = Pcg_create(gl_LaunchIDNV.x * gl_LaunchSizeNV.y + gl_LaunchIDNV.y);
+
+float
+rnd()
+{
+    return Pcg_next_float(GLOBAL_PCG);
+}
+
+vec2
+rnd2()
+{
+    return Pcg_next_vec2(GLOBAL_PCG);
+}
+
+vec3
+rnd3()
+{
+    return Pcg_next_vec3(GLOBAL_PCG);
+}
