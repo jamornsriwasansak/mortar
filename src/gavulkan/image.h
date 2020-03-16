@@ -184,6 +184,7 @@ struct RgbaImage2d
 				const size_t height,
 				const vk::ImageTiling & vk_image_tiling,
 				const vk::ImageUsageFlags & vk_image_usage_flags,
+				const bool use_srgb = false,
 				const bool is_downloadable = false):
 		m_width(width),
 		m_height(height),
@@ -196,7 +197,14 @@ struct RgbaImage2d
 		}
 		else if constexpr (std::is_same<ScalarType, uint8_t>::value)
 		{
-			m_vk_format = vk::Format::eR8G8B8A8Unorm;
+			if (use_srgb)
+			{
+				m_vk_format = vk::Format::eR8G8B8A8Srgb;
+			}
+			else
+			{
+				m_vk_format = vk::Format::eR8G8B8A8Unorm;
+			}
 		}
 		else
 		{
@@ -282,6 +290,7 @@ struct RgbaImage2d
 					stbi_result.m_height,
 					vk::ImageTiling::eOptimal,
 					RgbaUsageFlagBits,
+					true,
 					is_downloadable)
 	{
 		if constexpr (!std::is_same<uint8_t, ScalarType>::value)
@@ -298,6 +307,7 @@ struct RgbaImage2d
 					stbi_result.m_height,
 					vk::ImageTiling::eOptimal,
 					RgbaUsageFlagBits,
+					false,
 					is_downloadable)
 	{
 		if constexpr (!std::is_same<float, ScalarType>::value)
