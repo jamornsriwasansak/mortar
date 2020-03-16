@@ -88,12 +88,13 @@ struct Pcg32
 };
 
 Pcg32
-Pcg_create(uint seed0)
+Pcg_create(uint64_t seed,
+           uint64_t stream_id)
 {
     Pcg32 rng;
     pcg32_srandom_r(rng.pcg_rng,
-                    seed0,
-                    0);
+                    seed,
+                    stream_id);
     return rng;
 }
 
@@ -121,22 +122,33 @@ Pcg_next_vec3(inout Pcg32 rng)
     return vec3(u, v, w) / float(UINT32_MAX);
 }
 
-Pcg32 GLOBAL_PCG = Pcg_create(gl_LaunchIDNV.x * gl_LaunchSizeNV.y + gl_LaunchIDNV.y);
+Pcg32 GLOBAL_PCG;
+
+void
+srand(uvec2 pixel_index,
+      uvec2 image_size,
+      uint sample_index)
+{
+    uint seed = pixel_index.x + image_size.x * pixel_index.y;
+    // note: we have to modify sample_index to make sure that error distribution looks nice and not very correlated
+	GLOBAL_PCG = Pcg_create(seed,
+                            sample_index * image_size.x * image_size.y + 1);
+}
 
 float
-rnd()
+rand()
 {
     return Pcg_next_float(GLOBAL_PCG);
 }
 
 vec2
-rnd2()
+rand2()
 {
     return Pcg_next_vec2(GLOBAL_PCG);
 }
 
 vec3
-rnd3()
+rand3()
 {
     return Pcg_next_vec3(GLOBAL_PCG);
 }

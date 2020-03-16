@@ -4,7 +4,6 @@
 
 #include "renderer/primpath/hitpayload.glsl"
 #include "common/onb.glsl"
-#include "common/pcg.glsl"
 #include "common/traceray.glsl"
 #include "common/material.glsl"
 
@@ -24,9 +23,11 @@ layout(binding = 3, set = 0) uniform sampler2D envmap;
 layout(location = RAY_PRD_LOCATION) rayPayloadNV PrimitivePathTracerPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
 
-// use bluenoise for rendering
+// use bluenoise rng for rendering
 #include "common/bluenoise.glsl"
 DECLARE_BLUENOISE_LAYOUT(7,8,9)
+// not pcg
+//#include "common/pcg.glsl"
 
 Ray
 generate_primary_ray()
@@ -84,7 +85,8 @@ vec3 li(Ray ray,
                        bsdf_weight,
                        prd.m_material,
                        Onb_to_local(onb, -ray.m_direction),
-                       vec2(rnd(sample_index, dimension), rnd(sample_index, dimension + 1)));
+                       //vec2(rnd(sample_index, dimension), rnd(sample_index, dimension + 1)));
+                       rand2());
 
         
         /*
@@ -125,8 +127,7 @@ main()
     }
 
     // init rng
-    uint seed = gl_LaunchIDNV.x + gl_LaunchSizeNV.x * gl_LaunchIDNV.y;
-    Pcg32 rng = Pcg_create(seed);
+    srand(uvec2(gl_LaunchIDNV), uvec2(gl_LaunchSizeNV), uint(num_spp));
 
     float sum = 0.0f;
 
