@@ -6,6 +6,7 @@ uint GLOBAL_BLUE_SAMPLE_DIMENSION = 0;
 uint GLOBAL_BLUE_SAMPLE_INDEX = 0;
 uvec2 GLOBAL_BLUE_PIXEL_INDEX = uvec2(0, 0);
 
+#ifdef USE_BLUE_RAND
 void
 srand(uvec2 pixel_index,
 	  uvec2 image_size,
@@ -35,6 +36,7 @@ rand3()
 {
 	return vec3(rand(), rand(), rand());
 }
+#endif
 
 #define DECLARE_BLUENOISE_LAYOUT(SET0, SET1, SET2) \
 layout(set = SET0, binding = 0) buffer BlueSobol \

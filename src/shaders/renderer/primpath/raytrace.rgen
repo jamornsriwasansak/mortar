@@ -24,10 +24,12 @@ layout(location = RAY_PRD_LOCATION) rayPayloadNV PrimitivePathTracerPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
 
 // use bluenoise rng for rendering
+#define USE_PCG
+//#define USE_BLUE_RAND
 #include "common/bluenoise.glsl"
+#include "common/pcg.glsl"
 DECLARE_BLUENOISE_LAYOUT(7,8,9)
 // not pcg
-//#include "common/pcg.glsl"
 
 Ray
 generate_primary_ray()

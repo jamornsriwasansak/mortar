@@ -124,6 +124,8 @@ Pcg_next_vec3(inout Pcg32 rng)
 
 Pcg32 GLOBAL_PCG;
 
+#ifdef USE_PCG
+
 void
 srand(uvec2 pixel_index,
       uvec2 image_size,
@@ -152,3 +154,4 @@ rand3()
 {
     return Pcg_next_vec3(GLOBAL_PCG);
 }
+#endif
