@@ -45,7 +45,7 @@ generate_primary_ray()
     Ray result;
     result.m_origin = origin;
     result.m_tmin = DEFAULT_TMIN;
-    result.m_direction = direction;
+    result.m_direction = normalize(direction);
     result.m_tmax = DEFAULT_TMAX;
 
     return result;
