@@ -32,20 +32,15 @@ Diffuse_cos_sample(out vec3 outgoing,
 	return true;
 }
 
-float
-Diffuse_cos_sampling_pdf(const Material material,
-						 const vec3 incoming,
-						 const vec3 outgoing)
-{
-	return outgoing.y * M_1_PI;
-}
-
-vec3
-Diffuse_eval(const Material material,
+void
+Diffuse_eval(out vec3 bsdf_val,
+			 out float pdf,
+			 const Material material,
 			 const vec3 incoming,
 			 const vec3 outgoing)
 {
-	return material.m_diffuse_refl * M_1_PI;// *step(0.0f, incoming.y) * step(0.0f, outgoing.y);
+	bsdf_val = material.m_diffuse_refl * M_1_PI;
+	pdf = outgoing.y * M_1_PI;
 }
 
 //
@@ -160,37 +155,33 @@ Ggx_cos_sample(out vec3 outgoing,
 	return sample_success;
 }
 
-float
-Ggx_cos_sampling_pdf(const Material material,
-					 const vec3 incoming,
-					 const vec3 outgoing)
-{
-	const vec2 roughness = vec2(material.m_roughness);
-	const vec2 alpha = sqr(roughness);
-
-	// pdf = d(h) * g_1(v) / (4 * dot(v, n))
-	const vec3 h = normalize(incoming + outgoing);
-	const float d_term = Microfacet_d(h, alpha);
-	const float g1_term = Microfacet_g1(incoming, h, alpha);
-	const float denominator = 4.0f * incoming.y;
-
-	return d_term * g1_term / denominator;
-}
-
-vec3
-Ggx_eval(const Material material,
+void
+Ggx_eval(out vec3 bsdf_val,
+		 out float pdf,
+		 const Material material,
 		 const vec3 incoming,
 		 const vec3 outgoing)
 {
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
 	const vec3 h = normalize(incoming + outgoing);
-	
-	// compute g term and d term
-	const float g_term = Microfacet_g2(incoming, outgoing, h, alpha);
-	const float d_term = Microfacet_d(h, alpha);
+	if (any(isnan(h)))
+	{
+		bsdf_val = vec3(0.0f);
+		pdf = 0.0f;
+		return;
+	}
 
-	return material.m_spec_refl * g_term * d_term / (4.0f * incoming.y * outgoing.y);
+	const float d_term = Microfacet_d(h, alpha);
+	const float g1_v_term = Microfacet_g1(incoming, h, alpha);
+	const float g1_l_term = Microfacet_g1(outgoing, h, alpha);
+	const float g_term = g1_v_term * g1_l_term;
+
+	// pdf = d(h) * g_1(v) / (4 * dot(v, n))
+	pdf = d_term * g1_v_term / (4.0f * incoming.y);
+
+	// brdf = Reflectance * G * D * F / (4 * dot(v, n) * dot(l, n))
+	bsdf_val = material.m_spec_refl * g_term * d_term / (4.0f * incoming.y * outgoing.y);
 }
 
 //
@@ -240,10 +231,16 @@ Material_cos_sample(out vec3 outgoing,
 	}
 
 	// eval both
-	vec3 diffuse_bsdf_val = Diffuse_eval(material, incoming, outgoing);
-	float diffuse_pdf = Diffuse_cos_sampling_pdf(material, incoming, outgoing) * diffuse_cprob;
-	vec3 ggx_bsdf_val = Ggx_eval(material, incoming, outgoing);
-	float ggx_pdf = Ggx_cos_sampling_pdf(material, incoming, outgoing) * ggx_cprob;
+	vec3 diffuse_bsdf_val;
+	float diffuse_pdf;
+	Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing);
+	diffuse_pdf *= diffuse_cprob;
+
+	// get ggx values
+	vec3 ggx_bsdf_val;
+	float ggx_pdf;
+	Ggx_eval(ggx_bsdf_val, ggx_pdf, material, incoming, outgoing);
+	ggx_pdf *= ggx_cprob;
 
 	// use mis to compute bsdf_weight
 	bsdf_cos_contrib = (diffuse_bsdf_val + ggx_bsdf_val) / (diffuse_pdf + ggx_pdf) * outgoing.y;
