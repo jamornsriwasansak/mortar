@@ -76,7 +76,7 @@ vec3 li(Ray ray,
 		const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
 
         // add radiance
-        radiance += importance * prd.m_material.m_emission * 100.0f;
+        radiance += importance * prd.m_material.m_emission;
 
 		// generate outgoing direction
 		Onb onb = Onb_create(prd.m_normal);
