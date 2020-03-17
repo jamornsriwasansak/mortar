@@ -28,7 +28,9 @@ struct ImageStorage
 
 	// return index to image and whether it contains alpha channel or not
 	std::pair<uint32_t, bool>
-	fetch(const std::filesystem::path & path)
+	fetch(const std::filesystem::path & path,
+		  const bool do_check_alpha,
+		  const std::filesystem::path & alpha_path = "")
 	{
 		// if could find image return the number
 		if (m_image_index_from_path.find(path) != m_image_index_from_path.end())
@@ -39,18 +41,36 @@ struct ImageStorage
 		}
 
 		// check whether it has alpha channel or not
-		const StbiUint8Result raw_image(path);
+		StbiUint8Result raw_image(path);
 		bool is_opaque = true;
-		for (size_t i = 3; i < raw_image.m_width * raw_image.m_height * 4; i += 4)
+		if (alpha_path != "")
 		{
-			if (raw_image.m_stbi_data[i] != 255)
+			StbiUint8Result alpha_image(alpha_path);
+			THROW_ASSERT(alpha_image.m_width == raw_image.m_width && alpha_image.m_height == raw_image.m_height,
+						 "main image and alpha image must share the same size");
+			is_opaque = false;
+			// copy alpha channel
+			for (size_t i = 0; i < raw_image.m_width * raw_image.m_height * 4; i += 4)
 			{
-				is_opaque = false;
-				break;
+				const size_t r_offset = 0;
+				const size_t a_offset = 3;
+				raw_image.m_stbi_data[i + a_offset] = alpha_image.m_stbi_data[i + r_offset];
 			}
 		}
+		else if (do_check_alpha)
+		{
+			for (size_t i = 3; i < raw_image.m_width * raw_image.m_height * 4; i += 4)
+			{
+				if (raw_image.m_stbi_data[i] != 255)
+				{
+					is_opaque = false;
+					break;
+				}
+			}
+		}
+
 		// else load the image
-		m_images.emplace_back(std::move(RgbaImage2d<uint8_t>(path)),
+		m_images.emplace_back(std::move(RgbaImage2d<uint8_t>(raw_image)),
 							  is_opaque);
 
 		// and return the index
@@ -107,35 +127,31 @@ struct TriangleMeshStorage
 													  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
-	std::pair<vec3, bool>
-	get_encoded_color(const float color[3],
+	// if an optional alpha_channel_texname is given,
+	// this function will try to load channel R of the alpha_channel_texname
+	// and insert the result into the alpha channel of main texture.
+	template <typename T>
+	std::pair<T, bool>
+	get_encoded_color(const T & color,
 					  const std::string & texname,
-					  const std::filesystem::path & directory)
+					  const std::filesystem::path & directory,
+					  const bool do_check_alpha,
+					  const std::string & alpha_channel_texname = "")
 	{
 		if (texname != "")
 		{
-			const auto tex_info = m_image_storage->fetch(directory / texname);
-			return std::make_pair(vec3(-float(tex_info.first) - 1.0f), tex_info.second);
+			const auto tex_info = m_image_storage->fetch(directory / texname,
+														 do_check_alpha,
+														 alpha_channel_texname != "" ? (directory / alpha_channel_texname) : "");
+			return std::make_pair(T(-float(tex_info.first) - 1.0f),
+								  alpha_channel_texname == "" && tex_info.second);
 		}
 		else
 		{
-			return std::make_pair(vec3(color[0], color[1], color[2]), true);
-		}
-	}
-
-	std::pair<float, bool>
-	get_encoded_color(const float color,
-					  const std::string & texname,
-					  const std::filesystem::path & directory)
-	{
-		if (texname != "")
-		{
-			const auto tex_info = m_image_storage->fetch(directory / texname);
-			return std::make_pair(-float(tex_info.first) - 1.0f, tex_info.second);
-		}
-		else
-		{
-			return std::make_pair(color, false);
+			THROW_ASSERT(alpha_channel_texname == "",
+						 "does not support alpha channel texture when main texture is not available");
+			return std::make_pair(color,
+								  true);
 		}
 	}
 
@@ -203,19 +219,33 @@ struct TriangleMeshStorage
 		{
 			const auto & tmat = tmaterials[i];
 
+			const auto vec3_from_float3 = [=](const float values[]) -> vec3
+			{
+				vec3 result;
+				result.x = values[0];
+				result.y = values[1];
+				result.z = values[2];
+				return result;
+			};
+
 			Material material = Material_create();
-			const auto diffuse_refl = get_encoded_color(tmat.diffuse,
+			const auto diffuse_refl = get_encoded_color(vec3_from_float3(tmat.diffuse),
 														tmat.diffuse_texname,
-														path.parent_path());
-			const auto spec_refl = get_encoded_color(tmat.specular,
+														path.parent_path(),
+														true,
+														tmat.alpha_texname);
+			const auto spec_refl = get_encoded_color(vec3_from_float3(tmat.specular),
 													 tmat.specular_texname,
-													 path.parent_path());
+													 path.parent_path(),
+													 false);
 			const auto roughness = get_encoded_color(tmat.roughness,
 													 tmat.roughness_texname,
-													 path.parent_path());
-			const auto emission = get_encoded_color(tmat.emission,
+													 path.parent_path(),
+													 false);
+			const auto emission = get_encoded_color(vec3_from_float3(tmat.emission),
 													tmat.emissive_texname,
-													path.parent_path());
+													path.parent_path(),
+													false);
 			material.m_diffuse_refl = diffuse_refl.first;
 			material.m_spec_refl = spec_refl.first;
 			material.m_roughness = roughness.first;

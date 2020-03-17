@@ -15,6 +15,8 @@ struct StbiUint8Result
 
 	StbiUint8Result(const std::filesystem::path & filepath)
 	{
+		THROW_ASSERT(std::filesystem::exists(filepath), "cannot open filepath " + filepath.string());
+
 		// load image using STB
 		int width, height, num_channels;
 		const int num_desired_channels = 4;
