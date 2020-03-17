@@ -1,6 +1,6 @@
 #include "shared.glsl.h"
 
-struct PrimitivePathTracerPayload
+struct HitPayload
 {
     vec3 m_snormal; // shading normal
     float m_t; // ray t

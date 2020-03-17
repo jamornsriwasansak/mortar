@@ -21,7 +21,7 @@ struct PrimitivePathTracer
 		// create rtao pipeline
 		Shader raygen_shader("shaders/renderer/primpath/raytrace.rgen",
 							 vk::ShaderStageFlagBits::eRaygenNV);
-		Shader raychit_shader("shaders/renderer/primpath/raytrace.rchit",
+		Shader raychit_shader("shaders/shared_rt_stage/raytrace.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
 		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
 		raychit_shader.m_uniform_from_set_and_binding.at({ 2, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
@@ -29,16 +29,16 @@ struct PrimitivePathTracer
 		raychit_shader.m_uniform_from_set_and_binding.at({ 4, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
 		raychit_shader.m_uniform_from_set_and_binding.at({ 5, 0 })->m_num_descriptors = 1;
 		raychit_shader.m_uniform_from_set_and_binding.at({ 6, 0 })->m_num_descriptors = scene.m_images_cache->m_images.size();
-		Shader rayahit_shader("shaders/renderer/primpath/raytrace.rahit",
+		Shader rayahit_shader("shaders/shared_rt_stage/raytrace.rahit",
 							  vk::ShaderStageFlagBits::eAnyHitNV);
 		rayahit_shader.m_uniform_from_set_and_binding.at({ 2, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
 		rayahit_shader.m_uniform_from_set_and_binding.at({ 3, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
 		rayahit_shader.m_uniform_from_set_and_binding.at({ 4, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
 		rayahit_shader.m_uniform_from_set_and_binding.at({ 5, 0 })->m_num_descriptors = 1;
 		rayahit_shader.m_uniform_from_set_and_binding.at({ 6, 0 })->m_num_descriptors = scene.m_images_cache->m_images.size();
-		Shader shadow_raymiss_shader("shaders/renderer/primpath/rayshadow.rmiss",
+		Shader shadow_raymiss_shader("shaders/shared_rt_stage/rayshadow.rmiss",
 									 vk::ShaderStageFlagBits::eMissNV);
-		Shader raymiss_shader("shaders/renderer/primpath/raytrace.rmiss",
+		Shader raymiss_shader("shaders/shared_rt_stage/raytrace.rmiss",
 							  vk::ShaderStageFlagBits::eMissNV);
 		RayTracingPipeline rt_pipeline({ &raygen_shader,
 										 &raychit_shader,

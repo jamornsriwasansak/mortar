@@ -3,12 +3,11 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-#include "renderer/primpath/hitpayload.glsl"
-#include "common/material.glsl"
-#include "common/traceray.glsl"
+#include "common/ray.glsl"
+#include "shared_rt_stage/hitpayload.glsl"
 #include "shared.glsl.h"
 
-layout(location = RAY_PRD_LOCATION) rayPayloadInNV PrimitivePathTracerPayload prd;
+layout(location = RAY_PRD_LOCATION) rayPayloadInNV HitPayload prd;
 hitAttributeNV vec3 attribs;
 
 layout(set = 1, binding = 0) buffer Face
