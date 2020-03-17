@@ -219,13 +219,23 @@ struct TriangleMeshStorage
 		{
 			const auto & tmat = tmaterials[i];
 
-			const auto vec3_from_float3 = [=](const float values[]) -> vec3
+			// convert float array to vec3
+			const auto vec3_from_float3 = [](const float values[]) -> vec3
 			{
 				vec3 result;
 				result.x = values[0];
 				result.y = values[1];
 				result.z = values[2];
 				return result;
+			};
+
+			// if roughness is not set, we convert from exponent instead.
+			const auto fetch_roughness = [](const tinyobj::material_t & tmat) -> float
+			{
+				if (tmat.roughness > 0.0f) { return tmat.roughness; }
+				// the conversion is borrowed from Brian Karis, http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+				// power = 2 / roughness - 2
+				return 2.0f / (tmat.shininess + 2.0f);
 			};
 
 			Material material = Material_create();
@@ -238,7 +248,7 @@ struct TriangleMeshStorage
 													 tmat.specular_texname,
 													 path.parent_path(),
 													 false);
-			const auto roughness = get_encoded_color(tmat.roughness,
+			const auto roughness = get_encoded_color(fetch_roughness(tmat),
 													 tmat.roughness_texname,
 													 path.parent_path(),
 													 false);

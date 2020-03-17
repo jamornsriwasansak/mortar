@@ -68,40 +68,32 @@ vec3 li(Ray ray,
             // fetch emissive value from envmap
             vec2 latlong_texcoord = latlong_texcoord_from_direction(ray.m_direction);
             vec3 emission = texture(envmap, latlong_texcoord).xyz;
-			radiance += importance * emission;
+			radiance += importance * vec3(0.0f);
 			break;
 		}
 
 		// compute position
 		const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
 
-		// generate orthonormal basis and get local incoming direction
-		Onb onb = Onb_create(prd.m_normal);
+        // add radiance
+        radiance += importance * prd.m_material.m_emission * 100.0f;
 
 		// generate outgoing direction
+		Onb onb = Onb_create(prd.m_normal);
 		vec3 local_outgoing;
-        vec3 bsdf_weight;
-        Lambert_sample(local_outgoing,
-                       bsdf_weight,
-                       prd.m_material,
-                       Onb_to_local(onb, -ray.m_direction),
-                       rand2());
-
-        /*
-		Ggx_sample(local_outgoing,
-				   bsdf_weight,
-				   prd.m_material,
-				   Onb_to_local(onb, -ray.m_direction),
-				   rand2());
-                       */
-
+        vec3 bsdf_cos_contrib;
+		const bool sample_success = Material_cos_sample(local_outgoing,
+                                                        bsdf_cos_contrib,
+                                                        prd.m_material,
+                                                        Onb_to_local(onb, -ray.m_direction),
+                                                        rand2());
 		const vec3 outgoing = Onb_to_world(onb, local_outgoing);
 
-        // add radiance
-        radiance += importance * prd.m_material.m_emission;
+        // break if could not sample
+        if (!sample_success) { break; }
 
         // update importance for the next bounce
-        importance *= bsdf_weight;
+        importance *= bsdf_cos_contrib;
 
         // update ray
         ray.m_origin = position;
