@@ -8,7 +8,7 @@ A physically-based renderer utilizing vulkan raytracing api.
 In its current early stage, it supports:
 * Diffuse material
 * IBL environment map
-* Alpha-testing (alpha values must be defined in alpha channel of diffuse textures with PNG format)
+* Alpha-testing
 * Ambient occlusion Integrator
 * Primitive path tracer
 * Low discreprancy sampler with blue-noise property from [Heitz et al. 2019](https://eheitzresearch.wordpress.com/762-2/)
