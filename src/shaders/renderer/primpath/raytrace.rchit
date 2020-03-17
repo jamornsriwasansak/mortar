@@ -62,8 +62,13 @@ void main()
     const vec4 nv2 = nvs_arrays[gl_InstanceID].normal_and_vs[index2];
     const vec4 nv = mix_barycoord(attribs.xy, nv0, nv1, nv2);
 
+    // correct normals and make sure normal share the same direction as incoming vector (= -ray.m_direction)
+    vec3 gnormal = normalize(cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz));
+    vec3 snormal = normalize(nv.xyz);
+    gnormal = dot(gnormal, -gl_WorldRayDirectionNV) >= 0.0f ? gnormal : -gnormal;
+    snormal = dot(gnormal, snormal) >= 0.0f ? snormal : -snormal;
+
     // organize the values
-    const vec3 normal = normalize(nv.xyz);
     const vec3 position = pu.xyz;
     const vec2 texcoord = vec2(pu.w, nv.w);
 
@@ -74,5 +79,6 @@ void main()
 
     prd.m_t = gl_HitTNV;
     prd.m_material = material;
-    prd.m_normal = normal;
+    prd.m_snormal = snormal;
+    prd.m_gnormal = gnormal;
 }

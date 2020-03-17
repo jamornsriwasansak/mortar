@@ -79,7 +79,7 @@ vec3 li(Ray ray,
         radiance += importance * prd.m_material.m_emission;
 
 		// generate outgoing direction
-		Onb onb = Onb_create(prd.m_normal);
+		Onb onb = Onb_create(prd.m_snormal);
 		vec3 local_outgoing;
         vec3 bsdf_cos_contrib;
 		const bool sample_success = Material_cos_sample(local_outgoing,
