@@ -62,6 +62,8 @@ vec3 li(Ray ray,
         // trace ray
 		trace_ray(ray, tlas, 0);
 
+        const vec3 incoming = -ray.m_direction;
+
 		// determine whether we should temrinate or not
 		if (prd.m_t < 0)
 		{
@@ -81,11 +83,12 @@ vec3 li(Ray ray,
 		// generate outgoing direction
 		Onb onb = Onb_create(prd.m_snormal);
 		vec3 local_outgoing;
-        vec3 bsdf_cos_contrib;
+        vec3 brdf_cos_contrib, btdf_cos_contrib;
 		const bool sample_success = Material_cos_sample(local_outgoing,
-                                                        bsdf_cos_contrib,
+                                                        brdf_cos_contrib,
+                                                        btdf_cos_contrib,
                                                         prd.m_material,
-                                                        Onb_to_local(onb, -ray.m_direction),
+                                                        Onb_to_local(onb, incoming),
                                                         rand2());
 		const vec3 outgoing = Onb_to_world(onb, local_outgoing);
 
@@ -93,7 +96,15 @@ vec3 li(Ray ray,
         if (!sample_success) { break; }
 
         // update importance for the next bounce
-        importance *= bsdf_cos_contrib;
+        // and at the same time, dealing with light leak (veach thesis page 158, figure 5.6)
+        if (dot(outgoing, prd.m_gnormal) * dot(incoming, prd.m_gnormal) > 0.0f)
+        {
+            importance *= brdf_cos_contrib;
+        }
+        else
+        {
+            importance *= btdf_cos_contrib;
+        }
 
         // update ray
         ray.m_origin = position;

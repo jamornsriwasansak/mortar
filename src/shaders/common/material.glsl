@@ -28,7 +28,8 @@ Diffuse_cos_sample(out vec3 outgoing,
 				   const vec2 samples)
 {
 	outgoing = cosine_hemisphere_from_square(samples);
-	bsdf_cos_contrib = material.m_diffuse_refl;// *step(0.0f, incoming.y);
+	bsdf_cos_contrib = material.m_diffuse_refl;
+	bsdf_cos_contrib *= step(0.0f, incoming.y);
 	return true;
 }
 
@@ -40,6 +41,8 @@ Diffuse_eval(out vec3 bsdf_val,
 			 const vec3 outgoing)
 {
 	bsdf_val = material.m_diffuse_refl * M_1_PI;
+	bsdf_val *= step(0.0f, incoming.y);
+	bsdf_val *= step(0.0f, outgoing.y);
 	pdf = outgoing.y * M_1_PI;
 }
 
@@ -151,6 +154,8 @@ Ggx_cos_sample(out vec3 outgoing,
 		// pdf						=			d(h) * g_1(v)          / (4 * dot(v, n))
 		// f_r * dot(l, n) / pdf	= f(v, h) 				  * g_1(l)
 		bsdf_cos_contrib = material.m_spec_refl * vec3(Microfacet_g1(outgoing, h, alpha));
+		bsdf_cos_contrib *= step(0.0f, incoming.y);
+		bsdf_cos_contrib *= step(0.0f, outgoing.y);
 	}
 	return sample_success;
 }
@@ -182,6 +187,8 @@ Ggx_eval(out vec3 bsdf_val,
 
 	// brdf = Reflectance * G * D * F / (4 * dot(v, n) * dot(l, n))
 	bsdf_val = material.m_spec_refl * g_term * d_term / (4.0f * incoming.y * outgoing.y);
+	bsdf_val *= step(0.0f, incoming.y);
+	bsdf_val *= step(0.0f, outgoing.y);
 }
 
 //
@@ -190,7 +197,8 @@ Ggx_eval(out vec3 bsdf_val,
 
 bool
 Material_cos_sample(out vec3 outgoing,
-					out vec3 bsdf_cos_contrib,
+					out vec3 brdf_cos_contrib,
+					out vec3 btdf_cos_contrib,
 					const Material material,
 					const vec3 incoming,
 					vec2 samples)
@@ -243,7 +251,8 @@ Material_cos_sample(out vec3 outgoing,
 	ggx_pdf *= ggx_cprob;
 
 	// use mis to compute bsdf_weight
-	bsdf_cos_contrib = (diffuse_bsdf_val + ggx_bsdf_val) / (diffuse_pdf + ggx_pdf) * outgoing.y;
+	brdf_cos_contrib = (diffuse_bsdf_val + ggx_bsdf_val) / (diffuse_pdf + ggx_pdf) * outgoing.y;
+	btdf_cos_contrib = vec3(0.0f);
 
 	return true;
 }
