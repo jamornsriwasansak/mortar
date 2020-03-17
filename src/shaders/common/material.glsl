@@ -103,18 +103,19 @@ Microfacet_lambda(const vec3 w, const vec2 alpha)
 }
 
 float
-Microfacet_g1(const vec3 w, const vec2 alpha)
+Microfacet_g1(const vec3 w, const vec3 h, const vec2 alpha)
 {
+	if (dot(w, h) < 0.0f) { return 0.0f; }
 	return 1.0f / (1.0f + Microfacet_lambda(w, alpha));
 }
 
 // G term - separable masking shadowing function 
 float
-Microfacet_g2(const vec3 v, const vec3 l, const vec2 alpha)
+Microfacet_g2(const vec3 v, const vec3 l, const vec3 h, const vec2 alpha)
 {
 	// Separable Masking and Shadowing
 	// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs - equation 98
-	return Microfacet_g1(v, alpha) * Microfacet_g1(l, alpha);
+	return Microfacet_g1(v, h, alpha) * Microfacet_g1(l, h, alpha);
 }
 
 // D term - GGX distribution
@@ -154,7 +155,7 @@ Ggx_cos_sample(out vec3 outgoing,
 		// f_r * dot(l, n)			= f(v, h) * d(h) * g_1(v) * g_1(l) / (4 * dot(v, n))
 		// pdf						=			d(h) * g_1(v)          / (4 * dot(v, n))
 		// f_r * dot(l, n) / pdf	= f(v, h) 				  * g_1(l)
-		bsdf_cos_contrib = material.m_spec_refl * vec3(Microfacet_g1(outgoing, alpha));
+		bsdf_cos_contrib = material.m_spec_refl * vec3(Microfacet_g1(outgoing, h, alpha));
 	}
 	return sample_success;
 }
@@ -170,7 +171,7 @@ Ggx_cos_sampling_pdf(const Material material,
 	// pdf = d(h) * g_1(v) / (4 * dot(v, n))
 	const vec3 h = normalize(incoming + outgoing);
 	const float d_term = Microfacet_d(h, alpha);
-	const float g1_term = Microfacet_g1(incoming, alpha);
+	const float g1_term = Microfacet_g1(incoming, h, alpha);
 	const float denominator = 4.0f * incoming.y;
 
 	return d_term * g1_term / denominator;
@@ -186,7 +187,7 @@ Ggx_eval(const Material material,
 	const vec3 h = normalize(incoming + outgoing);
 	
 	// compute g term and d term
-	const float g_term = Microfacet_g2(incoming, outgoing, alpha);
+	const float g_term = Microfacet_g2(incoming, outgoing, h, alpha);
 	const float d_term = Microfacet_d(h, alpha);
 
 	return material.m_spec_refl * g_term * d_term / (4.0f * incoming.y * outgoing.y);
