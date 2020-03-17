@@ -68,7 +68,7 @@ vec3 li(Ray ray,
             // fetch emissive value from envmap
             vec2 latlong_texcoord = latlong_texcoord_from_direction(ray.m_direction);
             vec3 emission = texture(envmap, latlong_texcoord).xyz;
-			radiance += importance * vec3(0.0f);
+			radiance += importance * emission;
 			break;
 		}
 
