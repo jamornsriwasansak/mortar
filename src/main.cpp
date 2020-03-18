@@ -18,9 +18,9 @@ main()
 
 	// setup the scene
 	Scene scene;
-	//scene.add_mesh("bistro/exterior/exterior_fixed.obj", true);
-	//scene.add_mesh("test/mitsuba-sphere2.obj", true);
-	scene.add_mesh("sponza/sponza.obj", true);
+	//scene.add_mesh("bistro/exterior/exterior.obj", true);
+	scene.add_mesh("test/mitsuba-sphere.obj", true);
+	//scene.add_mesh("sponza/sponza.obj", true);
 	scene.build_rt();
 
 	// setup the camera

@@ -139,6 +139,7 @@ main()
     // estimate the radiance and accumulate it.
     vec3 estimated_radiance = li(initial_ray, int(num_spp));
 
+    // accumulate the sample
     accumulated_radiance = ((accumulated_radiance * num_spp) + estimated_radiance) / (num_spp + 1.0f);
 
 	// determine whether we should temrinate or not

@@ -2,6 +2,10 @@
 #include "shared.glsl.h"
 #include "mapping.glsl"
 
+// note all materials here are "two-sided"
+// diffuse and Ggx_brdf share the same material regardless of the side of the wall.
+// Ggx_btdf, on the other hand, will behave based on the incoming direction
+
 float
 sqr(float v)
 {
@@ -28,22 +32,23 @@ Diffuse_cos_sample(out vec3 outgoing,
 				   const vec2 samples)
 {
 	outgoing = cosine_hemisphere_from_square(samples);
+	// flip outgoing based on incoming direction
+	outgoing.y *= sign(incoming.y);
 	bsdf_cos_contrib = material.m_diffuse_refl;
-	bsdf_cos_contrib *= step(0.0f, incoming.y);
 	return true;
 }
 
-void
+bool
 Diffuse_eval(out vec3 bsdf_val,
 			 out float pdf,
 			 const Material material,
 			 const vec3 incoming,
 			 const vec3 outgoing)
 {
+	if (incoming.y * outgoing.y < 0.0f) return false;
 	bsdf_val = material.m_diffuse_refl * M_1_PI;
-	bsdf_val *= step(0.0f, incoming.y);
-	bsdf_val *= step(0.0f, outgoing.y);
-	pdf = outgoing.y * M_1_PI;
+	pdf = abs(outgoing.y) * M_1_PI;
+	return true;
 }
 
 //
@@ -101,19 +106,18 @@ Microfacet_lambda(const vec3 w, const vec2 alpha)
 }
 
 float
-Microfacet_g1(const vec3 w, const vec3 h, const vec2 alpha)
+Microfacet_g1(const vec3 w, const vec2 alpha)
 {
-	if (dot(w, h) < 0.0f) { return 0.0f; }
 	return 1.0f / (1.0f + Microfacet_lambda(w, alpha));
 }
 
 // G term - separable masking shadowing function 
 float
-Microfacet_g2(const vec3 v, const vec3 l, const vec3 h, const vec2 alpha)
+Microfacet_g2(const vec3 v, const vec3 l, const vec2 alpha)
 {
 	// Separable Masking and Shadowing
 	// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs - equation 98
-	return Microfacet_g1(v, h, alpha) * Microfacet_g1(l, h, alpha);
+	return Microfacet_g1(v, alpha) * Microfacet_g1(l, alpha);
 }
 
 // D term - GGX distribution
@@ -127,21 +131,25 @@ Microfacet_d(const vec3 h,
 }
 
 bool
-Ggx_cos_sample(out vec3 outgoing,
-			   out vec3 bsdf_cos_contrib,
-			   const Material material,
-			   const vec3 incoming,
-			   const vec2 samples)
+Ggx_reflect_cos_sample(out vec3 outgoing,
+					   out vec3 bsdf_cos_contrib,
+					   const Material material,
+					   const vec3 incoming,
+					   const vec2 samples)
 {
+	// if side is positive, indicates upper hemisphere.
+	// if side is negative, indicates lower hemisphere.
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
 
 	vec3 h;
 	const bool sample_success = Microfacet_sampleGGXVNDF(h,
-														 incoming,
+														 incoming * sign(incoming.y),
 														 alpha,
 														 samples.x,
 														 samples.y);
+	h *= sign(incoming.y);
+
 	if (sample_success)
 	{
 		outgoing = reflect(-incoming, h);
@@ -153,42 +161,39 @@ Ggx_cos_sample(out vec3 outgoing,
 		// f_r * dot(l, n)			= f(v, h) * d(h) * g_1(v) * g_1(l) / (4 * dot(v, n))
 		// pdf						=			d(h) * g_1(v)          / (4 * dot(v, n))
 		// f_r * dot(l, n) / pdf	= f(v, h) 				  * g_1(l)
-		bsdf_cos_contrib = material.m_spec_refl * vec3(Microfacet_g1(outgoing, h, alpha));
-		bsdf_cos_contrib *= step(0.0f, incoming.y);
-		bsdf_cos_contrib *= step(0.0f, outgoing.y);
+		//bsdf_cos_contrib = material.m_spec_refl * vec3(Microfacet_g1(outgoing, alpha));
+		bsdf_cos_contrib = vec3(1.0f);
 	}
-	return sample_success;
+	return sample_success && (outgoing.y * incoming.y > 0.0f);
 }
 
-void
-Ggx_eval(out vec3 bsdf_val,
-		 out float pdf,
-		 const Material material,
-		 const vec3 incoming,
-		 const vec3 outgoing)
+bool
+Ggx_reflect_eval(out vec3 bsdf_val,
+				 out float pdf,
+				 const Material material,
+				 const vec3 incoming,
+				 const vec3 outgoing)
 {
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
 	const vec3 h = normalize(incoming + outgoing);
 	if (any(isnan(h)))
 	{
-		bsdf_val = vec3(0.0f);
-		pdf = 0.0f;
-		return;
+		return false;
 	}
 
 	const float d_term = Microfacet_d(h, alpha);
-	const float g1_v_term = Microfacet_g1(incoming, h, alpha);
-	const float g1_l_term = Microfacet_g1(outgoing, h, alpha);
+	const float g1_v_term = Microfacet_g1(incoming, alpha);
+	const float g1_l_term = Microfacet_g1(outgoing, alpha);
 	const float g_term = g1_v_term * g1_l_term;
 
 	// pdf = d(h) * g_1(v) / (4 * dot(v, n))
-	pdf = d_term * g1_v_term / (4.0f * incoming.y);
+	pdf = d_term * g1_v_term / (4.0f * abs(incoming.y));
 
 	// brdf = Reflectance * G * D * F / (4 * dot(v, n) * dot(l, n))
 	bsdf_val = material.m_spec_refl * g_term * d_term / (4.0f * incoming.y * outgoing.y);
-	bsdf_val *= step(0.0f, incoming.y);
-	bsdf_val *= step(0.0f, outgoing.y);
+
+	return true && (outgoing.y * incoming.y > 0.0f);
 }
 
 //
@@ -234,30 +239,41 @@ Material_cos_sample(out vec3 outgoing,
 		samples.x = (samples.x - diffuse_cprob) / ggx_cprob;
 
 		// choose ggx
-		const bool sample_success = Ggx_cos_sample(outgoing, ggx_bsdf_weight, material, incoming, samples);
+		const bool sample_success = Ggx_reflect_cos_sample(outgoing, ggx_bsdf_weight, material, incoming, samples);
 		if (!sample_success) { return false; }
 	}
 
+	// note: SUM(f_i(v, l)) / SUM(p_i(v, l)) corresponded to applying MIS on top of bsdf sampling techniques
+	// thus, reduces level of noise.
+	vec3 brdf_cos_val_sum = vec3(0.0f);
+	float brdf_pdf_sum = 0.0f;
+
 	// eval diffuse
-	vec3 diffuse_bsdf_val = vec3(0.0f);
-	float diffuse_pdf = 0.0f;
 	if (diffuse_weight > 0.0f)
 	{
-		Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing);
-		diffuse_pdf *= diffuse_cprob;
+		vec3 diffuse_bsdf_val;
+		float diffuse_pdf;
+		if (Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing))
+		{
+			brdf_cos_val_sum += diffuse_bsdf_val;
+			brdf_pdf_sum += diffuse_pdf * diffuse_cprob;
+		}
 	}
 
 	// eval ggx
-	vec3 ggx_bsdf_val = vec3(0.0f);
-	float ggx_pdf = 0.0f;
 	if (ggx_weight > 0.0f)
 	{
-		Ggx_eval(ggx_bsdf_val, ggx_pdf, material, incoming, outgoing);
-		ggx_pdf *= ggx_cprob;
+		vec3 ggx_bsdf_val;
+		float ggx_pdf;
+		if (Ggx_reflect_eval(ggx_bsdf_val, ggx_pdf, material, incoming, outgoing))
+		{
+			brdf_cos_val_sum += ggx_bsdf_val;
+			brdf_pdf_sum += ggx_pdf * ggx_cprob;
+		}
 	}
 
 	// use mis to compute bsdf_weight
-	brdf_cos_contrib = (diffuse_bsdf_val + ggx_bsdf_val) / (diffuse_pdf + ggx_pdf) * outgoing.y;
+	brdf_cos_contrib = brdf_pdf_sum <= 1e-5f ? vec3(0.0f) : brdf_cos_val_sum / brdf_pdf_sum * abs(outgoing.y);
 	btdf_cos_contrib = vec3(0.0f);
 
 	return true;

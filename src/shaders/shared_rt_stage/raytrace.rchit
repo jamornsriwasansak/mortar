@@ -64,7 +64,7 @@ void main()
     // correct normals and make sure normal share the same direction as incoming vector (= -ray.m_direction)
     vec3 gnormal = normalize(cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz));
     vec3 snormal = normalize(nv.xyz);
-    gnormal = dot(gnormal, -gl_WorldRayDirectionNV) >= 0.0f ? gnormal : -gnormal;
+    //gnormal = dot(gnormal, -gl_WorldRayDirectionNV) >= 0.0f ? gnormal : -gnormal;
     snormal = dot(gnormal, snormal) >= 0.0f ? snormal : -snormal;
 
     // organize the values
