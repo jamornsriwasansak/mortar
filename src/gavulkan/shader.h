@@ -63,7 +63,7 @@ struct Shader
 		std::vector<uint32_t> shader_code;
 		compile_src(&shader_string,
 					&shader_code,
-					"shader_src",
+					shader_path.string(),
 					shader_stage,
 					shader_path,
 					true);
@@ -565,7 +565,8 @@ private:
 							   &preprocessed_source,
 							   includer))
 		{
-			THROW("glslang error(log):\n" + std::string(shader.getInfoLog()) +
+			THROW(source_name + "\n" +
+				  "glslang error(log):\n" + std::string(shader.getInfoLog()) +
 				  "glslang error(debug log):\n" + std::string(shader.getInfoDebugLog()));
 		}
 		const char * prep_source_c_str = preprocessed_source.c_str();
@@ -577,7 +578,8 @@ private:
 						  true,
 						  esh_messages))
 		{
-			THROW("glslang error(log):\n" + std::string(shader.getInfoLog()) +
+			THROW(source_name + "\n" +
+				  "glslang error(log):\n" + std::string(shader.getInfoLog()) +
 				  "glslang error(debug log):\n" + std::string(shader.getInfoDebugLog()));
 		}
 

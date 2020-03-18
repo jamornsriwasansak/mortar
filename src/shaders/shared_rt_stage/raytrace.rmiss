@@ -2,10 +2,10 @@
 #extension GL_NV_ray_tracing : require
 #extension GL_GOOGLE_include_directive : enable
 
-#include "renderer/primpath/hitpayload.glsl"
+#include "shared_rt_stage/hitpayload.glsl"
 #include "common/traceray.glsl"
 
-layout(location = RAY_PRD_LOCATION) rayPayloadInNV PrimitivePathTracerPayload prd;
+layout(location = RAY_PRD_LOCATION) rayPayloadInNV HitPayload prd;
 
 void main()
 {
