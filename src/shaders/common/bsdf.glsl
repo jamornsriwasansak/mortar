@@ -238,17 +238,23 @@ Material_cos_sample(out vec3 outgoing,
 		if (!sample_success) { return false; }
 	}
 
-	// eval both
-	vec3 diffuse_bsdf_val;
-	float diffuse_pdf;
-	Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing);
-	diffuse_pdf *= diffuse_cprob;
+	// eval diffuse
+	vec3 diffuse_bsdf_val = vec3(0.0f);
+	float diffuse_pdf = 0.0f;
+	if (diffuse_weight > 0.0f)
+	{
+		Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing);
+		diffuse_pdf *= diffuse_cprob;
+	}
 
-	// get ggx values
-	vec3 ggx_bsdf_val;
-	float ggx_pdf;
-	Ggx_eval(ggx_bsdf_val, ggx_pdf, material, incoming, outgoing);
-	ggx_pdf *= ggx_cprob;
+	// eval ggx
+	vec3 ggx_bsdf_val = vec3(0.0f);
+	float ggx_pdf = 0.0f;
+	if (ggx_weight > 0.0f)
+	{
+		Ggx_eval(ggx_bsdf_val, ggx_pdf, material, incoming, outgoing);
+		ggx_pdf *= ggx_cprob;
+	}
 
 	// use mis to compute bsdf_weight
 	brdf_cos_contrib = (diffuse_bsdf_val + ggx_bsdf_val) / (diffuse_pdf + ggx_pdf) * outgoing.y;
