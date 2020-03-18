@@ -23,6 +23,8 @@ layout(binding = 3, set = 0) uniform sampler2D envmap;
 layout(location = RAY_PRD_LOCATION) rayPayloadNV PrimitivePathTracerPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
 
+// layout 1 - 6 are used for interpreting hit location
+
 // use bluenoise rng for rendering
 //#define USE_PCG
 #define USE_BLUE_RAND

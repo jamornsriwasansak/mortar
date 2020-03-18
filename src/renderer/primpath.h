@@ -19,7 +19,7 @@ struct PrimitivePathTracer
 	create_primitive_path_tracer_pipeline(const Scene & scene)
 	{
 		// create rtao pipeline
-		Shader raygen_shader("shaders/renderer/primpath/raytrace.rgen",
+		Shader raygen_shader("shaders/renderer/primpath/primpath.rgen",
 							 vk::ShaderStageFlagBits::eRaygenNV);
 		Shader raychit_shader("shaders/shared_rt_stage/raytrace.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
