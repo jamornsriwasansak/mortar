@@ -45,7 +45,7 @@ Diffuse_eval(out vec3 bsdf_val,
 			 const vec3 incoming,
 			 const vec3 outgoing)
 {
-	if (incoming.y * outgoing.y < 0.0f) return false;
+	if (incoming.y * outgoing.y <= 0.0f) return false;
 	bsdf_val = material.m_diffuse_refl * M_1_PI;
 	pdf = abs(outgoing.y) * M_1_PI;
 	return true;

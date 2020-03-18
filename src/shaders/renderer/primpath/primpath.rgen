@@ -84,29 +84,32 @@ vec3 li(Ray ray,
 
 		// generate outgoing direction
 		Onb onb = Onb_create(prd.m_snormal);
+        const vec3 local_incoming = Onb_to_local(onb, incoming);
 		vec3 local_outgoing;
         vec3 brdf_cos_contrib, btdf_cos_contrib;
 		const bool sample_success = Material_cos_sample(local_outgoing,
                                                         brdf_cos_contrib,
                                                         btdf_cos_contrib,
                                                         prd.m_material,
-                                                        Onb_to_local(onb, incoming),
+                                                        local_incoming,
                                                         rand2());
 		const vec3 outgoing = Onb_to_world(onb, local_outgoing);
 
         // break if could not sample
         if (!sample_success) { break; }
 
-        // update importance for the next bounce
-        // and at the same time, dealing with light leak (veach thesis page 158, figure 5.6)
-        if (dot(outgoing, prd.m_gnormal) * dot(incoming, prd.m_gnormal) > 0.0f)
+        // prevent light leak but introduce black fringe
+        if (local_outgoing.y * dot(outgoing, prd.m_gnormal) < 0.0f || local_incoming.y * dot(incoming, prd.m_gnormal) < 0.0f) { break; }
+
+        // update importance for the next bounce (veach thesis page 158, figure 5.6)
+        if (local_incoming.y * local_outgoing.y > 0.0f)
         {
-            importance *= brdf_cos_contrib;
+			importance *= brdf_cos_contrib;
         }
         else
         {
-            importance *= btdf_cos_contrib;
-        }
+			importance *= btdf_cos_contrib;
+		}
 
         // update ray
         ray.m_origin = position;
