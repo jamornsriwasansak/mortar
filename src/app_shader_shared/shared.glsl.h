@@ -14,22 +14,32 @@ struct Material
     float m_roughness;
     //
     vec3 m_spec_refl;
-    float m_sheen;
+    float m_ior;
     //
     vec3 m_emission;
     int m_flags;
+    //
+    vec3 m_spec_trans;
+    float m_padding;
 };
 
 Material
 Material_create()
 {
     Material result;
+
     result.m_diffuse_refl = vec3(0.0f);
     result.m_roughness = 0.0f;
+    //
     result.m_spec_refl = vec3(0.0f);
-    result.m_sheen = 0.0f;
+    result.m_ior = 0.0f;
+    //
     result.m_emission = vec3(0.0f);
     result.m_flags = MATERIAL_FLAG_IS_OPAQUE;
+    //
+    result.m_spec_trans = vec3(0.0f);
+    result.m_padding = 0.0f;
+
     return result;
 }
 
@@ -41,10 +51,12 @@ Material_create()
 	MAT.m_roughness = roughness_tex_index >= 0 ? texture(TEXTURES[roughness_tex_index], UV).x : MAT.m_roughness; \
 	int spec_refl_tex_index = -int(MAT.m_spec_refl.x + 1); \
 	MAT.m_spec_refl = spec_refl_tex_index >= 0 ? texture(TEXTURES[spec_refl_tex_index], UV).xyz : MAT.m_spec_refl; \
-    int sheen_tex_index = -int(MAT.m_sheen + 1); \
-	MAT.m_sheen = sheen_tex_index >= 0 ? texture(TEXTURES[sheen_tex_index], UV).x : MAT.m_sheen; \
+    int ior_tex_index = -int(MAT.m_ior + 1); \
+	MAT.m_ior = ior_tex_index >= 0 ? texture(TEXTURES[ior_tex_index], UV).x : MAT.m_ior; \
 	int emission_tex_index = -int(MAT.m_emission.x + 1); \
 	MAT.m_emission = emission_tex_index >= 0 ? texture(TEXTURES[emission_tex_index], UV).xyz : MAT.m_emission; \
+    int spec_trans_index = -int(MAT.m_spec_trans.x + 1); \
+	MAT.m_spec_trans = spec_trans_index >= 0 ? texture(TEXTURES[spec_trans_index], UV).xyz : MAT.m_spec_trans; \
 }
 
 #endif
