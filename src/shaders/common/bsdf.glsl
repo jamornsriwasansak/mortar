@@ -135,7 +135,7 @@ vec3
 Microfacet_f_shlick(const vec3 f0,
 					const vec3 incoming)
 {
-	const float one_minus_cos = 1.0f - incoming.y;
+	const float one_minus_cos = 1.0f - abs(incoming.y);
 	const float exponential = sqr(sqr(one_minus_cos)) * one_minus_cos;
 	return mix(vec3(exponential), vec3(1.0f), f0);
 }
