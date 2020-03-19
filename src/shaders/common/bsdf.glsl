@@ -130,6 +130,16 @@ Microfacet_d(const vec3 h,
 	return M_1_PI / denominator;
 }
 
+// F term - shlick fresnel (for ggx_reflect)
+vec3
+Microfacet_f_shlick(const vec3 f0,
+					const vec3 incoming)
+{
+	const float one_minus_cos = 1.0f - incoming.y;
+	const float exponential = sqr(sqr(one_minus_cos)) * one_minus_cos;
+	return mix(vec3(exponential), vec3(1.0f), f0);
+}
+
 bool
 Ggx_reflect_cos_sample(out vec3 outgoing,
 					   out vec3 bsdf_cos_contrib,
@@ -137,8 +147,6 @@ Ggx_reflect_cos_sample(out vec3 outgoing,
 					   const vec3 incoming,
 					   const vec2 samples)
 {
-	// if side is positive, indicates upper hemisphere.
-	// if side is negative, indicates lower hemisphere.
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
 
@@ -161,8 +169,9 @@ Ggx_reflect_cos_sample(out vec3 outgoing,
 		// f_r * dot(l, n)			= f(v, h) * d(h) * g_1(v) * g_1(l) / (4 * dot(v, n))
 		// pdf						=			d(h) * g_1(v)          / (4 * dot(v, n))
 		// f_r * dot(l, n) / pdf	= f(v, h) 				  * g_1(l)
-		//bsdf_cos_contrib = material.m_spec_refl * vec3(Microfacet_g1(outgoing, alpha));
-		bsdf_cos_contrib = vec3(1.0f);
+		const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
+		const float g_term = Microfacet_g1(outgoing, alpha);
+		bsdf_cos_contrib = f_term * g_term;
 	}
 	return sample_success && (outgoing.y * incoming.y > 0.0f);
 }
@@ -186,12 +195,13 @@ Ggx_reflect_eval(out vec3 bsdf_val,
 	const float g1_v_term = Microfacet_g1(incoming, alpha);
 	const float g1_l_term = Microfacet_g1(outgoing, alpha);
 	const float g_term = g1_v_term * g1_l_term;
+	const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
 
 	// pdf = d(h) * g_1(v) / (4 * dot(v, n))
 	pdf = d_term * g1_v_term / (4.0f * abs(incoming.y));
 
-	// brdf = Reflectance * G * D * F / (4 * dot(v, n) * dot(l, n))
-	bsdf_val = material.m_spec_refl * g_term * d_term / (4.0f * incoming.y * outgoing.y);
+	// brdf = G * D * F / (4 * dot(v, n) * dot(l, n))
+	bsdf_val = g_term * d_term * f_term / (4.0f * incoming.y * outgoing.y);
 
 	return true && (outgoing.y * incoming.y > 0.0f);
 }
