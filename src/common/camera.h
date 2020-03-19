@@ -54,16 +54,17 @@ struct FpsCamera
 
 		auto & core = Core::Inst();
 
-		forward += glfwGetKey(core.m_glfw_window, GLFW_KEY_W) == GLFW_PRESS ? 1 : 0;
-		forward += glfwGetKey(core.m_glfw_window, GLFW_KEY_S) == GLFW_PRESS ? -1 : 0;
-		right += glfwGetKey(core.m_glfw_window, GLFW_KEY_D) == GLFW_PRESS ? 1 : 0;
-		right += glfwGetKey(core.m_glfw_window, GLFW_KEY_A) == GLFW_PRESS ? -1 : 0;
-		up += glfwGetKey(core.m_glfw_window, GLFW_KEY_SPACE) == GLFW_PRESS ? 1 : 0;
-		up += glfwGetKey(core.m_glfw_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ? -1 : 0;
+		forward += glfwGetKey(core.m_glfw_window, GLFW_KEY_W) == GLFW_PRESS ? 1.0f : 0.0f;
+		forward += glfwGetKey(core.m_glfw_window, GLFW_KEY_S) == GLFW_PRESS ? -1.0f : 0.0f;
+		right += glfwGetKey(core.m_glfw_window, GLFW_KEY_D) == GLFW_PRESS ? 1.0f : 0.0f;
+		right += glfwGetKey(core.m_glfw_window, GLFW_KEY_A) == GLFW_PRESS ? -1.0f : 0.0f;
+		up += glfwGetKey(core.m_glfw_window, GLFW_KEY_SPACE) == GLFW_PRESS ? 1.0f : 0.0f;
+		up += glfwGetKey(core.m_glfw_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ? -1.0f : 0.0f;
+		float boost = glfwGetKey(core.m_glfw_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
 
-		move_forward(forward * m_move_speed * frame_time);
-		move_right(right * m_move_speed * frame_time);
-		flyup(up * m_up_speed * frame_time);
+		move_forward(forward * m_move_speed * frame_time * boost);
+		move_right(right * m_move_speed * frame_time * boost);
+		flyup(up * m_up_speed * frame_time * boost);
 
 		// handle direction
 		dvec2 cursor_pos;

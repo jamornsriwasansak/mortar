@@ -19,8 +19,10 @@ main()
 	// setup the scene
 	Scene scene;
 	//scene.add_mesh("bistro/exterior/exterior.obj", true);
-	scene.add_mesh("test/mitsuba-sphere.obj", true);
+	//scene.add_mesh("test/mitsuba-sphere.obj", true);
 	//scene.add_mesh("sponza/sponza.obj", true);
+	scene.add_mesh("fireplace_room/fireplace_room.obj", true);
+	//scene.add_mesh("bunny_box/bunny_box.obj", true);
 	scene.build_rt();
 
 	// setup the camera
@@ -32,8 +34,8 @@ main()
 					 up,
 					 glm::radians(45.0f),
 					 float(Extent.width) / float(Extent.height));
-	camera.m_move_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.3f;
-	camera.m_up_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.3f;
+	camera.m_move_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.08f;
+	camera.m_up_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.08f;
 
 	// run renderer
 #if 0
