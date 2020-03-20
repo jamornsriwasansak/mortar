@@ -131,6 +131,7 @@ Microfacet_d(const vec3 h,
 }
 
 // F term - shlick fresnel (for ggx_reflect)
+// TODO:: change this to fresnel term for conductor
 vec3
 Microfacet_f_shlick(const vec3 f0,
 					const vec3 incoming)
@@ -161,12 +162,12 @@ Ggx_reflect_cos_sample(out vec3 outgoing,
 	if (sample_success)
 	{
 		outgoing = reflect(-incoming, h);
-		// f_r						= f(v, h) * d(h) * g_2(v, l) / (4 * dot(v, n) * dot(l, n))
-		// f_r * dot(l, n)			= f(v, h) * d(h) * g_1(v) * g_1(l) / (4 * dot(v, n))
-		// pdf						= 			d(h) * g_1(v)		   /      dot(v, n)  * jacobian
-		// pdf						=			d(h) * g_1(v)          / (4 * dot(v, n))
-		// f_r * dot(l, n) / pdf	= f(v, h) 				  * g_1(l)
-		// where reflection jacobian = 1 / 4 * dot(v, n)
+		// f_r						= f(i, h) * d(h) * g_2(i, o) / (4 * dot(i, n) * dot(o, n))
+		// f_r * dot(o, n)			= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n))
+		// pdf						= 			d(h) * g_1(i)		   /      dot(i, n)  * jacobian
+		// pdf						=			d(h) * g_1(i)          / (4 * dot(i, n))
+		// f_r * dot(o, n) / pdf	= f(i, h) 				  * g_1(o)
+		// where refoection jacobian = 1 / 4 * dot(i, n)
 		const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
 		const float g_term = Microfacet_g1(outgoing, alpha);
 		bsdf_cos_contrib = f_term * g_term;
@@ -192,9 +193,9 @@ Ggx_reflect_eval(out vec3 bsdf_val,
 	if (any(isnan(h))) { return false; }
 
 	const float d_term = Microfacet_d(h, alpha);
-	const float g1_v_term = Microfacet_g1(incoming, alpha);
-	const float g1_l_term = Microfacet_g1(outgoing, alpha);
-	const float g_term = g1_v_term * g1_l_term;
+	const float g1_i_term = Microfacet_g1(incoming, alpha);
+	const float g1_o_term = Microfacet_g1(outgoing, alpha);
+	const float g_term = g1_i_term * g1_o_term;
 	const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
 
 	// brdf = G * D * F / (4 * dot(v, n) * dot(l, n))
@@ -203,7 +204,7 @@ Ggx_reflect_eval(out vec3 bsdf_val,
 	// pdf = d(h) * g_1(v) * jacobian
 	// where reflection jacobian = 1 / 4 * dot(v, n)
 	const float jacobian = 1.0f / (4.0f * abs(incoming.y));
-	pdf = d_term * g1_v_term * jacobian;
+	pdf = d_term * g1_i_term * jacobian;
 
 	return true;
 }
@@ -218,12 +219,14 @@ Dielectric_fresnel(const float costhetai,
 	return 0.5f * (rhos * rhos + rhot * rhot);
 }
 
+// note: we borrow "future" samples to decide fresnel event
 bool
 Ggx_transmit_cos_sample(out vec3 outgoing,
 						out vec3 bsdf_cos_contrib,
 						const Material material,
 						const vec3 incoming,
-						const vec2 samples)
+						const vec2 samples,
+						inout vec2 next_samples)
 {
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
@@ -244,22 +247,41 @@ Ggx_transmit_cos_sample(out vec3 outgoing,
 
 		const float eta = incoming.y > 0 ? material.m_ior : 1.0f / material.m_ior;
 		outgoing = refract(normalize(-incoming), h, eta);
-		if (dot(outgoing, outgoing) < 1e-5f)
+		bsdf_cos_contrib = material.m_spec_trans;
+
+		const float f_term = clamp(Dielectric_fresnel(abs(incoming.y), abs(outgoing.y), eta), 0.0f, 1.0f);
+
+		// as we noticed the only difference eval between reflection and refraction is fresnel term
+
+		if (next_samples.x <= f_term)
 		{
+			// f_r						= f(i, h) * d(h) * g_2(i, o) / (4 * dot(i, n) * dot(o, n))
+			// f_r * dot(o, n)			= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n))
+			// pdf						= 			d(h) * g_1(i)		   /      dot(i, n)  * jacobian
+			// where refoection jacobian = 1 / 4 * dot(i, n)
+			// pdf						=			d(h) * g_1(i)          / (4 * dot(i, n))
+			// f_r * dot(o, n) / pdf	= f(i, h) 				  * g_1(o)
+
+			next_samples.x = next_samples.x / f_term;
 			outgoing = reflect(-incoming, h);
+			bsdf_cos_contrib *= f_term;
+		}
+		else
+		{
+			// f_t						= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * dot(o, n) * (dot(i, h) + eta * dot(o, h))^2)
+			// f_t * dot(o, n)			= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
+			// pdf						= dot(i, h)										* d(h) * g_1(i)	* jacobian													/ dot(i ,n)
+			// where jacobian(dh / di)	=			  dot(o, h) * eta^2											 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
+			// pdf						= dot(i, h) * dot(o, h)	* eta^2					* d(h) * g_1(i)			 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
+			// and since dot(i, h) = dot(o, h)
+			// f_t * dot(o, n) / pdf	=								  (1 - f(i, h))					* g_1(o)
+
+			next_samples.x = (next_samples.x - f_term) / (1.0f - f_term);
+			bsdf_cos_contrib *= 1.0f - f_term;
 		}
 
-		// f_r						= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * dot(o, n) * (dot(i, h) + eta * dot(o, h))^2)
-		// f_r * dot(o, n)			= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
-		// pdf						= dot(i, h)										* d(h) * g_1(i)	* jacobian													/ dot(i ,n)
-		// where jacobian(dh / di)	=			  dot(o, h) * eta^2											 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
-		// pdf						= dot(i, h) * dot(o, h)	* eta^2					* d(h) * g_1(i)			 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
-		// and since dot(i, h) = dot(o, h)
-		// f_r * dot(o, n) / pdf	=								  (1 - f(i, h))					* g_1(o)
-
-		const float f_term = Dielectric_fresnel(abs(incoming.y), abs(outgoing.y), eta);
 		const float g_term = Microfacet_g1(outgoing, alpha);
-		bsdf_cos_contrib = material.m_spec_trans * (1.0f - f_term) * g_term;
+		bsdf_cos_contrib *= g_term;
 	}
 
 	return sample_success;
@@ -272,36 +294,45 @@ Ggx_transmit_eval(out vec3 bsdf_val,
 				  const vec3 incoming,
 				  const vec3 outgoing)
 {
-	return false;
-	// make sure that incoming and outgoing are on the opposite side
-	if (incoming.y * outgoing.y >= 0.0f) return false;
-
 	// check whether it's entering or leaving
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
 	const float eta = incoming.y > 0 ? material.m_ior : 1.0f / material.m_ior;
-	const vec3 h = normalize(incoming + eta * outgoing);
-
+	vec3 h = normalize(incoming + eta * outgoing);
+	
 	// is rare but happens
 	if (any(isnan(h))) { return false; }
 
 	const float d_term = Microfacet_d(h, alpha);
-	const float g1_v_term = Microfacet_g1(incoming, alpha);
-	const float g1_l_term = Microfacet_g1(outgoing, alpha);
-	const float g_term = g1_v_term * g1_l_term;
-	const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
+	const float g1_i_term = Microfacet_g1(incoming, alpha);
+	const float g1_o_term = Microfacet_g1(outgoing, alpha);
+	const float g_term = g1_i_term * g1_o_term;
+	const float f_term = clamp(Dielectric_fresnel(abs(incoming.y), abs(outgoing.y), eta), 0.0f, 1.0f);
 
-	const float dot_v_h = abs(dot(incoming, h));
-	const float dot_l_h = abs(dot(outgoing, h));
-	const float numerator = dot_v_h * dot_l_h * sqr(eta) * g_term * d_term;
-	const float denominator = (incoming.y * outgoing.y) * sqr(dot_v_h + eta * dot_l_h);
+	bsdf_val = material.m_spec_trans;
 
-	// brdf numerator   = dot(v, h) * dot(l, h) * eta^2 * G * D * (1 - F)
-	// brdf denominator = dot(v, n) * dot(l, n) * (dot(v, h) + eta * dot(l, h))^2
-	bsdf_val = material.m_spec_refl * numerator / denominator;
-
-	// pdf = d(h) * g_1(v) * jacobian
-	// where refraction jacobian = eta^2 * dot(v, h) / (dot(v, h) + eta * dot(l, h))^2
+	if (incoming.y * outgoing.y > 0.0f)
+	{
+		// same side: must be reflection
+		// f_r						= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n) * dot(o, n))
+		// pdf						= f(i, h) * d(h) * g_1(i)          / (4 * dot(i, n))
+		if (d_term == 0.0f)
+		{
+			return false;
+		}
+		bsdf_val *= f_term * d_term * g1_i_term * g1_o_term / (4.0f * abs(incoming.y) * abs(outgoing.y));
+		pdf = f_term * d_term * g1_i_term / (4.0f * abs(incoming.y));
+	}
+	else
+	{
+		const float dot_i_h = abs(dot(incoming, h));
+		const float dot_o_h = abs(dot(outgoing, h));
+		// different side: must be refraction
+		// f_t						= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * dot(o, n) * (dot(i, h) + eta * dot(o, h))^2)
+		// pdf						= dot(i, h) * dot(o, h)	* eta^2					* d(h) * g_1(i)			 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
+		bsdf_val *= dot_i_h * dot_o_h * sqr(eta) * (1.0f - f_term) * d_term * g1_i_term * g1_o_term / (abs(incoming.y) * abs(outgoing.y) * sqr(dot_i_h + eta * dot_o_h));
+		pdf = dot_i_h * dot_o_h * sqr(eta) * d_term * g1_i_term / (abs(incoming.y) * sqr(dot_i_h + eta * dot_o_h));
+	}
 
 	return true;
 }
@@ -316,20 +347,13 @@ Material_cos_sample(out vec3 outgoing,
 					inout float ior,
 					const Material material,
 					const vec3 incoming,
-					vec2 samples)
+					vec2 samples,
+					inout vec2 next_samples)
 {
 	const float diffuse_weight = length(material.m_diffuse_refl);
 	const float ggx_refl_weight = length(material.m_spec_refl);
 	const float ggx_trans_weight = length(material.m_spec_trans);
-	if (ggx_trans_weight > 1e-5f)
-	{
-		return Ggx_transmit_cos_sample(outgoing,
-									   bsdf_cos_contrib,
-									   material,
-									   incoming,
-									   samples);
-	}
-	const float sum_weight = diffuse_weight + ggx_refl_weight;
+	const float sum_weight = diffuse_weight + ggx_refl_weight + ggx_trans_weight;
 
 	// break if both weight are too low.
 	// probably a light source or a completely dark material.
@@ -367,7 +391,7 @@ Material_cos_sample(out vec3 outgoing,
 
 		// sample using ggx transmission
 		vec3 ggx_trans_bsdf_contrib;
-		const bool sample_success = Ggx_transmit_cos_sample(outgoing, ggx_trans_bsdf_contrib, material, incoming, samples);
+		const bool sample_success = Ggx_transmit_cos_sample(outgoing, ggx_trans_bsdf_contrib, material, incoming, samples, next_samples);
 		if (!sample_success) { return false; }
 	}
 
@@ -401,7 +425,6 @@ Material_cos_sample(out vec3 outgoing,
 	}
 
 	// eval ggx transmission
-	/*
 	if (ggx_trans_cprob > 0.0f)
 	{
 		vec3 ggx_trans_bsdf_val;
@@ -412,10 +435,9 @@ Material_cos_sample(out vec3 outgoing,
 			bsdf_pdf_sum += ggx_trans_pdf * ggx_trans_cprob;
 		}
 	}
-	*/
 
 	// use mis to compute bsdf_weight
-	bsdf_cos_contrib = bsdf_pdf_sum <= 1e-5f ? vec3(0.0f) : bsdf_cos_val_sum / bsdf_pdf_sum * abs(outgoing.y);
+	bsdf_cos_contrib = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_cos_val_sum / bsdf_pdf_sum * abs(outgoing.y);
 
 	return true;
 }

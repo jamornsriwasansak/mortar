@@ -25,8 +25,8 @@ layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
 // layout 1 - 6 are used for interpreting hit location
 
 // use bluenoise rng for rendering
-//#define USE_PCG
-#define USE_BLUE_RAND
+#define USE_PCG
+//#define USE_BLUE_RAND
 #include "common/bluenoise.glsl"
 #include "common/pcg.glsl"
 DECLARE_BLUENOISE_LAYOUT(7,8,9)
@@ -57,8 +57,12 @@ generate_primary_ray()
 vec3 li(Ray ray,
         const int sample_index)
 {
+    float ior = 1.0f; // air IOR = 1.0
     vec3 radiance = vec3(0.0f);
     vec3 importance = vec3(1.0f);
+
+    vec2 samples = rand2();
+    vec2 next_samples = rand2();
 
     for (int i = 0; i < 3; i++)
     {
@@ -93,7 +97,8 @@ vec3 li(Ray ray,
                                                         ior, // inout
                                                         prd.m_material,
                                                         local_incoming,
-                                                        rand2());
+                                                        samples,
+                                                        next_samples);
 		const vec3 outgoing = Onb_to_world(onb, local_outgoing);
 
         // break if could not sample
@@ -107,6 +112,10 @@ vec3 li(Ray ray,
 
         // update importance for the next bounce (veach thesis page 158, figure 5.6)
 		importance *= bsdf_cos_contrib;
+
+        // update next_samples
+        samples = next_samples;
+        next_samples = rand2();
 
         // update ray
         ray.m_origin = position;
