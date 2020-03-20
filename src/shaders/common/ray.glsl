@@ -1,7 +1,7 @@
 #define RAY_PRD_LOCATION 0
 #define SHADOW_RAY_PRD_LOCATION 1
 
-#define DEFAULT_TMIN 0.001f
+#define DEFAULT_TMIN 0.0001f
 #define DEFAULT_TMAX 10000000.0f
 
 struct Ray
