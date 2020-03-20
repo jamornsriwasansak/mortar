@@ -37,7 +37,7 @@ DECLARE_BLUENOISE_LAYOUT(7,8,9)
 Ray
 generate_primary_ray()
 {
-    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + vec2(0.5);
+    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + rand2();
     const vec2 ndc = pixel_center / vec2(gl_LaunchSizeNV.xy);
     const vec2 d = ndc * 2 - 1;
 
