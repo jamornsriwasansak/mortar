@@ -260,8 +260,11 @@ struct TriangleMeshStorage
 			material.m_spec_refl = spec_refl.first;
 			material.m_roughness = roughness.first;
 			material.m_emission = emission.first;
-			material.m_ior = tmat.ior;
-			material.m_spec_trans = vec3_from_float3(tmat.transmittance);
+			if (tmat.illum == 7)
+			{
+				material.m_spec_trans = vec3(1.0f) - vec3_from_float3(tmat.transmittance);
+				material.m_ior = tmat.ior;
+			}
 			const bool is_opaque = diffuse_refl.second;
 			material.m_flags = is_opaque ? MATERIAL_FLAG_IS_OPAQUE : 0;
 			m_materials.push_back(material);

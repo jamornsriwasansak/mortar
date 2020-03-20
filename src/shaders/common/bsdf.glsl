@@ -162,13 +162,11 @@ Ggx_reflect_cos_sample(out vec3 outgoing,
 	{
 		outgoing = reflect(-incoming, h);
 		// f_r						= f(v, h) * d(h) * g_2(v, l) / (4 * dot(v, n) * dot(l, n))
-		// f_r * dot(l, n)			= f(v, h) * d(h) * g_2(v, l) / (4 * dot(v, n))
-		// pdf						= d_v(v, l, h) / (4 * dot(v, h))
-
-		// after simplification
 		// f_r * dot(l, n)			= f(v, h) * d(h) * g_1(v) * g_1(l) / (4 * dot(v, n))
+		// pdf						= 			d(h) * g_1(v)		   /      dot(v, n)  * jacobian
 		// pdf						=			d(h) * g_1(v)          / (4 * dot(v, n))
 		// f_r * dot(l, n) / pdf	= f(v, h) 				  * g_1(l)
+		// where reflection jacobian = 1 / 4 * dot(v, n)
 		const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
 		const float g_term = Microfacet_g1(outgoing, alpha);
 		bsdf_cos_contrib = f_term * g_term;
@@ -183,13 +181,15 @@ Ggx_reflect_eval(out vec3 bsdf_val,
 				 const vec3 incoming,
 				 const vec3 outgoing)
 {
+	// make sure we are evaluating the same side of hemisphere
+	if (outgoing.y * incoming.y <= 0.0f) { return false; }
+
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
 	const vec3 h = normalize(incoming + outgoing);
-	if (any(isnan(h)))
-	{
-		return false;
-	}
+
+	// is rare but happens
+	if (any(isnan(h))) { return false; }
 
 	const float d_term = Microfacet_d(h, alpha);
 	const float g1_v_term = Microfacet_g1(incoming, alpha);
@@ -197,13 +197,113 @@ Ggx_reflect_eval(out vec3 bsdf_val,
 	const float g_term = g1_v_term * g1_l_term;
 	const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
 
-	// pdf = d(h) * g_1(v) / (4 * dot(v, n))
-	pdf = d_term * g1_v_term / (4.0f * abs(incoming.y));
-
 	// brdf = G * D * F / (4 * dot(v, n) * dot(l, n))
 	bsdf_val = g_term * d_term * f_term / (4.0f * incoming.y * outgoing.y);
 
-	return true && (outgoing.y * incoming.y > 0.0f);
+	// pdf = d(h) * g_1(v) * jacobian
+	// where reflection jacobian = 1 / 4 * dot(v, n)
+	const float jacobian = 1.0f / (4.0f * abs(incoming.y));
+	pdf = d_term * g1_v_term * jacobian;
+
+	return true;
+}
+
+float
+Dielectric_fresnel(const float costhetai,
+				   const float costhetao,
+				   const float eta)
+{
+	float rhos = (costhetai - eta * costhetao) / (costhetai + eta * costhetao);
+	float rhot = (costhetao - eta * costhetai) / (costhetao + eta * costhetai);
+	return 0.5f * (rhos * rhos + rhot * rhot);
+}
+
+bool
+Ggx_transmit_cos_sample(out vec3 outgoing,
+						out vec3 bsdf_cos_contrib,
+						const Material material,
+						const vec3 incoming,
+						const vec2 samples)
+{
+	const vec2 roughness = vec2(material.m_roughness);
+	const vec2 alpha = sqr(roughness);
+
+	// sample half angle
+	vec3 h;
+	const bool sample_success = Microfacet_sampleGGXVNDF(h,
+														 incoming * sign(incoming.y),
+														 alpha,
+														 samples.x,
+														 samples.y);
+	h *= sign(incoming.y);
+
+	// check whether it's entering or leaving
+	if (sample_success)
+	{
+		if (h.y * incoming.y < 0.0f) { return false; }
+
+		const float eta = incoming.y > 0 ? material.m_ior : 1.0f / material.m_ior;
+		outgoing = refract(normalize(-incoming), h, eta);
+		if (dot(outgoing, outgoing) < 1e-5f)
+		{
+			outgoing = reflect(-incoming, h);
+		}
+
+		// f_r						= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * dot(o, n) * (dot(i, h) + eta * dot(o, h))^2)
+		// f_r * dot(o, n)			= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
+		// pdf						= dot(i, h)										* d(h) * g_1(i)	* jacobian													/ dot(i ,n)
+		// where jacobian(dh / di)	=			  dot(o, h) * eta^2											 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
+		// pdf						= dot(i, h) * dot(o, h)	* eta^2					* d(h) * g_1(i)			 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
+		// and since dot(i, h) = dot(o, h)
+		// f_r * dot(o, n) / pdf	=								  (1 - f(i, h))					* g_1(o)
+
+		const float f_term = Dielectric_fresnel(abs(incoming.y), abs(outgoing.y), eta);
+		const float g_term = Microfacet_g1(outgoing, alpha);
+		bsdf_cos_contrib = material.m_spec_trans * (1.0f - f_term) * g_term;
+	}
+
+	return sample_success;
+}
+
+bool
+Ggx_transmit_eval(out vec3 bsdf_val,
+				  out float pdf,
+				  const Material material,
+				  const vec3 incoming,
+				  const vec3 outgoing)
+{
+	return false;
+	// make sure that incoming and outgoing are on the opposite side
+	if (incoming.y * outgoing.y >= 0.0f) return false;
+
+	// check whether it's entering or leaving
+	const vec2 roughness = vec2(material.m_roughness);
+	const vec2 alpha = sqr(roughness);
+	const float eta = incoming.y > 0 ? material.m_ior : 1.0f / material.m_ior;
+	const vec3 h = normalize(incoming + eta * outgoing);
+
+	// is rare but happens
+	if (any(isnan(h))) { return false; }
+
+	const float d_term = Microfacet_d(h, alpha);
+	const float g1_v_term = Microfacet_g1(incoming, alpha);
+	const float g1_l_term = Microfacet_g1(outgoing, alpha);
+	const float g_term = g1_v_term * g1_l_term;
+	const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
+
+	const float dot_v_h = abs(dot(incoming, h));
+	const float dot_l_h = abs(dot(outgoing, h));
+	const float numerator = dot_v_h * dot_l_h * sqr(eta) * g_term * d_term;
+	const float denominator = (incoming.y * outgoing.y) * sqr(dot_v_h + eta * dot_l_h);
+
+	// brdf numerator   = dot(v, h) * dot(l, h) * eta^2 * G * D * (1 - F)
+	// brdf denominator = dot(v, n) * dot(l, n) * (dot(v, h) + eta * dot(l, h))^2
+	bsdf_val = material.m_spec_refl * numerator / denominator;
+
+	// pdf = d(h) * g_1(v) * jacobian
+	// where refraction jacobian = eta^2 * dot(v, h) / (dot(v, h) + eta * dot(l, h))^2
+
+	return true;
 }
 
 //
@@ -212,15 +312,24 @@ Ggx_reflect_eval(out vec3 bsdf_val,
 
 bool
 Material_cos_sample(out vec3 outgoing,
-					out vec3 brdf_cos_contrib,
-					out vec3 btdf_cos_contrib,
+					out vec3 bsdf_cos_contrib,
+					inout float ior,
 					const Material material,
 					const vec3 incoming,
 					vec2 samples)
 {
 	const float diffuse_weight = length(material.m_diffuse_refl);
-	const float ggx_weight = length(material.m_spec_refl);
-	const float sum_weight = diffuse_weight + ggx_weight;
+	const float ggx_refl_weight = length(material.m_spec_refl);
+	const float ggx_trans_weight = length(material.m_spec_trans);
+	if (ggx_trans_weight > 1e-5f)
+	{
+		return Ggx_transmit_cos_sample(outgoing,
+									   bsdf_cos_contrib,
+									   material,
+									   incoming,
+									   samples);
+	}
+	const float sum_weight = diffuse_weight + ggx_refl_weight;
 
 	// break if both weight are too low.
 	// probably a light source or a completely dark material.
@@ -228,63 +337,85 @@ Material_cos_sample(out vec3 outgoing,
 
 	// probability of choosing each material
 	const float diffuse_cprob = diffuse_weight / sum_weight;
-	const float ggx_cprob = ggx_weight / sum_weight;
+	const float ggx_refl_cprob = ggx_refl_weight / sum_weight;
+	const float ggx_trans_cprob = ggx_trans_weight / sum_weight;
 
-	if (samples.x < diffuse_cprob)
+	if (samples.x < diffuse_cprob) // r is in between [0, diffuse_cprob]
 	{
-		vec3 diffuse_bsdf_weight;
-
 		// scale sample
 		samples.x = samples.x / diffuse_cprob;
 
-		// choose diffuse
-		const bool sample_success = Diffuse_cos_sample(outgoing, diffuse_bsdf_weight, material, incoming, samples);
+		// sample using diffuse
+		vec3 diffuse_bsdf_contrib;
+		const bool sample_success = Diffuse_cos_sample(outgoing, diffuse_bsdf_contrib, material, incoming, samples);
 		if (!sample_success) { return false; }
 	}
-	else
+	else if (samples.x < diffuse_cprob + ggx_refl_cprob) // r is in between [diffuse_cprob, diffuse_cprob + ggx_refl_cprob]
 	{
-		vec3 ggx_bsdf_weight;
-
 		// scale sample
-		samples.x = (samples.x - diffuse_cprob) / ggx_cprob;
+		samples.x = (samples.x - diffuse_cprob) / ggx_refl_cprob;
 
-		// choose ggx
-		const bool sample_success = Ggx_reflect_cos_sample(outgoing, ggx_bsdf_weight, material, incoming, samples);
+		// sample using ggx reflection
+		vec3 ggx_refl_bsdf_contrib;
+		const bool sample_success = Ggx_reflect_cos_sample(outgoing, ggx_refl_bsdf_contrib, material, incoming, samples);
+		if (!sample_success) { return false; }
+	}
+	else // r is in between [diffuse_cprob + ggx_refl_cprob, 1.0]
+	{
+		// scale sample
+		samples.x = (samples.x - (diffuse_cprob + ggx_refl_cprob)) / ggx_trans_cprob;
+
+		// sample using ggx transmission
+		vec3 ggx_trans_bsdf_contrib;
+		const bool sample_success = Ggx_transmit_cos_sample(outgoing, ggx_trans_bsdf_contrib, material, incoming, samples);
 		if (!sample_success) { return false; }
 	}
 
 	// note: SUM(f_i(v, l)) / SUM(p_i(v, l)) corresponded to applying MIS on top of bsdf sampling techniques
 	// thus, reduces level of noise.
-	vec3 brdf_cos_val_sum = vec3(0.0f);
-	float brdf_pdf_sum = 0.0f;
+	vec3 bsdf_cos_val_sum = vec3(0.0f);
+	float bsdf_pdf_sum = 0.0f;
 
 	// eval diffuse
-	if (diffuse_weight > 0.0f)
+	if (diffuse_cprob > 0.0f)
 	{
 		vec3 diffuse_bsdf_val;
 		float diffuse_pdf;
 		if (Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing))
 		{
-			brdf_cos_val_sum += diffuse_bsdf_val;
-			brdf_pdf_sum += diffuse_pdf * diffuse_cprob;
+			bsdf_cos_val_sum += diffuse_bsdf_val;
+			bsdf_pdf_sum += diffuse_pdf * diffuse_cprob;
 		}
 	}
 
-	// eval ggx
-	if (ggx_weight > 0.0f)
+	// eval ggx reflection
+	if (ggx_refl_cprob > 0.0f)
 	{
-		vec3 ggx_bsdf_val;
-		float ggx_pdf;
-		if (Ggx_reflect_eval(ggx_bsdf_val, ggx_pdf, material, incoming, outgoing))
+		vec3 ggx_refl_bsdf_val;
+		float ggx_refl_pdf;
+		if (Ggx_reflect_eval(ggx_refl_bsdf_val, ggx_refl_pdf, material, incoming, outgoing))
 		{
-			brdf_cos_val_sum += ggx_bsdf_val;
-			brdf_pdf_sum += ggx_pdf * ggx_cprob;
+			bsdf_cos_val_sum += ggx_refl_bsdf_val;
+			bsdf_pdf_sum += ggx_refl_pdf * ggx_refl_cprob;
 		}
 	}
+
+	// eval ggx transmission
+	/*
+	if (ggx_trans_cprob > 0.0f)
+	{
+		vec3 ggx_trans_bsdf_val;
+		float ggx_trans_pdf;
+		if (Ggx_transmit_eval(ggx_trans_bsdf_val, ggx_trans_pdf, material, incoming, outgoing))
+		{
+			bsdf_cos_val_sum += ggx_trans_bsdf_val;
+			bsdf_pdf_sum += ggx_trans_pdf * ggx_trans_cprob;
+		}
+	}
+	*/
 
 	// use mis to compute bsdf_weight
-	brdf_cos_contrib = brdf_pdf_sum <= 1e-5f ? vec3(0.0f) : brdf_cos_val_sum / brdf_pdf_sum * abs(outgoing.y);
-	btdf_cos_contrib = vec3(0.0f);
+	bsdf_cos_contrib = bsdf_pdf_sum <= 1e-5f ? vec3(0.0f) : bsdf_cos_val_sum / bsdf_pdf_sum * abs(outgoing.y);
 
 	return true;
 }
