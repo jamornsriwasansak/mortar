@@ -5,7 +5,6 @@
 #include "shared_rt_stage/hitpayload.glsl"
 #include "common/onb.glsl"
 #include "common/traceray.glsl"
-#include "common/bsdf.glsl"
 
 layout(binding = 0, set = 0) uniform accelerationStructureNV tlas;
 layout(binding = 1, set = 0, rgba32f) uniform image2D image;
@@ -32,6 +31,8 @@ layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
 #include "common/pcg.glsl"
 DECLARE_BLUENOISE_LAYOUT(7,8,9)
 // not pcg
+
+#include "common/bsdf.glsl"
 
 Ray
 generate_primary_ray()
@@ -86,10 +87,10 @@ vec3 li(Ray ray,
 		Onb onb = Onb_create(prd.m_snormal);
         const vec3 local_incoming = Onb_to_local(onb, incoming);
 		vec3 local_outgoing;
-        vec3 brdf_cos_contrib, btdf_cos_contrib;
-		const bool sample_success = Material_cos_sample(local_outgoing,
-                                                        brdf_cos_contrib,
-                                                        btdf_cos_contrib,
+        vec3 bsdf_cos_contrib;
+		const bool sample_success = Material_cos_sample(local_outgoing, // out
+                                                        bsdf_cos_contrib, // out
+                                                        ior, // inout
                                                         prd.m_material,
                                                         local_incoming,
                                                         rand2());
@@ -99,17 +100,13 @@ vec3 li(Ray ray,
         if (!sample_success) { break; }
 
         // prevent light leak but introduce black fringe
-        if (local_outgoing.y * dot(outgoing, prd.m_gnormal) < 0.0f || local_incoming.y * dot(incoming, prd.m_gnormal) < 0.0f) { break; }
+        if (local_outgoing.y * dot(outgoing, prd.m_gnormal) < 0.0f || local_incoming.y * dot(incoming, prd.m_gnormal) < 0.0f)
+        {
+			break;
+        }
 
         // update importance for the next bounce (veach thesis page 158, figure 5.6)
-        if (local_incoming.y * local_outgoing.y > 0.0f)
-        {
-			importance *= brdf_cos_contrib;
-        }
-        else
-        {
-			importance *= btdf_cos_contrib;
-		}
+		importance *= bsdf_cos_contrib;
 
         // update ray
         ray.m_origin = position;
