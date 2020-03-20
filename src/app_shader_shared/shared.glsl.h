@@ -2,7 +2,7 @@
 #define SHARED_GLSL_H
 // everything is this file is shared between shaders and c++ source
 // we have to make sure that everything is align by 16 (sizeof struct must be multiple of 16)
-// this is due to vulkan's ssbo standard
+// this reduces problems with vulkan's ubo and ssbo.
 
 // we follow disney materials for now.
 
@@ -32,7 +32,7 @@ Material_create()
     result.m_roughness = 0.0f;
     //
     result.m_spec_refl = vec3(0.0f);
-    result.m_ior = 0.0f;
+    result.m_ior = 1.0f; // note ior, by default is air, = 1.0f
     //
     result.m_emission = vec3(0.0f);
     result.m_flags = MATERIAL_FLAG_IS_OPAQUE;
