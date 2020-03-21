@@ -7,12 +7,22 @@
 #include "common/bluenoise.h"
 
 #include "renderer/rtao.h"
-#include "renderer/primpath.h"
+#include "renderer/pathtracer.h"
 
 int
 main()
 {
+	std::vector<float> blank_image(4, 0);
+#if 1
+	RgbaImage2d<float> hdr_envmap(blank_image.data(),
+								  1,
+								  1,
+								  vk::ImageTiling::eOptimal,
+								  RgbaImage2d<float>::RgbaUsageFlagBits);
+	hdr_envmap.init_sampler();
+#else
 	RgbaImage2d<float> hdr_envmap("envmap/palermo_sidewalk_1k.hdr");
+#endif
 
 	int num_spp = 1;
 
@@ -42,8 +52,8 @@ main()
 	Rtao rtao;
 	rtao.run(&scene, &camera);
 #else
-	PrimitivePathTracer prim_path_tracer;
-	prim_path_tracer.run(&scene, &camera, hdr_envmap);
+	PathTracer path_tracer;
+	path_tracer.run(&scene, &camera, hdr_envmap);
 #endif
 
 	return 0;
