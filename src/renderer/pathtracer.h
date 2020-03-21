@@ -24,18 +24,20 @@ struct PathTracer
 		Shader raychit_shader("shaders/shared_rt_stage/raytrace.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
 		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 2, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 3, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 4, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 5, 0 })->m_num_descriptors = 1;
-		raychit_shader.m_uniform_from_set_and_binding.at({ 6, 0 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 1 })->m_num_descriptors = scene.m_triangle_instances.size();
+		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 2 })->m_num_descriptors = scene.m_triangle_instances.size();
+		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 3 })->m_num_descriptors = scene.m_triangle_instances.size();
+		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 4 })->m_num_descriptors = 1;
+		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 5 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+
 		Shader rayahit_shader("shaders/shared_rt_stage/raytrace.rahit",
 							  vk::ShaderStageFlagBits::eAnyHitNV);
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 2, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 3, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 4, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 5, 0 })->m_num_descriptors = 1;
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 6, 0 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 1 })->m_num_descriptors = scene.m_triangle_instances.size();
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 2 })->m_num_descriptors = scene.m_triangle_instances.size();
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 3 })->m_num_descriptors = scene.m_triangle_instances.size();
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 4 })->m_num_descriptors = 1;
+		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 5 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+
 		Shader shadow_raymiss_shader("shaders/shared_rt_stage/rayshadow.rmiss",
 									 vk::ShaderStageFlagBits::eMissNV);
 		Shader raymiss_shader("shaders/shared_rt_stage/raytrace.rmiss",
@@ -124,46 +126,18 @@ struct PathTracer
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_1 = rt_pipeline
 			.build_descriptor_sets(1)
 			.set_storage_buffers_array(0, scene->get_indices_arrays_storage())
+			.set_storage_buffers_array(1, scene->get_position_u_storage())
+			.set_storage_buffers_array(2, scene->get_normal_v_storage())
+			.set_storage_buffers_array(3, scene->get_material_id_storage())
+			.set_storage_buffer(4, *scene->get_materials_buffer_storage())
+			.set_samplers(5, scene->m_images_cache->get_images())
 			.build();
 
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_2 = rt_pipeline
 			.build_descriptor_sets(2)
-			.set_storage_buffers_array(0, scene->get_position_u_storage())
-			.build();
-
-		std::vector<vk::DescriptorSet> rt_descriptor_sets_3 = rt_pipeline
-			.build_descriptor_sets(3)
-			.set_storage_buffers_array(0, scene->get_normal_v_storage())
-			.build();
-
-		std::vector<vk::DescriptorSet> rt_descriptor_sets_4 = rt_pipeline
-			.build_descriptor_sets(4)
-			.set_storage_buffers_array(0, scene->get_material_id_storage())
-			.build();
-
-		std::vector<vk::DescriptorSet> rt_descriptor_sets_5 = rt_pipeline
-			.build_descriptor_sets(5)
-			.set_storage_buffer(0, *scene->get_materials_buffer_storage())
-			.build();
-
-		std::vector<vk::DescriptorSet> rt_descriptor_sets_6 = rt_pipeline
-			.build_descriptor_sets(6)
-			.set_samplers(0, scene->m_images_cache->get_images())
-			.build();
-
-		std::vector<vk::DescriptorSet> rt_descriptor_sets_7 = rt_pipeline
-			.build_descriptor_sets(7)
 			.set_storage_buffer(0, rng.m_sobol_sequence_buffer)
-			.build();
-
-		std::vector<vk::DescriptorSet> rt_descriptor_sets_8 = rt_pipeline
-			.build_descriptor_sets(8)
-			.set_storage_buffer(0, rng.m_scrambling_tile_buffer)
-			.build();
-
-		std::vector<vk::DescriptorSet> rt_descriptor_sets_9 = rt_pipeline
-			.build_descriptor_sets(9)
-			.set_storage_buffer(0, rng.m_ranking_tile_buffer)
+			.set_storage_buffer(1, rng.m_scrambling_tile_buffer)
+			.set_storage_buffer(2, rng.m_ranking_tile_buffer)
 			.build();
 
 		std::vector<vk::DescriptorSet> final_descriptor_sets_0 = final_pipeline
@@ -200,13 +174,6 @@ struct PathTracer
 											rt_descriptor_sets_0[i],
 											rt_descriptor_sets_1[i],
 											rt_descriptor_sets_2[i],
-											rt_descriptor_sets_3[i],
-											rt_descriptor_sets_4[i],
-											rt_descriptor_sets_5[i],
-											rt_descriptor_sets_6[i],
-											rt_descriptor_sets_7[i],
-											rt_descriptor_sets_8[i],
-											rt_descriptor_sets_9[i],
 										  },
 										  { });
 			cmd_buffer.traceRaysNV(rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_raygen_offset,

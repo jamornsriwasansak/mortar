@@ -38,16 +38,16 @@ rand3()
 }
 #endif
 
-#define DECLARE_BLUENOISE_LAYOUT(SET0, SET1, SET2) \
-layout(set = SET0, binding = 0) buffer BlueSobol \
+#define DECLARE_BLUENOISE_LAYOUT(SET) \
+layout(set = SET, binding = 0) buffer BlueSobol \
 { \
 	uint8_t sobol_256spp_256d[]; \
 } blue_sobol;\
-layout(set = SET1, binding = 0) buffer BlueSt \
+layout(set = SET, binding = 1) buffer BlueSt \
 { \
 	uint8_t scrambling_tile[]; \
 } blue_st; \
-layout(set = SET2, binding = 0) buffer BlueRt \
+layout(set = SET, binding = 2) buffer BlueRt \
 { \
 	uint8_t ranking_tile[]; \
 } blue_rt; \

@@ -6,9 +6,9 @@
 #include "common/onb.glsl"
 #include "common/traceray.glsl"
 
-layout(binding = 0, set = 0) uniform accelerationStructureNV tlas;
-layout(binding = 1, set = 0, rgba32f) uniform image2D image;
-layout(binding = 2, set = 0) uniform CameraProperties
+layout(set = 0, binding = 0) uniform accelerationStructureNV tlas;
+layout(set = 0, binding = 1, rgba32f) uniform image2D image;
+layout(set = 0, binding = 2) uniform CameraProperties
 {
     mat4 m_view;
     mat4 m_proj;
@@ -17,19 +17,17 @@ layout(binding = 2, set = 0) uniform CameraProperties
     uvec4 m_is_moved;
 }
 cam;
-layout(binding = 3, set = 0) uniform sampler2D envmap;
+layout(set = 0, binding = 3) uniform sampler2D envmap;
 
 layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
-
-// layout 1 - 6 are used for interpreting hit location
 
 // use bluenoise rng for rendering
 //#define USE_PCG
 #define USE_BLUE_RAND
 #include "common/bluenoise.glsl"
 #include "common/pcg.glsl"
-DECLARE_BLUENOISE_LAYOUT(7,8,9)
+DECLARE_BLUENOISE_LAYOUT(2)
 // not pcg
 
 #include "common/bsdf.glsl"
@@ -130,7 +128,9 @@ main()
     // if camera is not moved reuse accumulated radiance
     vec3 accumulated_radiance = vec3(0.0f);
     float num_spp = 0.0f;
+
     if (!(cam.m_is_moved.x == 1))
+    //if (false)
     {
 		vec4 accumulated_radiance_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
 		accumulated_radiance = accumulated_radiance_and_num_spp.xyz;
