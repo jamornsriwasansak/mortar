@@ -226,7 +226,7 @@ Ggx_transmit_cos_sample(out vec3 outgoing,
 						const Material material,
 						const vec3 incoming,
 						const vec2 samples,
-						inout vec2 next_samples)
+						inout float next_sample)
 {
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
@@ -253,7 +253,7 @@ Ggx_transmit_cos_sample(out vec3 outgoing,
 
 		// as we noticed the only difference eval between reflection and refraction is fresnel term
 
-		if (next_samples.x <= f_term)
+		if (next_sample <= f_term)
 		{
 			// f_r						= f(i, h) * d(h) * g_2(i, o) / (4 * dot(i, n) * dot(o, n))
 			// f_r * dot(o, n)			= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n))
@@ -262,7 +262,7 @@ Ggx_transmit_cos_sample(out vec3 outgoing,
 			// pdf						=			d(h) * g_1(i)          / (4 * dot(i, n))
 			// f_r * dot(o, n) / pdf	= f(i, h) 				  * g_1(o)
 
-			next_samples.x = next_samples.x / f_term;
+			next_sample = next_sample / f_term;
 			outgoing = reflect(-incoming, h);
 			bsdf_cos_contrib *= f_term;
 		}
@@ -276,7 +276,7 @@ Ggx_transmit_cos_sample(out vec3 outgoing,
 			// and since dot(i, h) = dot(o, h)
 			// f_t * dot(o, n) / pdf	=								  (1 - f(i, h))					* g_1(o)
 
-			next_samples.x = (next_samples.x - f_term) / (1.0f - f_term);
+			next_sample = (next_sample - f_term) / (1.0f - f_term);
 			bsdf_cos_contrib *= 1.0f - f_term;
 		}
 
@@ -348,7 +348,7 @@ Material_cos_sample(out vec3 outgoing,
 					const Material material,
 					const vec3 incoming,
 					vec2 samples,
-					inout vec2 next_samples)
+					inout float next_sample)
 {
 	const float diffuse_weight = length(material.m_diffuse_refl);
 	const float ggx_refl_weight = length(material.m_spec_refl);
@@ -391,7 +391,7 @@ Material_cos_sample(out vec3 outgoing,
 
 		// sample using ggx transmission
 		vec3 ggx_trans_bsdf_contrib;
-		const bool sample_success = Ggx_transmit_cos_sample(outgoing, ggx_trans_bsdf_contrib, material, incoming, samples, next_samples);
+		const bool sample_success = Ggx_transmit_cos_sample(outgoing, ggx_trans_bsdf_contrib, material, incoming, samples, next_sample);
 		if (!sample_success) { return false; }
 	}
 

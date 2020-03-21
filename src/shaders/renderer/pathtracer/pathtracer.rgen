@@ -62,7 +62,7 @@ vec3 li(Ray ray,
     vec3 importance = vec3(1.0f);
 
     vec2 samples = rand2();
-    vec2 next_samples = rand2();
+    float next_sample = rand();
 
     for (int i = 0; i < 3; i++)
     {
@@ -98,7 +98,7 @@ vec3 li(Ray ray,
                                                         prd.m_material,
                                                         local_incoming,
                                                         samples,
-                                                        next_samples);
+                                                        next_sample);
 		const vec3 outgoing = Onb_to_world(onb, local_outgoing);
 
         // break if could not sample
@@ -114,8 +114,8 @@ vec3 li(Ray ray,
 		importance *= bsdf_cos_contrib;
 
         // update next_samples
-        samples = next_samples;
-        next_samples = rand2();
+        samples = vec2(next_sample, rand());
+        next_sample = rand();
 
         // update ray
         ray.m_origin = position;

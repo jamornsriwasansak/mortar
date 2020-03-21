@@ -13,13 +13,13 @@
 #include "gavulkan/raytracingpipeline.h"
 #include "gavulkan/graphicspipeline.h"
 
-struct PrimitivePathTracer
+struct PathTracer
 {
 	RayTracingPipeline
-	create_primitive_path_tracer_pipeline(const Scene & scene)
+	create_path_tracer_pipeline(const Scene & scene)
 	{
 		// create rtao pipeline
-		Shader raygen_shader("shaders/renderer/primpath/primpath.rgen",
+		Shader raygen_shader("shaders/renderer/pathtracer/pathtracer.rgen",
 							 vk::ShaderStageFlagBits::eRaygenNV);
 		Shader raychit_shader("shaders/shared_rt_stage/raytrace.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
@@ -77,7 +77,7 @@ struct PrimitivePathTracer
 		*/
 
 		// create rtao pipeline
-		RayTracingPipeline rt_pipeline = create_primitive_path_tracer_pipeline(*scene);
+		RayTracingPipeline rt_pipeline = create_path_tracer_pipeline(*scene);
 
 		// fetch image_views
 		std::vector<const vk::ImageView *> image_views = raw_ptrs(Core::Inst().m_vk_swapchain_image_views);
