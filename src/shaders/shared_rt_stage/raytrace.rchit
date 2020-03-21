@@ -3,44 +3,16 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_nonuniform_qualifier : require
 
+#include "common/math.glsl"
 #include "common/ray.glsl"
-#include "shared_rt_stage/hitpayload.glsl"
 #include "shared.glsl.h"
+#include "shared_rt_stage/hitpayload.glsl"
+#include "shared_rt_stage/trimeshbuffer.glsl"
 
 layout(location = RAY_PRD_LOCATION) rayPayloadInNV HitPayload prd;
 hitAttributeNV vec3 attribs;
 
-layout(set = 1, binding = 0) buffer Face
-{
-    uint faces[];
-} faces_arrays[];
-
-layout(set = 1, binding = 1) buffer PuArray
-{
-    vec4 position_and_us[];
-} pus_arrays[];
-
-layout(set = 1, binding = 2) buffer NvArray
-{
-    vec4 normal_and_vs[];
-} nvs_arrays[];
-
-layout(set = 1, binding = 3) buffer MaterialId
-{
-    uint material_ids[];
-} material_ids_arrays[];
-
-layout(set = 1, binding = 4) buffer MaterialBuffer
-{
-    Material materials[];
-} mat;
-
-layout(set = 1, binding = 5) uniform sampler2D textures[];
-
-vec4 mix_barycoord(const vec2 bary, const vec4 a, const vec4 b, const vec4 c)
-{
-    return (1.0f - bary.x - bary.y) * a + bary.x * b + bary.y * c;
-}
+DECLARE_TRIMESH_LAYOUT(1)
 
 void main()
 {

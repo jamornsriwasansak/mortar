@@ -21,6 +21,13 @@ struct PathTracer
 		// create rtao pipeline
 		Shader raygen_shader("shaders/renderer/pathtracer/pathtracer.rgen",
 							 vk::ShaderStageFlagBits::eRaygenNV);
+		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
+		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 1 })->m_num_descriptors = scene.m_triangle_instances.size();
+		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 2 })->m_num_descriptors = scene.m_triangle_instances.size();
+		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 3 })->m_num_descriptors = scene.m_triangle_instances.size();
+		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 4 })->m_num_descriptors = 1;
+		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 5 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+
 		Shader raychit_shader("shaders/shared_rt_stage/raytrace.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
 		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
