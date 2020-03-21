@@ -132,6 +132,12 @@ struct Core
 			// glfw poll events
 			glfwPollEvents();
 
+			// if esc is press, request closing the windows
+			if (glfwGetKey(m_glfw_window, GLFW_KEY_ESCAPE))
+			{
+				glfwSetWindowShouldClose(m_glfw_window, GLFW_TRUE);
+			}
+
 			const vk::Semaphore & image_available_semaphore = *image_available_semaphores[i_inflight_frame];
 			const vk::Semaphore & signal_semaphore = *signal_semaphores[i_inflight_frame];
 
