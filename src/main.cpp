@@ -34,8 +34,8 @@ main()
 					 up,
 					 glm::radians(45.0f),
 					 float(Extent.width) / float(Extent.height));
-	camera.m_move_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.08f;
-	camera.m_up_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.08f;
+	camera.m_move_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.1f;
+	camera.m_up_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.1f;
 
 	// run renderer
 #if 0

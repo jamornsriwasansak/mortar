@@ -25,8 +25,8 @@ layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
 // layout 1 - 6 are used for interpreting hit location
 
 // use bluenoise rng for rendering
-#define USE_PCG
-//#define USE_BLUE_RAND
+//#define USE_PCG
+#define USE_BLUE_RAND
 #include "common/bluenoise.glsl"
 #include "common/pcg.glsl"
 DECLARE_BLUENOISE_LAYOUT(7,8,9)

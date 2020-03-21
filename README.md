@@ -2,7 +2,8 @@
 
 A physically-based renderer utilizing vulkan raytracing api.
 
-![The Toilet Scene](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/toilet3.png)
+![The Toilet Scene](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/toilet.jpg)
+![Fireplace Room](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/fireplace.jpg)
 
 ### Features
 In its current early stage, it supports:
