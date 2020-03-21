@@ -26,4 +26,6 @@ I plan to add MIS probably within a few days.
 * glm (included as a submodule)
 
 ### Note
-I started this project around March, 1st since I was curious of the vulkan raytracing performance. On the first day of this project, I spent an entire day building a new PC to house RTX2060. This is probably the most costly project I ever invested with my own money. :(
+Rough dielectric was not tested properly. It might not produce correct result if such material is used.
+
+<sup>I started this project around March, 1st since I was curious of the vulkan raytracing performance. On the first day of this project, I spent an entire day building a new PC to house RTX2060. This is probably the most costly project I ever invested with my own money. :(
