@@ -7,18 +7,18 @@ A physically-based renderer utilizing vulkan raytracing api.
 
 ### Features
 In its current early stage, it supports:
-* Diffuse material
 * IBL environment map
 * Alpha-testing
 * Ambient occlusion Integrator
-* Primitive path tracer
 * Low discreprancy sampler with blue-noise property from [Heitz et al. 2019](https://eheitzresearch.wordpress.com/762-2/)
+* PCG random number generator ported from [pcg-random.org](https://www.pcg-random.org/)
+* Lambert diffuse BRDF
 * GGX Microfacet BSDF (rough conductor and rough dielectric)
 
 I plan to add MIS probably within a few days.
 
 ### Dependencies
-* vulkan
+* vulkan sdk
 * glslang (included as a submodule)
 * tinyobjloader (included as a submodule)
 * glfw (included as a submodule)
