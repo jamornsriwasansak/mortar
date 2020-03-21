@@ -281,6 +281,7 @@ struct RgbaImage2d
 					height,
 					vk::ImageTiling::eOptimal,
 					vk_image_usage_flags,
+					false,
 					is_downloadable)
 	{
 	}
@@ -409,6 +410,29 @@ struct RgbaImage2d
 								prev_vk_image_layout);
 
 		return result;
+	}
+
+	void save_pfm(const std::filesystem::path & filepath)
+	{
+		std::vector<ScalarType> read_result = download();
+
+		// write PFM header
+		std::ofstream os(filepath, std::ios::binary);
+		THROW_ASSERT(os.is_open(), "cannot open the filepath : " + filepath.string());
+		os << "PF" << std::endl;
+		os << m_width << " " << m_height << std::endl;
+		os << "-1" << std::endl;
+
+		// else start writing the image
+		for (int y = m_height - 1; y >= 0; y--)
+			for (int x = 0; x < m_width; x++)
+				for (int c = 0; c < 3; c++)
+				{
+					float v = read_result[(y * m_width + x) * 4 + c];
+					os.write((char *)(&v), sizeof(float));
+				}
+
+		os.close();
 	}
 
 	void

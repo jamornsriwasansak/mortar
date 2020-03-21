@@ -269,5 +269,7 @@ struct PathTracer
 				Core::Inst().m_vk_graphics_queue.submit(submit_info,
 														params.m_inflight_fence);
 			});
+
+		storage.save_pfm("result.pfm");
 	}
 };
