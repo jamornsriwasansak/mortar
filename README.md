@@ -13,9 +13,9 @@ In its current early stage, it supports:
 * Ambient occlusion Integrator
 * Primitive path tracer
 * Low discreprancy sampler with blue-noise property from [Heitz et al. 2019](https://eheitzresearch.wordpress.com/762-2/)
-* GGX Microfacet BSDF
+* GGX Microfacet BSDF (rough conductor and rough dielectric)
 
-I plan to add microfacet and MIS probably within a few days.
+I plan to add MIS probably within a few days.
 
 ### Dependencies
 * vulkan
