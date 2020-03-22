@@ -96,18 +96,21 @@ struct ImageStorage
 
 struct TriangleMesh
 {
-	std::shared_ptr<Buffer>		m_position_and_u_buffer;
-	std::shared_ptr<Buffer>		m_normal_and_v_buffer;
-	std::shared_ptr<Buffer>		m_index_buffer;
-	std::shared_ptr<Buffer>		m_material_id_buffer;
-	RtBlas						m_rt_blas;
+	std::shared_ptr<Buffer>	m_position_and_u_buffer;
+	std::shared_ptr<Buffer>	m_normal_and_v_buffer;
+	std::shared_ptr<Buffer>	m_index_buffer;
+	std::shared_ptr<Buffer>	m_material_id_buffer;
+	std::shared_ptr<Buffer>	m_cdf_buffer;
+	std::shared_ptr<Buffer>	m_pdf_buffer;
+	RtBlas					m_rt_blas;
+	float					m_emission_weight = 0.0f;
 };
 
 struct TriangleMeshStorage
 {
 	std::vector<std::unique_ptr<TriangleMesh>>	m_triangle_meshes;
 	std::vector<Material>						m_materials;
-	std::shared_ptr<Buffer>						m_materials_buffer;
+	std::shared_ptr<Buffer>						m_materials_buffer = nullptr;
 	std::shared_ptr<ImageStorage>				m_image_storage = nullptr;
 
 	TriangleMeshStorage()
@@ -277,6 +280,9 @@ struct TriangleMeshStorage
 		// indices for all shape
 		std::vector<std::vector<uint32_t>> shape_indices_arays;
 		std::vector<std::vector<uint32_t>> shape_material_ids_arrays;
+		std::vector<std::vector<float>> shape_cdf_table_arrays;
+		std::vector<std::vector<float>> shape_pdf_table_arrays;
+		std::vector<float> shape_emissive_weights;
 		std::vector<bool> shape_is_opaques;
 
 		// position, normal, and texcoord(u, v) to be reorganized
@@ -298,6 +304,7 @@ struct TriangleMeshStorage
 
 			// check indices
 			bool is_shape_opaque = true;
+			bool is_shape_emissive = false;
 			for (size_t i_index = 0; i_index < shape.mesh.indices.size(); i_index++)
 			{
 				const uint32_t vertex_index = uint32_t(shape.mesh.indices[i_index].vertex_index);
@@ -379,6 +386,57 @@ struct TriangleMeshStorage
 				if (i_index % 3 == 0)
 				{
 					shape_material_ids.push_back(material_id);
+
+					// check whether material has emission or not
+					const Material & mat = m_materials[material_id];
+					if (length(mat.m_emission) >= 0.0f)
+					{
+						is_shape_emissive = true;
+					}
+				}
+			}
+
+			// pdf and cdf table
+			std::vector<float> pdf_table;
+			std::vector<float> cdf_table;
+			float emissive_weight = 0.0f;
+			if (is_shape_emissive)
+			{
+				pdf_table = std::vector<float>(shape_indices.size() / 3);
+				cdf_table = std::vector<float>(shape_indices.size() / 3);
+
+				for (size_t i_face = 0; i_face < shape_indices.size() / 3; i_face++)
+				{
+					// find triangle area
+					const vec3 & pos0 = vec3(position_and_us[shape_indices[i_face * 3 + 0]]);
+					const vec3 & pos1 = vec3(position_and_us[shape_indices[i_face * 3 + 1]]);
+					const vec3 & pos2 = vec3(position_and_us[shape_indices[i_face * 3 + 2]]);
+					const vec3 crossed = cross(pos1 - pos0, pos2 - pos0);
+					const float triangle_area = dot(crossed, crossed) / 2.0f;
+
+					// find emission value for that face or atleast approximation if texture is used
+					const uint32_t mat_id = shape_material_ids[i_face];
+					const Material & mat = m_materials[mat_id];
+					const vec3 emission = mat.m_emission.x > 0.0f ? mat.m_emission : vec3(1.0f); // for texture we just assume weight of 1
+
+					// compute pdf weight
+					const float pdf_weight = triangle_area * length(emission);
+					emissive_weight += pdf_weight;
+
+					pdf_table[i_face] = pdf_weight;
+				}
+
+				// normalize pdf_table
+				for (size_t i_face = 0; i_face < shape_indices.size() / 3; i_face++)
+				{
+					pdf_table[i_face] /= emissive_weight;
+				}
+
+				// compute cdf_table
+				cdf_table[0] = pdf_table[0];
+				for (size_t i_face = 1; i_face < shape_indices.size() / 3; i_face++)
+				{
+					cdf_table[i_face] = pdf_table[i_face] + cdf_table[i_face - 1];
 				}
 			}
 
@@ -386,6 +444,9 @@ struct TriangleMeshStorage
 			shape_indices_arays.push_back(std::move(shape_indices));
 			shape_material_ids_arrays.push_back(std::move(shape_material_ids));
 			shape_is_opaques.push_back(is_shape_opaque);
+			shape_pdf_table_arrays.push_back(std::move(pdf_table));
+			shape_cdf_table_arrays.push_back(std::move(cdf_table));
+			shape_emissive_weights.push_back(emissive_weight);
 		}
 
 		/*
@@ -425,13 +486,26 @@ struct TriangleMeshStorage
 																			vk::MemoryPropertyFlagBits::eDeviceLocal,
 																			index_buffer_usage_flag);
 
+			// create material id buffer
 			std::shared_ptr<Buffer> material_id_buffer = nullptr;
 			if (do_ray_tracing)
 			{
-				// create material buffer
 				material_id_buffer = std::make_shared<Buffer>(shape_material_ids_arrays[i_shape],
 															  vk::MemoryPropertyFlagBits::eDeviceLocal,
 															  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+			}
+
+			// create pdf and cdf table
+			std::shared_ptr<Buffer> pdf_table = nullptr;
+			std::shared_ptr<Buffer> cdf_table = nullptr;
+			if (shape_emissive_weights[i_shape] >= 0.0f)
+			{
+				pdf_table = std::make_shared<Buffer>(shape_pdf_table_arrays[i_shape],
+													 vk::MemoryPropertyFlagBits::eDeviceLocal,
+													 vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+				cdf_table = std::make_shared<Buffer>(shape_cdf_table_arrays[i_shape],
+													 vk::MemoryPropertyFlagBits::eDeviceLocal,
+													 vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
 			}
 
 			// prepare triangle_mesh
@@ -446,6 +520,12 @@ struct TriangleMeshStorage
 					triangle_mesh->m_rt_blas = RtBlas(*position_and_u_buffer,
 													  *index_buffer,
 													  shape_is_opaques[i_shape]);
+				}
+				if (shape_emissive_weights[i_shape] >= 0.0f)
+				{
+					triangle_mesh->m_emission_weight = shape_emissive_weights[i_shape];
+					triangle_mesh->m_pdf_buffer = pdf_table;
+					triangle_mesh->m_cdf_buffer = cdf_table;
 				}
 			}
 			m_triangle_meshes.push_back(std::move(triangle_mesh));
