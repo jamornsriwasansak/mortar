@@ -39,7 +39,7 @@ struct RayTracingPipeline
 		// compute all stride
 		const uint32_t shader_group_handle_size = Core::Inst().m_vk_rt_properties.shaderGroupHandleSize;
 		const uint32_t raygen_size = shader_group_handle_size;
-		const uint32_t miss_size = shader_group_handle_size * uint32_t(rt_shaders.m_miss_shaders.size());
+		const uint32_t miss_size = shader_group_handle_size * static_cast<uint32_t>(rt_shaders.m_miss_shaders.size());
 		const uint32_t hit_size = shader_group_handle_size * num_hit_shaders;
 
 		// set all offset
@@ -61,7 +61,7 @@ struct RayTracingPipeline
 
 		vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
 		{
-			pipelineLayoutCreateInfo.setLayoutCount = uint32_t(descriptor_set_layouts.size());
+			pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
 			pipelineLayoutCreateInfo.pSetLayouts = descriptor_set_layouts.data();
 			if (m_descriptor_manager.m_vk_push_constant_range.has_value())
 			{
@@ -76,7 +76,7 @@ struct RayTracingPipeline
 		std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_groups;
 
 		// raygen
-		vk::RayTracingShaderGroupCreateInfoNV raygen_shader_group = raygen_shader->get_raytracing_shader_group_ci(uint32_t(shader_stages.size()));
+		vk::RayTracingShaderGroupCreateInfoNV raygen_shader_group = raygen_shader->get_raytracing_shader_group_ci(static_cast<uint32_t>(shader_stages.size()));
 		vk::PipelineShaderStageCreateInfo raygen_shader_stage = raygen_shader->get_pipeline_shader_stage_ci();
 		shader_stages.push_back(raygen_shader_stage);
 		shader_groups.push_back(raygen_shader_group);
@@ -84,7 +84,7 @@ struct RayTracingPipeline
 		// miss shaders
 		for (const Shader * miss_shader : miss_shaders)
 		{
-			vk::RayTracingShaderGroupCreateInfoNV miss_shader_group = miss_shader->get_raytracing_shader_group_ci(uint32_t(shader_stages.size()));
+			vk::RayTracingShaderGroupCreateInfoNV miss_shader_group = miss_shader->get_raytracing_shader_group_ci(static_cast<uint32_t>(shader_stages.size()));
 			vk::PipelineShaderStageCreateInfo miss_shader_stage = miss_shader->get_pipeline_shader_stage_ci();
 			shader_stages.push_back(miss_shader_stage);
 			shader_groups.push_back(miss_shader_group);
@@ -100,13 +100,13 @@ struct RayTracingPipeline
 		if (closest_hit_shader)
 		{
 			vk::PipelineShaderStageCreateInfo closest_hit_shader_stage = closest_hit_shader->get_pipeline_shader_stage_ci();
-			hit_shader_group.setClosestHitShader(uint32_t(shader_stages.size()));
+			hit_shader_group.setClosestHitShader(static_cast<uint32_t>(shader_stages.size()));
 			shader_stages.push_back(closest_hit_shader_stage);
 		}
 		if (any_hit_shader)
 		{
 			vk::PipelineShaderStageCreateInfo any_hit_shader_stage = any_hit_shader->get_pipeline_shader_stage_ci();
-			hit_shader_group.setAnyHitShader(uint32_t(shader_stages.size()));
+			hit_shader_group.setAnyHitShader(static_cast<uint32_t>(shader_stages.size()));
 			shader_stages.push_back(any_hit_shader_stage);
 		}
 		shader_groups.push_back(hit_shader_group);
@@ -114,16 +114,16 @@ struct RayTracingPipeline
 		// create ray tracing pipeline
 		vk::RayTracingPipelineCreateInfoNV ray_pipeline_ci = {};
 		{
-			ray_pipeline_ci.setStageCount(uint32_t(shader_stages.size()));
+			ray_pipeline_ci.setStageCount(static_cast<uint32_t>(shader_stages.size()));
 			ray_pipeline_ci.setPStages(shader_stages.data());
-			ray_pipeline_ci.setGroupCount(uint32_t(shader_groups.size()));
+			ray_pipeline_ci.setGroupCount(static_cast<uint32_t>(shader_groups.size()));
 			ray_pipeline_ci.setPGroups(shader_groups.data());
 			ray_pipeline_ci.setMaxRecursionDepth(1);
 			ray_pipeline_ci.setLayout(*m_vk_pipeline_layout);
 		}
 		m_vk_pipeline = device->createRayTracingPipelineNVUnique(nullptr, ray_pipeline_ci);
 
-		return uint32_t(shader_groups.size());
+		return static_cast<uint32_t>(shader_groups.size());
 	}
 
 	DescriptorSetsBuilder

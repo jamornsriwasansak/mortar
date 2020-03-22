@@ -37,12 +37,13 @@ struct ImageStorage
 		{
 			const size_t image_index = m_image_index_from_path.at(path);
 			const bool is_opaque = m_images[image_index].second;
-			return std::make_pair(uint32_t(image_index), is_opaque);
+			return std::make_pair(static_cast<uint32_t>(image_index), is_opaque);
 		}
 
 		// check whether it has alpha channel or not
 		StbiUint8Result raw_image(path);
 		bool is_opaque = true;
+		const int num_elements = raw_image.m_width * raw_image.m_height * 4;
 		if (alpha_path != "")
 		{
 			StbiUint8Result alpha_image(alpha_path);
@@ -50,7 +51,7 @@ struct ImageStorage
 						 "main image and alpha image must share the same size");
 			is_opaque = false;
 			// copy alpha channel
-			for (size_t i = 0; i < raw_image.m_width * raw_image.m_height * 4; i += 4)
+			for (int i = 0; i < num_elements; i += 4)
 			{
 				const size_t r_offset = 0;
 				const size_t a_offset = 3;
@@ -59,7 +60,7 @@ struct ImageStorage
 		}
 		else if (do_check_alpha)
 		{
-			for (size_t i = 3; i < raw_image.m_width * raw_image.m_height * 4; i += 4)
+			for (int i = 3; i < num_elements; i += 4)
 			{
 				if (raw_image.m_stbi_data[i] != 255)
 				{
@@ -74,7 +75,7 @@ struct ImageStorage
 							  is_opaque);
 
 		// and return the index
-		return std::make_pair(uint32_t(m_images.size() - 1), is_opaque);
+		return std::make_pair(static_cast<uint32_t>(m_images.size() - 1), is_opaque);
 	}
 
 	void
@@ -146,7 +147,7 @@ struct TriangleMeshStorage
 			const auto tex_info = m_image_storage->fetch(directory / texname,
 														 do_check_alpha,
 														 alpha_channel_texname != "" ? (directory / alpha_channel_texname) : "");
-			return std::make_pair(T(-float(tex_info.first) - 1.0f),
+			return std::make_pair(T(-static_cast<float>(tex_info.first) - 1.0f),
 								  alpha_channel_texname == "" && tex_info.second);
 		}
 		else
@@ -216,7 +217,7 @@ struct TriangleMeshStorage
 		* load all materials
 		*/
 
-		const uint32_t material_offset = uint32_t(m_materials.size());
+		const uint32_t material_offset = static_cast<uint32_t>(m_materials.size());
 
 		for (size_t i = 0; i < tmaterials.size(); i++)
 		{
@@ -307,10 +308,10 @@ struct TriangleMeshStorage
 			bool is_shape_emissive = false;
 			for (size_t i_index = 0; i_index < shape.mesh.indices.size(); i_index++)
 			{
-				const uint32_t vertex_index = uint32_t(shape.mesh.indices[i_index].vertex_index);
-				const uint32_t normal_index = uint32_t(shape.mesh.indices[i_index].normal_index);
-				const uint32_t texcoord_index = uint32_t(shape.mesh.indices[i_index].texcoord_index);
-				const uint32_t material_id = uint32_t(shape.mesh.material_ids[i_index / 3]) + material_offset;
+				const uint32_t vertex_index = static_cast<uint32_t>(shape.mesh.indices[i_index].vertex_index);
+				const uint32_t normal_index = static_cast<uint32_t>(shape.mesh.indices[i_index].normal_index);
+				const uint32_t texcoord_index = static_cast<uint32_t>(shape.mesh.indices[i_index].texcoord_index);
+				const uint32_t material_id = static_cast<uint32_t>(shape.mesh.material_ids[i_index / 3]) + material_offset;
 				const auto tindex_combination = std::make_tuple(vertex_index,
 																normal_index,
 																texcoord_index,
@@ -389,8 +390,9 @@ struct TriangleMeshStorage
 
 					// check whether material has emission or not
 					const Material & mat = m_materials[material_id];
-					if (length(mat.m_emission) >= 0.0f)
+					if (length(mat.m_emission) > SMALL_VALUE)
 					{
+						std::cout << glm::to_string(mat.m_emission) << std::endl;
 						is_shape_emissive = true;
 					}
 				}
@@ -498,7 +500,7 @@ struct TriangleMeshStorage
 			// create pdf and cdf table
 			std::shared_ptr<Buffer> pdf_table = nullptr;
 			std::shared_ptr<Buffer> cdf_table = nullptr;
-			if (shape_emissive_weights[i_shape] >= 0.0f)
+			if (shape_emissive_weights[i_shape] > SMALL_VALUE)
 			{
 				pdf_table = std::make_shared<Buffer>(shape_pdf_table_arrays[i_shape],
 													 vk::MemoryPropertyFlagBits::eDeviceLocal,

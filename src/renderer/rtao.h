@@ -22,8 +22,9 @@ struct Rtao
 							 vk::ShaderStageFlagBits::eRaygenNV);
 		Shader raychit_shader("shaders/renderer/rtao/raytrace.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
-		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 2, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
+		const uint32_t num_traingle_instances = static_cast<uint32_t>(scene.m_triangle_instances.size());
+		raychit_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_traingle_instances;
+		raychit_shader.m_uniforms_set.at({ 2, 0 })->m_num_descriptors = num_traingle_instances;
 		Shader shadow_raymiss_shader("shaders/renderer/rtao/rayshadow.rmiss",
 									 vk::ShaderStageFlagBits::eMissNV);
 		Shader raymiss_shader("shaders/renderer/rtao/raytrace.rmiss",
@@ -194,11 +195,11 @@ struct Rtao
 				std::array<vk::CommandBuffer, 1> command_buffers = { *cmd_buffers[params.m_image_index] };
 				{
 					submit_info.setPWaitDstStageMask(wait_stage_mask.data());
-					submit_info.setWaitSemaphoreCount(uint32_t(params.m_wait_semaphores.size()));
+					submit_info.setWaitSemaphoreCount(static_cast<uint32_t>(params.m_wait_semaphores.size()));
 					submit_info.setPWaitSemaphores(params.m_wait_semaphores.data());
-					submit_info.setCommandBufferCount(uint32_t(command_buffers.size()));
+					submit_info.setCommandBufferCount(static_cast<uint32_t>(command_buffers.size()));
 					submit_info.setPCommandBuffers(command_buffers.data());
-					submit_info.setSignalSemaphoreCount(uint32_t(params.m_signal_semaphores.size()));
+					submit_info.setSignalSemaphoreCount(static_cast<uint32_t>(params.m_signal_semaphores.size()));
 					submit_info.setPSignalSemaphores(params.m_signal_semaphores.data());
 				}
 

@@ -15,8 +15,8 @@ struct Buffer
 	vk::UniqueDeviceMemory		m_vk_memory;
 	vk::BufferUsageFlags		m_vk_buffer_usage_flags;
 	vk::Format					m_vk_format;
-	size_t						m_element_size_in_bytes;
-	size_t						m_num_elements;
+	vk::DeviceSize				m_element_size_in_bytes;
+	uint32_t					m_num_elements;
 
 	Buffer():
 		m_vk_buffer(nullptr),
@@ -28,8 +28,8 @@ struct Buffer
 	}
 
 	Buffer(const void * data,
-		   const size_t element_size_in_bytes,
-		   const size_t num_elements,
+		   const vk::DeviceSize element_size_in_bytes,
+		   const uint32_t num_elements,
 		   const vk::MemoryPropertyFlags & mem_prop_flags,
 		   const vk::BufferUsageFlags & buffer_usage_flags,
 		   const vk::Format & format = vk::Format()):
@@ -48,7 +48,7 @@ struct Buffer
 		// create unique buffer
 		vk::BufferCreateInfo vertex_buffer_ci = {};
 		{
-			vertex_buffer_ci.setSize(uint32_t(size_in_bytes()));
+			vertex_buffer_ci.setSize(size_in_bytes());
 			vertex_buffer_ci.setUsage(m_vk_buffer_usage_flags);
 			vertex_buffer_ci.setSharingMode(vk::SharingMode::eExclusive);
 		}
@@ -107,14 +107,14 @@ struct Buffer
 		   const vk::Format & format = vk::Format()):
 		Buffer(data.data(),
 			   sizeof(T),
-			   data.size(),
+			   static_cast<int>(data.size()),
 			   mem_prop_flags,
 			   buffer_usage_flags,
 			   format)
 	{
 	}
 
-	Buffer(const size_t size_in_bytes,
+	Buffer(const vk::DeviceSize size_in_bytes,
 		   const vk::MemoryPropertyFlags & mem_prop_flags,
 		   const vk::BufferUsageFlags & buffer_usage_flags,
 		   const vk::Format & format = vk::Format()):
@@ -129,7 +129,7 @@ struct Buffer
 
 	void
 	copy_from(const void * data,
-			  const size_t data_size_in_bytes)
+			  const vk::DeviceSize data_size_in_bytes)
 	{
 		THROW_ASSERT(size_in_bytes() == data_size_in_bytes,
 					 "size mismatch the buffer size");
@@ -138,7 +138,7 @@ struct Buffer
 		const vk::Device & device = *Core::Inst().m_vk_device;
 		void * mapped_vertex_mem = device.mapMemory(*m_vk_memory,
 													vk::DeviceSize(0),
-													vk::DeviceSize(data_size_in_bytes),
+													data_size_in_bytes,
 													vk::MemoryMapFlagBits());
 		std::memcpy(mapped_vertex_mem,
 					data,
@@ -172,7 +172,7 @@ struct Buffer
 		Core::Inst().one_time_command_submit(command_func);
 	}
 
-	size_t
+	vk::DeviceSize
 	size_in_bytes() const
 	{
 		return m_element_size_in_bytes * m_num_elements;

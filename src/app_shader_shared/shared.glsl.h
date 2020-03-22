@@ -4,6 +4,8 @@
 // we have to make sure that everything is align by 16 (sizeof struct must be multiple of 16)
 // this reduces problems with vulkan's ubo and ssbo.
 
+#define SMALL_VALUE 1e-5f
+
 // we follow disney materials for now.
 
 #define MATERIAL_FLAG_IS_OPAQUE 8

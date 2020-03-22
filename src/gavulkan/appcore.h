@@ -182,7 +182,7 @@ struct Core
 		{
 			command_ai.setCommandPool(*m_vk_command_pool);
 			command_ai.setLevel(vk::CommandBufferLevel::ePrimary);
-			command_ai.setCommandBufferCount(uint32_t(m_vk_swapchain_images.size()));
+			command_ai.setCommandBufferCount(static_cast<uint32_t>(m_vk_swapchain_images.size()));
 		}
 		return m_vk_device->allocateCommandBuffersUnique(command_ai);
 	}
@@ -454,9 +454,9 @@ private:
 		vk::InstanceCreateInfo instance_ci = {};
 		{
 			instance_ci.setPApplicationInfo(&app_info);
-			instance_ci.setEnabledExtensionCount(uint32_t(instance_extensions.size()));
+			instance_ci.setEnabledExtensionCount(static_cast<uint32_t>(instance_extensions.size()));
 			instance_ci.setPpEnabledExtensionNames(instance_extensions.data());
-			instance_ci.setEnabledLayerCount(uint32_t(instance_layers.size()));
+			instance_ci.setEnabledLayerCount(static_cast<uint32_t>(instance_layers.size()));
 			instance_ci.setPpEnabledLayerNames(instance_layers.data());
 		}
 
@@ -540,10 +540,10 @@ private:
 		vk::DeviceCreateInfo device_ci = {};
 		{
 			device_ci.setPQueueCreateInfos(queue_cis.data());
-			device_ci.setQueueCreateInfoCount(uint32_t(queue_cis.size()));
-			device_ci.setEnabledExtensionCount(uint32_t(extensions.size()));
+			device_ci.setQueueCreateInfoCount(static_cast<uint32_t>(queue_cis.size()));
+			device_ci.setEnabledExtensionCount(static_cast<uint32_t>(extensions.size()));
 			device_ci.setPpEnabledExtensionNames(extensions.data());
-			device_ci.setEnabledLayerCount(uint32_t(layers.size()));
+			device_ci.setEnabledLayerCount(static_cast<uint32_t>(layers.size()));
 			device_ci.setPpEnabledLayerNames(layers.data());
 			device_ci.setPNext(&device_features2);
 		}
@@ -569,12 +569,12 @@ private:
 		{
 			if (queue_family_properties[iq].queueFlags & vk::QueueFlagBits::eGraphics)
 			{
-				graphics_queue_family_index = uint32_t(iq);
+				graphics_queue_family_index = static_cast<uint32_t>(iq);
 			}
-			if (physical_device.getSurfaceSupportKHR(uint32_t(iq),
+			if (physical_device.getSurfaceSupportKHR(static_cast<uint32_t>(iq),
 													 surface))
 			{
-				present_queue_family_index = uint32_t(iq);
+				present_queue_family_index = static_cast<uint32_t>(iq);
 			}
 		}
 		return { graphics_queue_family_index, present_queue_family_index };
@@ -701,17 +701,17 @@ private:
 		std::array<vk::DescriptorPoolSize, 2> pool_sizes;
 		{
 			pool_sizes[0].setType(vk::DescriptorType::eUniformBuffer);
-			pool_sizes[0].setDescriptorCount(uint32_t(num_descriptors));
+			pool_sizes[0].setDescriptorCount(static_cast<uint32_t>(num_descriptors));
 			
 			pool_sizes[1].setType(vk::DescriptorType::eCombinedImageSampler);
-			pool_sizes[1].setDescriptorCount(uint32_t(num_descriptors));
+			pool_sizes[1].setDescriptorCount(static_cast<uint32_t>(num_descriptors));
 		}
 
 		vk::DescriptorPoolCreateInfo pool_ci = {};
 		{
-			pool_ci.setPoolSizeCount(uint32_t(pool_sizes.size()));
+			pool_ci.setPoolSizeCount(static_cast<uint32_t>(pool_sizes.size()));
 			pool_ci.setPPoolSizes(pool_sizes.data());
-			pool_ci.setMaxSets(uint32_t(num_swapchain_images) * num_sets);
+			pool_ci.setMaxSets(static_cast<uint32_t>(num_swapchain_images) * num_sets);
 		}
 
 		vk::UniqueDescriptorPool result = device.createDescriptorPoolUnique(pool_ci);

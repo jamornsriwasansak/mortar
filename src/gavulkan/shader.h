@@ -29,8 +29,8 @@ struct ShaderUniformInfo
 	std::string				m_mem_type = "";
 	std::string				m_name = "";
 	std::string				m_type = "";
-	size_t					m_size_in_bytes = 0;
-	size_t					m_num_descriptors = 1;
+	uint32_t				m_size_in_bytes = 0;
+	uint32_t				m_num_descriptors = 1;
 	ParsedFormatQualifier	m_parsed_format_qualifier = {};
 
 	vk::DescriptorType
@@ -42,6 +42,7 @@ struct ShaderUniformInfo
 		if (m_mem_type == "buffer") return vk::DescriptorType::eStorageBuffer;
 		if (m_mem_type == "uniform") return vk::DescriptorType::eUniformBuffer;
 		THROW("unknown descriptor type type : " + m_type + ", mem_type : " + m_mem_type);
+		return vk::DescriptorType(0);
 	}
 };
 
@@ -51,7 +52,7 @@ struct Shader
 	vk::ShaderStageFlagBits										m_vk_shader_stage;
 	std::vector<ShaderAttributeInfo>							m_attributes;
 	std::vector<ShaderUniformInfo>								m_uniforms;
-	std::map<std::pair<size_t, size_t>, ShaderUniformInfo *>	m_uniform_from_set_and_binding;
+	std::map<std::pair<size_t, size_t>, ShaderUniformInfo *>	m_uniforms_set;
 
 	Shader(const std::filesystem::path shader_path,
 		   const vk::ShaderStageFlagBits & shader_stage):
@@ -82,7 +83,7 @@ struct Shader
 		// init m_uniform_from_uniform_name
 		for (ShaderUniformInfo & uniform : m_uniforms)
 		{
-			m_uniform_from_set_and_binding[std::make_pair(uniform.m_set, uniform.m_binding)] = &uniform;
+			m_uniforms_set[std::make_pair(uniform.m_set, uniform.m_binding)] = &uniform;
 		}
 
 		// shader module create info
@@ -151,7 +152,7 @@ struct Shader
 	{
 		std::pair<size_t, size_t> set_binding = std::make_pair(set,
 															   binding);
-		return *m_uniform_from_set_and_binding.at(set_binding);
+		return *m_uniforms_set.at(set_binding);
 	}
 
 private:
@@ -257,7 +258,7 @@ private:
 						{
 							location = std::stoi(tokens[i_token + 2]);
 						}
-						catch (const std::exception & e)
+						catch (const std::exception)
 						{
 							location = -1;
 						};
@@ -285,7 +286,7 @@ private:
 							"expect layout qualifier of push_constant to contain only push_constant");
 						THROW_ASSERT(tokens[i_token + 1] == ")",
 							"expect layout qualifier of push_constant to contain only push_constant");
-						is_push_constant == true;
+						is_push_constant = true;
 					}
 					else if (tokens[i_token] == ",")
 					{
@@ -319,7 +320,7 @@ private:
 					ShaderAttributeInfo attrib;
 					attrib.m_name = name;
 					attrib.m_type = type;
-					attrib.m_location = uint32_t(location);
+					attrib.m_location = static_cast<uint32_t>(location);
 					shader_attribs.push_back(attrib);
 
 					i_token += 2;
@@ -332,7 +333,7 @@ private:
 					const std::string type = tokens[i_token + 1];
 
 					size_t num_open_bracket = 0;
-					size_t size_in_bytes = 0;
+					uint32_t size_in_bytes = 0;
 
 					i_token += 2;
 
@@ -346,29 +347,29 @@ private:
 						else if (tokens[i_token] == "}")
 						{
 							num_open_bracket -= 1;
-							size_in_bytes = div_and_ceil(size_in_bytes, size_t(16)) * 16;
+							size_in_bytes = div_and_ceil(size_in_bytes, 16u) * 16;
 						}
 						else
 						{
 							std::optional<size_t> type_size_in_bytes = get_glsl_type_size_in_bytes(tokens[i_token]);
 							if (type_size_in_bytes == 4)
 							{
-								size_in_bytes += 4;
+								size_in_bytes += 4u;
 							}
 							else if (type_size_in_bytes > 4 &&
-								type_size_in_bytes <= 8)
+									 type_size_in_bytes <= 8)
 							{
 								// should be *vec2
-								size_in_bytes = div_and_ceil(size_in_bytes, size_t(8)) * 8;
-								size_in_bytes += type_size_in_bytes.value();
+								size_in_bytes = div_and_ceil(size_in_bytes, 8u) * 8u;
+								size_in_bytes += static_cast<uint32_t>(type_size_in_bytes.value());
 							}
 							else if (type_size_in_bytes > 16)
 							{
 								// should be *vec3, *vec4, *mat2, *mat3, *mat4
 								THROW_ASSERT(type_size_in_bytes.value() % 16 == 0,
 									"unknown type :" + type + " is not multiple of 16 bytes");
-								size_in_bytes = div_and_ceil(size_in_bytes, size_t(16)) * 16;
-								size_in_bytes += type_size_in_bytes.value();
+								size_in_bytes = div_and_ceil(size_in_bytes, 16u) * 16u;
+								size_in_bytes += static_cast<uint32_t>(type_size_in_bytes.value());
 							}
 						}
 
@@ -392,8 +393,8 @@ private:
 					ShaderUniformInfo uniform;
 					uniform.m_is_push_constant = is_push_constant;
 					uniform.m_mem_type = mem_type;
-					uniform.m_set = set == -1 ? 0 : uint32_t(set);
-					uniform.m_binding = uint32_t(binding);
+					uniform.m_set = set == -1 ? 0 : static_cast<uint32_t>(set);
+					uniform.m_binding = static_cast<uint32_t>(binding);
 					uniform.m_type = type;
 					uniform.m_name = name;
 					uniform.m_size_in_bytes = size_in_bytes;

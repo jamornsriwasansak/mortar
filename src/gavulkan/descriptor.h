@@ -68,9 +68,9 @@ struct DescriptorSetsBuilder
 		vk::WriteDescriptorSet write_descriptor_set = {};
 		{
 			write_descriptor_set.setDstSet(m_vk_descriptor_sets[i_frame]);
-			write_descriptor_set.setDstBinding(uint32_t(i_binding));
+			write_descriptor_set.setDstBinding(static_cast<uint32_t>(i_binding));
 			write_descriptor_set.setDstArrayElement(0);
-			write_descriptor_set.setDescriptorCount(uint32_t(num_descriptors));
+			write_descriptor_set.setDescriptorCount(static_cast<uint32_t>(num_descriptors));
 			write_descriptor_set.setDescriptorType(vk::DescriptorType::eUniformBuffer);
 			write_descriptor_set.setPBufferInfo(descriptor_buffer_info.get());
 			write_descriptor_set.setPImageInfo(nullptr);
@@ -114,7 +114,7 @@ struct DescriptorSetsBuilder
 		vk::WriteDescriptorSet write_descriptor_set = {};
 		{
 			write_descriptor_set.setDstSet(m_vk_descriptor_sets[i_frame]);
-			write_descriptor_set.setDstBinding(uint32_t(i_binding));
+			write_descriptor_set.setDstBinding(static_cast<uint32_t>(i_binding));
 			write_descriptor_set.setDstArrayElement(0);
 			write_descriptor_set.setDescriptorCount(1);
 			write_descriptor_set.setDescriptorType(vk::DescriptorType::eStorageBuffer);
@@ -161,9 +161,9 @@ struct DescriptorSetsBuilder
 		vk::WriteDescriptorSet write_descriptor_set = {};
 		{
 			write_descriptor_set.setDstSet(m_vk_descriptor_sets[i_frame]);
-			write_descriptor_set.setDstBinding(uint32_t(i_binding));
+			write_descriptor_set.setDstBinding(static_cast<uint32_t>(i_binding));
 			write_descriptor_set.setDstArrayElement(0);
-			write_descriptor_set.setDescriptorCount(buffers.size());
+			write_descriptor_set.setDescriptorCount(static_cast<uint32_t>(buffers.size()));
 			write_descriptor_set.setDescriptorType(vk::DescriptorType::eStorageBuffer);
 			write_descriptor_set.setPBufferInfo(descriptor_buffer_infos.get());
 			write_descriptor_set.setPImageInfo(nullptr);
@@ -220,7 +220,7 @@ struct DescriptorSetsBuilder
 			vk::WriteDescriptorSet write_descriptor_set = {};
 			{
 				write_descriptor_set.setDstSet(m_vk_descriptor_sets[i_frame]);
-				write_descriptor_set.setDstBinding(uint32_t(i_binding));
+				write_descriptor_set.setDstBinding(static_cast<uint32_t>(i_binding));
 				write_descriptor_set.setDstArrayElement(0);
 				write_descriptor_set.setDescriptorCount(1);
 				write_descriptor_set.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
@@ -259,9 +259,9 @@ struct DescriptorSetsBuilder
 			vk::WriteDescriptorSet write_descriptor_set = {};
 			{
 				write_descriptor_set.setDstSet(m_vk_descriptor_sets[i_frame]);
-				write_descriptor_set.setDstBinding(uint32_t(i_binding));
+				write_descriptor_set.setDstBinding(static_cast<uint32_t>(i_binding));
 				write_descriptor_set.setDstArrayElement(0);
-				write_descriptor_set.setDescriptorCount(uint32_t(images.size()));
+				write_descriptor_set.setDescriptorCount(static_cast<uint32_t>(images.size()));
 				write_descriptor_set.setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
 				write_descriptor_set.setPBufferInfo(nullptr);
 				write_descriptor_set.setPImageInfo(descriptor_image_infos.get());
@@ -293,7 +293,7 @@ struct DescriptorSetsBuilder
 		vk::WriteDescriptorSet write_descriptor_set = {};
 		{
 			write_descriptor_set.setDstSet(m_vk_descriptor_sets[i_frame]);
-			write_descriptor_set.setDstBinding(uint32_t(i_binding));
+			write_descriptor_set.setDstBinding(static_cast<uint32_t>(i_binding));
 			write_descriptor_set.setDstArrayElement(0);
 			write_descriptor_set.setDescriptorCount(1);
 			write_descriptor_set.setDescriptorType(vk::DescriptorType::eStorageImage);
@@ -334,7 +334,7 @@ struct DescriptorSetsBuilder
 			vk::WriteDescriptorSet write_descriptor_set = {};
 			{
 				write_descriptor_set.setDstSet(m_vk_descriptor_sets[i_frame]);
-				write_descriptor_set.setDstBinding(uint32_t(i_binding));
+				write_descriptor_set.setDstBinding(static_cast<uint32_t>(i_binding));
 				write_descriptor_set.setDstArrayElement(0);
 				write_descriptor_set.setDescriptorCount(1);
 				write_descriptor_set.setDescriptorType(vk::DescriptorType::eAccelerationStructureNV);
@@ -444,7 +444,7 @@ struct DescriptorManager
 			// check whether uniform indices match binding
 			for (size_t i_binding = 0; i_binding < binding_to_descriptor_layout_bindings.size(); i_binding++)
 			{
-				THROW_ASSERT(binding_to_descriptor_layout_bindings[i_binding].binding == uint32_t(i_binding),
+				THROW_ASSERT(binding_to_descriptor_layout_bindings[i_binding].binding == static_cast<uint32_t>(i_binding),
 							 "binding number \"" + std::to_string(i_binding) + "\" missing");
 			}
 
@@ -459,7 +459,7 @@ struct DescriptorManager
 			// create a set of all descriptor for this pipeline
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_ci = {};
 			{
-				descriptor_set_layout_ci.setBindingCount(uint32_t(descriptor_layout_bindings.size()));
+				descriptor_set_layout_ci.setBindingCount(static_cast<uint32_t>(descriptor_layout_bindings.size()));
 				descriptor_set_layout_ci.setPBindings(descriptor_layout_bindings.data());
 			}
 
@@ -509,7 +509,7 @@ struct DescriptorManager
 		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info = {};
 		{
 			descriptor_set_alloc_info.setDescriptorPool(*Core::Inst().m_vk_descriptor_pool);
-			descriptor_set_alloc_info.setDescriptorSetCount(uint32_t(descriptor_set_layouts.size()));
+			descriptor_set_alloc_info.setDescriptorSetCount(static_cast<uint32_t>(descriptor_set_layouts.size()));
 			descriptor_set_alloc_info.setPSetLayouts(descriptor_set_layouts.data());
 		}
 		std::vector<vk::DescriptorSet> descriptor_sets = Core::Inst().m_vk_device->allocateDescriptorSets(descriptor_set_alloc_info);

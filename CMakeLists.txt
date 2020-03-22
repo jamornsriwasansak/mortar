@@ -47,15 +47,23 @@ set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/lib")
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
 
+	# find all sources
 	file(GLOB_RECURSE mortar_src
 		 "src/*.h"
 		 "src/*.hpp"
 		 "src/*.cpp"
 		 "src/*.cc")
+
+	# make sure compiler does not generate unnecessary warning from third party
+	set_source_files_properties(${mortar_src}
+								PROPERTIES)
+
+	# options for generating executable
 	include_directories(src)
-	add_executable(mortar "${mortar_src}")
+	add_executable(mortar ${mortar_src})
 	target_link_libraries(mortar SPIRV glslang glfw ${Vulkan_LIBRARY})
 
+	# copy shaders
 	add_custom_target(mortar_shaders_copy)
 	add_custom_command(TARGET mortar_shaders_copy POST_BUILD
 					   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/ ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/shaders/

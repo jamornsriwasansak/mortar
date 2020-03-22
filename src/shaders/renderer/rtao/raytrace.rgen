@@ -4,7 +4,7 @@
 
 #include "renderer/rtao/hitpayload.glsl"
 #include "common/pcg.glsl"
-#include "common/material.glsl"
+#include "common/mapping.glsl"
 #include "common/traceray.glsl"
 #include "common/onb.glsl"
 

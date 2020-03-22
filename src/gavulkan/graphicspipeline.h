@@ -78,7 +78,7 @@ private:
 			// setup color attachment reference
 			vk::AttachmentReference color_attch_ref = {};
 			{
-				color_attch_ref.setAttachment(uint32_t(i_color_attachment));
+				color_attch_ref.setAttachment(static_cast<uint32_t>(i_color_attachment));
 				color_attch_ref.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 			}
 			color_attachment_refs.push_back(color_attch_ref);
@@ -92,7 +92,7 @@ private:
 			// color attachment
 			if (color_attachments.size() > 0)
 			{
-				subpass.setColorAttachmentCount(uint32_t(color_attachment_refs.size()));
+				subpass.setColorAttachmentCount(static_cast<uint32_t>(color_attachment_refs.size()));
 				subpass.setPColorAttachments(color_attachment_refs.data());
 			}
 
@@ -127,7 +127,7 @@ private:
 
 		vk::RenderPassCreateInfo render_pass_ci = {};
 		{
-			render_pass_ci.setAttachmentCount(uint32_t(attachment_descriptions.size()));
+			render_pass_ci.setAttachmentCount(static_cast<uint32_t>(attachment_descriptions.size()));
 			render_pass_ci.setPAttachments(attachment_descriptions.data());
 			render_pass_ci.setSubpassCount(1);
 			render_pass_ci.setPSubpasses(&subpass);
@@ -186,7 +186,7 @@ private:
 			const auto [stride, format] = map_from_attribute_type.at(shader_attribute.m_type);
 
 			vertex_input_bindings[i_attribute].setBinding(shader_attribute.m_location);
-			vertex_input_bindings[i_attribute].setStride(uint32_t(stride));
+			vertex_input_bindings[i_attribute].setStride(static_cast<uint32_t>(stride));
 			vertex_input_bindings[i_attribute].setInputRate(vk::VertexInputRate::eVertex);
 
 			vertex_input_attributes[i_attribute].setBinding(shader_attribute.m_location);
@@ -197,9 +197,9 @@ private:
 
 		vk::PipelineVertexInputStateCreateInfo vertex_input_state_ci;
 		{
-			vertex_input_state_ci.setVertexBindingDescriptionCount(uint32_t(vertex_input_bindings.size()));
+			vertex_input_state_ci.setVertexBindingDescriptionCount(static_cast<uint32_t>(vertex_input_bindings.size()));
 			vertex_input_state_ci.setPVertexBindingDescriptions(vertex_input_bindings.data());
-			vertex_input_state_ci.setVertexAttributeDescriptionCount(uint32_t(vertex_input_attributes.size()));
+			vertex_input_state_ci.setVertexAttributeDescriptionCount(static_cast<uint32_t>(vertex_input_attributes.size()));
 			vertex_input_state_ci.setPVertexAttributeDescriptions(vertex_input_attributes.data());
 		}
 
@@ -211,7 +211,7 @@ private:
 
 		vk::PipelineLayoutCreateInfo layout_ci = {};
 		{
-			layout_ci.setSetLayoutCount(uint32_t(vk_descriptor_set_layouts.size()));
+			layout_ci.setSetLayoutCount(static_cast<uint32_t>(vk_descriptor_set_layouts.size()));
 			layout_ci.setPSetLayouts(vk_descriptor_set_layouts.data());
 			if (vk_push_constant_range.has_value())
 			{
@@ -226,8 +226,8 @@ private:
 		{
 			viewport.setX(0.0f);
 			viewport.setY(0.0f);
-			viewport.setWidth(float(Extent.width));
-			viewport.setHeight(float(Extent.height));
+			viewport.setWidth(static_cast<float>(Extent.width));
+			viewport.setHeight(static_cast<float>(Extent.height));
 			viewport.setMinDepth(0.0f);
 			viewport.setMaxDepth(1.0f);
 		}
@@ -294,7 +294,7 @@ private:
 		{
 			color_blend_state_ci.setLogicOpEnable(VK_FALSE);
 			color_blend_state_ci.setLogicOp(vk::LogicOp::eCopy);
-			color_blend_state_ci.setAttachmentCount(uint32_t(color_blend_attachment_states.size()));
+			color_blend_state_ci.setAttachmentCount(static_cast<uint32_t>(color_blend_attachment_states.size()));
 			color_blend_state_ci.setPAttachments(color_blend_attachment_states.data());
 			color_blend_state_ci.setBlendConstants({ 0.0f, 0.0f, 0.0f, 0.0f });
 		}
@@ -306,7 +306,7 @@ private:
 		// pipeline create info
 		vk::GraphicsPipelineCreateInfo pipeline_ci = {};
 		{
-			pipeline_ci.setStageCount(uint32_t(shader_stage_cis.size()));
+			pipeline_ci.setStageCount(static_cast<uint32_t>(shader_stage_cis.size()));
 			pipeline_ci.setPStages(shader_stage_cis.data());
 			pipeline_ci.setPVertexInputState(&vertex_input_state_ci);
 			pipeline_ci.setPInputAssemblyState(&input_assembly_state_ci);
@@ -365,7 +365,7 @@ private:
 			vk::FramebufferCreateInfo framebuffer_ci = {};
 			{
 				framebuffer_ci.setRenderPass(render_pass);
-				framebuffer_ci.setAttachmentCount(uint32_t(attachments.size()));
+				framebuffer_ci.setAttachmentCount(static_cast<uint32_t>(attachments.size()));
 				framebuffer_ci.setPAttachments(attachments.data());
 				framebuffer_ci.setWidth(Extent.width);
 				framebuffer_ci.setHeight(Extent.height);

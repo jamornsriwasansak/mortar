@@ -18,32 +18,35 @@ struct PathTracer
 	RayTracingPipeline
 	create_path_tracer_pipeline(const Scene & scene)
 	{
+		const uint32_t num_triangle_instances = static_cast<uint32_t>(scene.m_triangle_instances.size());
+		const uint32_t num_textures = static_cast<uint32_t>(scene.m_images_cache->m_images.size());
+
 		// create rtao pipeline
 		Shader raygen_shader("shaders/renderer/pathtracer/pathtracer.rgen",
 							 vk::ShaderStageFlagBits::eRaygenNV);
-		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 1 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 2 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 3 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 4 })->m_num_descriptors = 1;
-		raygen_shader.m_uniform_from_set_and_binding.at({ 1, 5 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+		raygen_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 1, 3 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
+		raygen_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
 
 		Shader raychit_shader("shaders/shared_rt_stage/raytrace.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
-		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 0 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 1 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 2 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 3 })->m_num_descriptors = scene.m_triangle_instances.size();
-		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 4 })->m_num_descriptors = 1;
-		raychit_shader.m_uniform_from_set_and_binding.at({ 1, 5 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+		raychit_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
+		raychit_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
+		raychit_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
+		raychit_shader.m_uniforms_set.at({ 1, 3 })->m_num_descriptors = num_triangle_instances;
+		raychit_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
+		raychit_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
 
 		Shader rayahit_shader("shaders/shared_rt_stage/raytrace.rahit",
 							  vk::ShaderStageFlagBits::eAnyHitNV);
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 1 })->m_num_descriptors = scene.m_triangle_instances.size();
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 2 })->m_num_descriptors = scene.m_triangle_instances.size();
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 3 })->m_num_descriptors = scene.m_triangle_instances.size();
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 4 })->m_num_descriptors = 1;
-		rayahit_shader.m_uniform_from_set_and_binding.at({ 1, 5 })->m_num_descriptors = scene.m_images_cache->m_images.size();
+		rayahit_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
+		rayahit_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
+		rayahit_shader.m_uniforms_set.at({ 1, 3 })->m_num_descriptors = num_triangle_instances;
+		rayahit_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
+		rayahit_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
 
 		Shader shadow_raymiss_shader("shaders/shared_rt_stage/rayshadow.rmiss",
 									 vk::ShaderStageFlagBits::eMissNV);
@@ -219,7 +222,7 @@ struct PathTracer
 				stopwatch.reset();
 
 				// update camera
-				camera->update(float(frame_time));
+				camera->update(static_cast<float>(frame_time));
 				CameraProperties cam_props = camera->get_camera_props();
 
 				cam_prop_buffers[params.m_image_index].copy_from(&cam_props,
@@ -231,11 +234,11 @@ struct PathTracer
 				std::array<vk::CommandBuffer, 1> command_buffers = { *cmd_buffers[params.m_image_index] };
 				{
 					submit_info.setPWaitDstStageMask(wait_stage_mask.data());
-					submit_info.setWaitSemaphoreCount(uint32_t(params.m_wait_semaphores.size()));
+					submit_info.setWaitSemaphoreCount(static_cast<uint32_t>(params.m_wait_semaphores.size()));
 					submit_info.setPWaitSemaphores(params.m_wait_semaphores.data());
-					submit_info.setCommandBufferCount(uint32_t(command_buffers.size()));
+					submit_info.setCommandBufferCount(static_cast<uint32_t>(command_buffers.size()));
 					submit_info.setPCommandBuffers(command_buffers.data());
-					submit_info.setSignalSemaphoreCount(uint32_t(params.m_signal_semaphores.size()));
+					submit_info.setSignalSemaphoreCount(static_cast<uint32_t>(params.m_signal_semaphores.size()));
 					submit_info.setPSignalSemaphores(params.m_signal_semaphores.data());
 				}
 

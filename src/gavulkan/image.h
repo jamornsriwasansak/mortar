@@ -100,7 +100,7 @@ struct DepthImage2d
 		vk::ImageCreateInfo image_ci = {};
 		{
 			image_ci.setImageType(vk::ImageType::e2D);
-			image_ci.setExtent(vk::Extent3D(uint32_t(width), uint32_t(height), 1u));
+			image_ci.setExtent(vk::Extent3D(static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1u));
 			image_ci.setMipLevels(1);
 			image_ci.setArrayLayers(1);
 			image_ci.setFormat(m_vk_format);
@@ -177,13 +177,13 @@ struct RgbaImage2d
 	vk::UniqueImageView			m_vk_image_view;
 	vk::UniqueSampler			m_vk_sampler;
 	vk::ImageLayout				m_vk_image_layout;
-	size_t						m_width;
-	size_t						m_height;
+	uint32_t					m_width;
+	uint32_t					m_height;
 	size_t						m_num_channels;
 
 	RgbaImage2d(const void * data,
-				const size_t width,
-				const size_t height,
+				const uint32_t width,
+				const uint32_t height,
 				const vk::ImageTiling & vk_image_tiling,
 				const vk::ImageUsageFlags & vk_image_usage_flags,
 				const bool use_srgb = false,
@@ -223,7 +223,7 @@ struct RgbaImage2d
 		vk::ImageCreateInfo image_ci = {};
 		{
 			image_ci.setImageType(vk::ImageType::e2D);
-			image_ci.setExtent(vk::Extent3D(uint32_t(width), uint32_t(height), 1u));
+			image_ci.setExtent(vk::Extent3D(width, height, 1u));
 			image_ci.setMipLevels(1);
 			image_ci.setArrayLayers(1);
 			image_ci.setFormat(m_vk_format);
@@ -249,10 +249,10 @@ struct RgbaImage2d
 		m_vk_memory = Core::Inst().m_vk_device->allocateMemoryUnique(mem_ai);
 
 		// bind image and memory together
-		const size_t mem_offset = 0;
+		const vk::DeviceSize mem_offset = 0;
 		Core::Inst().m_vk_device->bindImageMemory(*m_vk_image,
 												  *m_vk_memory,
-												  vk::DeviceSize(mem_offset));
+												  mem_offset);
 
 		if (data != nullptr)
 		{
@@ -272,8 +272,8 @@ struct RgbaImage2d
 		init_image_view();
 	}
 
-	RgbaImage2d(const size_t width,
-				const size_t height,
+	RgbaImage2d(const uint32_t width,
+				const uint32_t height,
 				const vk::ImageUsageFlags & vk_image_usage_flags,
 				const bool is_downloadable = false):
 		RgbaImage2d(nullptr,
@@ -360,8 +360,8 @@ struct RgbaImage2d
 		copy_vk_buffer_to_vk_image(*m_vk_image,
 								   vk::ImageLayout::eTransferDstOptimal,
 								   *stage.m_vk_buffer,
-								   uint32_t(width),
-								   uint32_t(height));
+								   static_cast<uint32_t>(width),
+								   static_cast<uint32_t>(height));
 
 		// make image layout optimal for shader reading
 		transition_image_layout(*m_vk_image,
@@ -424,8 +424,10 @@ struct RgbaImage2d
 		os << "-1" << std::endl;
 
 		// else start writing the image
-		for (int y = m_height - 1; y >= 0; y--)
-			for (int x = 0; x < m_width; x++)
+		const int height = static_cast<int>(m_height);
+		const int width = static_cast<int>(m_width);
+		for (int y = height - 1; y >= 0; y--)
+			for (int x = 0; x < width; x++)
 				for (int c = 0; c < 3; c++)
 				{
 					float v = read_result[(y * m_width + x) * 4 + c];

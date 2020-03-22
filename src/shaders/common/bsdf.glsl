@@ -357,7 +357,7 @@ Material_cos_sample(out vec3 outgoing,
 
 	// break if both weight are too low.
 	// probably a light source or a completely dark material.
-	if (sum_weight <= 1e-5f) { return false; }
+	if (sum_weight <= SMALL_VALUE) { return false; }
 
 	// probability of choosing each material
 	const float diffuse_cprob = diffuse_weight / sum_weight;

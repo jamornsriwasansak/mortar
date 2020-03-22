@@ -95,7 +95,7 @@ struct RtBlas
 																	.memoryRequirements;
 
 		// create scratch buffer
-		Buffer scratch_buffer(mem_req.size,
+		Buffer scratch_buffer(static_cast<uint32_t>(mem_req.size),
 							  vk::MemoryPropertyFlagBits::eDeviceLocal,
 							  vk::BufferUsageFlagBits::eRayTracingNV);
 
@@ -197,7 +197,7 @@ struct RtTlas
 		vk::AccelerationStructureInfoNV	as_info;
 		{
 			as_info.setType(vk::AccelerationStructureTypeNV::eTopLevel);
-			as_info.setInstanceCount(uint32_t(instances.size()));
+			as_info.setInstanceCount(static_cast<uint32_t>(instances.size()));
 			as_info.setFlags(vk::BuildAccelerationStructureFlagBitsNV::ePreferFastTrace);
 		}
 		vk::AccelerationStructureCreateInfoNV as_ci;
@@ -238,9 +238,9 @@ struct RtTlas
 			VkGeometryInstanceNV instance_nv;
 			{
 				instance_nv.accelerationStructureHandle = as_handle;
-				instance_nv.flags = uint32_t(vk::GeometryInstanceFlagBitsNV::eTriangleCullDisable);
+				instance_nv.flags = static_cast<uint32_t>(vk::GeometryInstanceFlagBitsNV::eTriangleCullDisable);
 				instance_nv.hitGroupId = 0;
-				instance_nv.instanceId = uint32_t(i_instance);
+				instance_nv.instanceId = static_cast<uint32_t>(i_instance);
 				instance_nv.mask = 0xff;
 				std::memcpy(instance_nv.transform,
 							&transform[0][0],
