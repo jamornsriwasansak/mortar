@@ -392,7 +392,6 @@ struct TriangleMeshStorage
 					const Material & mat = m_materials[material_id];
 					if (length(mat.m_emission) > SMALL_VALUE)
 					{
-						std::cout << glm::to_string(mat.m_emission) << std::endl;
 						is_shape_emissive = true;
 					}
 				}

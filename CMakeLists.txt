@@ -56,7 +56,8 @@ set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 
 	# make sure compiler does not generate unnecessary warning from third party
 	set_source_files_properties(${mortar_src}
-								PROPERTIES)
+								PROPERTIES
+								COMPILER_FLAGS "-w")
 
 	# options for generating executable
 	include_directories(src)
