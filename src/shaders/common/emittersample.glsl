@@ -4,8 +4,9 @@
 struct EmitterSample
 {
 	vec3 m_position;
+	float m_pdf;
 	vec3 m_gnormal;
+	int m_flag;
 	vec3 m_snormal;
 	vec3 m_emission;
-	int m_flag;
 };

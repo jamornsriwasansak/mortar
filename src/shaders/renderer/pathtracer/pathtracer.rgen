@@ -88,7 +88,7 @@ connect_emitter_sample(const vec3 position,
         vec3 bsdf_contrib; 
         if (!Material_eval(bsdf_contrib, material, bsdf_local_incoming, bsdf_local_outgoing)) { return vec3(0.0f); }
 
-        return bsdf_contrib * cos_cos / sqr_length * emitter_sample.m_emission;
+        return bsdf_contrib * cos_cos / sqr_length * emitter_sample.m_emission / emitter_sample.m_pdf;
     }
     else
 	{
@@ -129,15 +129,13 @@ li(Ray ray,
 		// compute position
 		const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
 
-        /*
-        if (emitter_flag == EMITTER_GEOMETRY)
-        {
-            return vec3(dot(emitter_position - position, prd.m_snormal) / sqr(distance2(position, emitter_position))) * emitter_emission;
-        }
-        else
-        {
-            return vec3(0.0f);
-        }*/
+        #if 0
+        // compute contribution from next event estimation
+        ray_origin = ray.m_origin;
+        const vec3 nee_contrib = connect_emitter_sample(position, prd.m_snormal, prd.m_gnormal, incoming, prd.m_material, emitter_sample);
+        radiance += nee_contrib;
+        break;
+        #endif
 
         // add radiance
         radiance += importance * prd.m_material.m_emission;

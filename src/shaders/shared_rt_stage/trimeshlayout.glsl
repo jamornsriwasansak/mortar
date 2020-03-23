@@ -84,13 +84,13 @@ int sample_emitter_face(out float prob, out float rescaled_s, const int cdf_tabl
 }\
 EmitterSample sample_emitter(vec2 samples)\
 {\
-	float sample_instance_prob = 0.0f;\
-	float sample_face_prob = 0.0f;\
-	const int instance_id = sample_emitter_instance_index(sample_instance_prob, samples.x, samples.x);\
+	float sample_instance_id_prob = 0.0f;\
+	const int instance_id = sample_emitter_instance_index(sample_instance_id_prob, samples.x, samples.x);\
 	EmitterSample emitter_sample;\
     if (instance_id < emitter_info_block.info.m_envmap_emitter_offset)\
     {\
-		const int face_id = sample_emitter_face(sample_face_prob, samples.x, instance_id, samples.x);\
+		float sample_face_id_prob = 0.0f;\
+		const int face_id = sample_emitter_face(sample_face_id_prob, samples.x, instance_id, samples.x);\
         const uint index0 = faces_arrays[instance_id].faces[face_id * 3 + 0];\
         const uint index1 = faces_arrays[instance_id].faces[face_id * 3 + 1];\
         const uint index2 = faces_arrays[instance_id].faces[face_id * 3 + 2];\
@@ -106,7 +106,10 @@ EmitterSample sample_emitter(vec2 samples)\
 	    const vec4 nv2 = nvs_arrays[instance_id].normal_and_vs[index2];\
 	    const vec4 nv = mix_barycoord(baryccoord, nv0, nv1, nv2);\
 	    /* correct normals and make sure normal share the same direction as incoming vector (= -ray.m_direction)*/\
-	    emitter_sample.m_gnormal = normalize(cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz));\
+		const vec3 crossed = cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz);\
+		const float triangle_area = length(crossed) * 0.5f;\
+		const float sample_face_pdf = 1.0f / triangle_area;\
+	    emitter_sample.m_gnormal = normalize(crossed);\
 	    emitter_sample.m_snormal = normalize(nv.xyz);\
 	    emitter_sample.m_snormal = dot(emitter_sample.m_gnormal, emitter_sample.m_snormal) >= 0.0f ? emitter_sample.m_snormal : -emitter_sample.m_snormal;\
 	    /* organize the values */\
@@ -118,6 +121,7 @@ EmitterSample sample_emitter(vec2 samples)\
 		DECODE_MATERIAL(material, textures, texcoord);\
 		emitter_sample.m_emission = material.m_emission;\
         emitter_sample.m_flag = EMITTER_GEOMETRY;\
+		emitter_sample.m_pdf = sample_instance_id_prob * sample_face_id_prob * sample_face_pdf;\
 		return emitter_sample;\
     }\
     emitter_sample.m_position = vec3(0.0f);\
