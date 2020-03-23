@@ -3,8 +3,8 @@
 #extension GL_GOOGLE_include_directive : require
 
 // switch between Heitz's blue-noise and PCG here
-//#define USE_PCG
-#define USE_BLUE_RAND
+#define USE_PCG
+//#define USE_BLUE_RAND
 
 #include "common/bluenoise.glsl"
 #include "common/bsdf.glsl"
@@ -14,6 +14,9 @@
 #include "common/traceray.glsl"
 #include "shared_rt_stage/hitpayload.glsl"
 #include "shared_rt_stage/trimeshlayout.glsl"
+
+//#define USE_MIS
+#define USE_NEE_ONLY
 
 layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
@@ -54,46 +57,82 @@ generate_primary_ray(const vec2 samples)
     return result;
 }
 
-vec3 ray_origin;
+float
+mi_weight(const float pdf1,
+          const float pdf2)
+{
+    return pdf1 / (pdf1 + pdf2);
+}
 
-vec3
-connect_emitter_sample(const vec3 position,
+bool
+connect_emitter_sample(out vec3 weighted_contrib,
+                       const vec3 position,
                        const vec3 snormal,
                        const vec3 gnormal,
                        const vec3 incoming,
                        const Material material,
                        const EmitterSample emitter_sample)
 {
-	if (emitter_sample.m_flag == EMITTER_GEOMETRY)
-	{
+    if (emitter_sample.m_flag == EMITTER_GEOMETRY)
+    {
         const vec3 s_to_e = emitter_sample.m_position - position; // surface to emitter
         const float sqr_length = dot(s_to_e, s_to_e);
         const float len = sqrt(sqr_length);
         const vec3 norm_s_to_e = s_to_e / len;
 
         // check cosine(s_to_e) * cosine(e_to_s)
-        const float cos_cos = abs(dot(norm_s_to_e, snormal) * dot(norm_s_to_e, emitter_sample.m_gnormal));
-        if (cos_cos <= SMALL_VALUE) { return vec3(0.0f); }
+        const float cos_s2e = dot(norm_s_to_e, snormal);
+        const float cos_e2s = dot(norm_s_to_e, emitter_sample.m_gnormal);
+        const float cos_cos = abs(cos_s2e * cos_e2s);
+        if (cos_cos <= SMALL_VALUE) { return false; }
+
+        // make sure that incoming and outgoing are not being "sampled" under the surface
+        if (cos_s2e * dot(norm_s_to_e, prd.m_gnormal) < 0.0f)
+        {
+            return false;
+        }
 
         // test shadow ray
         Ray shadow_ray = Ray_create(position, s_to_e, DEFAULT_TMIN, 1.0f - DEFAULT_TMIN);
         is_intersect = true;
         trace_shadow_ray(shadow_ray, tlas, 1);
-        if (is_intersect) { return vec3(0.0f); }
+        if (is_intersect) { return false; }
 
-        // evaluate material
+        // prepare to evaluate material
         Onb onb = Onb_create(snormal);
         const vec3 bsdf_local_incoming = Onb_to_local(onb, incoming);
         const vec3 bsdf_local_outgoing = Onb_to_local(onb, norm_s_to_e);
-        vec3 bsdf_contrib; 
-        if (!Material_eval(bsdf_contrib, material, bsdf_local_incoming, bsdf_local_outgoing)) { return vec3(0.0f); }
 
-        return bsdf_contrib * cos_cos / sqr_length * emitter_sample.m_emission / emitter_sample.m_pdf;
+        // if evaluation is unsuccessful, let's return
+        vec3 bsdf_val;
+        float bsdf_pdf_w; // pdf in solid angle domain
+        if (!Material_eval(bsdf_val, bsdf_pdf_w, material, bsdf_local_incoming, bsdf_local_outgoing))
+        {
+            return false;
+        }
+
+        // compute bsdf pdf in area domain from solid angle domain
+        float bsdf_pdf_a = bsdf_pdf_w * abs(cos_e2s) / sqr_length;
+
+        // compute mis weight
+        #ifdef USE_MIS
+        const float mis_weight = mi_weight(emitter_sample.m_pdf, bsdf_pdf_a);
+        #elif defined(USE_NEE_ONLY)
+        const float mis_weight = 1.0f;
+        #else
+        const float mis_weight = 0.0f;
+        #endif
+
+        const float geometry_term = cos_cos / sqr_length;
+
+        // compute result
+        weighted_contrib = mis_weight * bsdf_val * geometry_term * emitter_sample.m_emission / emitter_sample.m_pdf;
+        return true;
     }
     else
-	{
-		return vec3(0.0f);
-	}
+    {
+        return false;
+    }
 }
 
 vec3
@@ -109,50 +148,82 @@ li(Ray ray,
     vec2 samples = rand2();
     float next_sample = rand();
 
-    for (int i = 0; i < 2; i++)
+    // trace ray
+    trace_ray(ray, tlas, 0);
+
+    int path_length = 2;
+    float prev_bsdf_pdf_w = 0.0f;
+    for (int i = 0; i < path_length; i++)
     {
+        // note m_direction is either from Material_cos_sample or generate_primary_ray
+        // therefore, it is always normalized
         const vec3 incoming = -ray.m_direction;
 
-        // trace ray
-		trace_ray(ray, tlas, 0);
-
-		// determine whether we should temrinate or not
-		if (prd.m_t < 0)
-		{
+        // add radiance from envmap
+        if (prd.m_t < 0)
+        {
             // fetch emissive value from envmap
-            vec2 latlong_texcoord = latlong_texcoord_from_direction(ray.m_direction);
-            vec3 emission = texture(envmap, latlong_texcoord).xyz;
-			radiance += importance * emission;
-			break;
+            const vec2 latlong_texcoord = latlong_texcoord_from_direction(ray.m_direction);
+            const vec3 emission = texture(envmap, latlong_texcoord).xyz;
+            radiance += importance * emission;
+            break;
+        }
+        else if (length(prd.m_material.m_emission) > 0.0f)
+        {
+            if (i > 0)
+            {            
+                // hit shape with emissive value
+                const float light_sampling_pdf_a = geometry_emitter_pdf(prd.m_instance_id, prd.m_face_id, prd.m_face_area);
+                const float bsdf_sampling_pdf_a = prev_bsdf_pdf_w * abs(dot(prd.m_gnormal, incoming)) / sqr(prd.m_t);
+                #ifdef USE_MIS
+                const float mis_weight = mi_weight(bsdf_sampling_pdf_a, light_sampling_pdf_a);
+                #elif defined(USE_NEE_ONLY)
+                const float mis_weight = 0.0f;
+                #else
+                const float mis_weight = 1.0f;
+                #endif
+                radiance += mis_weight * importance * prd.m_material.m_emission;
+            }
+            else
+            {
+                radiance += importance * prd.m_material.m_emission;
+            }
+        }
+
+        // compute position
+        const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
+
+        if (i <= path_length - 2)
+        {
+			// compute contribution from next event estimation weighted by mis weight
+			vec3 nee_contrib;
+            if (connect_emitter_sample(nee_contrib, position, prd.m_snormal, prd.m_gnormal, incoming, prd.m_material, emitter_sample))
+            {
+				radiance += importance * nee_contrib;
+            }
 		}
 
-		// compute position
-		const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
+        // since the code after this will sample the next direction and trace for next bounce
+        // we stop here
+        if (i == path_length - 1)
+        {
+            break;
+        }
 
-        #if 0
-        // compute contribution from next event estimation
-        ray_origin = ray.m_origin;
-        const vec3 nee_contrib = connect_emitter_sample(position, prd.m_snormal, prd.m_gnormal, incoming, prd.m_material, emitter_sample);
-        radiance += nee_contrib;
-        break;
-        #endif
-
-        // add radiance
-        radiance += importance * prd.m_material.m_emission;
-
-		// generate outgoing direction
-		Onb onb = Onb_create(prd.m_snormal);
+        // generate outgoing direction
+        Onb onb = Onb_create(prd.m_snormal);
         const vec3 local_incoming = Onb_to_local(onb, incoming);
-		vec3 local_outgoing;
+        vec3 local_outgoing;
         vec3 bsdf_cos_contrib;
-		const bool sample_success = Material_cos_sample(local_outgoing, // out
+        float bsdf_pdf_w;
+        const bool sample_success = Material_cos_sample(local_outgoing, // out
                                                         bsdf_cos_contrib, // out
-                                                        ior, // inout
+                                                        bsdf_pdf_w, // out
                                                         prd.m_material,
                                                         local_incoming,
                                                         samples,
                                                         next_sample);
-		const vec3 outgoing = Onb_to_world(onb, local_outgoing);
+        const vec3 outgoing = Onb_to_world(onb, local_outgoing);
 
         // break if could not sample
         if (!sample_success) { break; }
@@ -160,20 +231,24 @@ li(Ray ray,
         // prevent light leak but introduce black fringe
         if (local_outgoing.y * dot(outgoing, prd.m_gnormal) < 0.0f || local_incoming.y * dot(incoming, prd.m_gnormal) < 0.0f)
         {
-			break;
+            break;
         }
 
         // update importance for the next bounce (veach thesis page 158, figure 5.6)
-		importance *= bsdf_cos_contrib;
+        importance *= bsdf_cos_contrib;
 
         // update next_samples
         samples = vec2(next_sample, rand());
         next_sample = rand();
+        prev_bsdf_pdf_w = bsdf_pdf_w;
 
         // update ray
         ray.m_origin = position;
         ray.m_direction = outgoing;
-	}
+
+        // and trace
+        trace_ray(ray, tlas, 0);
+    }
     return radiance;
 }
 
@@ -186,8 +261,8 @@ main()
 
     if (!(cam.m_is_moved.x == 1))
     {
-		vec4 accumulated_radiance_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
-		accumulated_radiance = accumulated_radiance_and_num_spp.xyz;
+        vec4 accumulated_radiance_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
+        accumulated_radiance = accumulated_radiance_and_num_spp.xyz;
         num_spp = accumulated_radiance_and_num_spp.w;
     }
 
@@ -196,8 +271,8 @@ main()
 
     float sum = 0.0f;
 
-	// trace ray based on camera properties
-	Ray initial_ray = generate_primary_ray(rand2());
+    // trace ray based on camera properties
+    Ray initial_ray = generate_primary_ray(rand2());
 
     // estimate the radiance and accumulate it.
     vec3 estimated_radiance = li(initial_ray, int(num_spp));
@@ -205,6 +280,6 @@ main()
     // accumulate the sample
     accumulated_radiance = ((accumulated_radiance * num_spp) + estimated_radiance) / (num_spp + 1.0f);
 
-	// determine whether we should temrinate or not
-	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulated_radiance, num_spp + 1.0f));
+    // determine whether we should temrinate or not
+    imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulated_radiance, num_spp + 1.0f));
 }

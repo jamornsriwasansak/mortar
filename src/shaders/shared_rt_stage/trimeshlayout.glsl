@@ -127,4 +127,10 @@ EmitterSample sample_emitter(vec2 samples)\
     emitter_sample.m_position = vec3(0.0f);\
     emitter_sample.m_flag = EMITTER_ENVMAP;\
 	return emitter_sample;\
+}\
+float geometry_emitter_pdf(const int instance_id, const int face_id, const float triangle_area)\
+{\
+	const float tlpdf = emitter_tlcdf.cdf[instance_id + 1] - emitter_tlcdf.cdf[instance_id];\
+	const float blpdf = emitter_blcdf[instance_id].cdf[face_id + 1] - emitter_blcdf[instance_id].cdf[face_id];\
+	return tlpdf * blpdf / triangle_area;\
 }

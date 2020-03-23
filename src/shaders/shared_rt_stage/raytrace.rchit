@@ -34,7 +34,8 @@ void main()
     const vec4 nv = mix_barycoord(attribs.xy, nv0, nv1, nv2);
 
     // correct normals and make sure normal share the same direction as incoming vector (= -ray.m_direction)
-    vec3 gnormal = normalize(cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz));
+    vec3 crossed = cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz);
+    vec3 gnormal = normalize(crossed);
     vec3 snormal = normalize(nv.xyz);
     //gnormal = dot(gnormal, -gl_WorldRayDirectionNV) >= 0.0f ? gnormal : -gnormal;
     snormal = dot(gnormal, snormal) >= 0.0f ? snormal : -snormal;
@@ -52,4 +53,7 @@ void main()
     prd.m_material = material;
     prd.m_snormal = snormal;
     prd.m_gnormal = gnormal;
+    prd.m_instance_id = gl_InstanceID;
+    prd.m_face_id = gl_PrimitiveID;
+    prd.m_face_area = length(crossed);
 }
