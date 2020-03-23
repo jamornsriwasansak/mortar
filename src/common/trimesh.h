@@ -457,7 +457,7 @@ struct TriangleMeshStorage
 				{
 					cdf_table[i_face + 1] = pdf_table[i_face] + cdf_table[i_face];
 				}
-				THROW_ASSERT(std::abs(cdf_table[num_faces] - 1.0f) <= SMALL_VALUE,
+				THROW_ASSERT(std::abs(cdf_table[num_faces] - 1.0f) <= 1e-2f,
 							 "last element of cdf table is not 1.0f");
 				cdf_table[num_faces] = 1.0f;
 			}
