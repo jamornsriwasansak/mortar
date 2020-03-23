@@ -54,22 +54,53 @@ generate_primary_ray(const vec2 samples)
     return result;
 }
 
+vec3 ray_origin;
+
+vec3
+connect_emitter_sample(const vec3 position,
+                       const vec3 snormal,
+                       const vec3 gnormal,
+                       const vec3 incoming,
+                       const Material material,
+                       const EmitterSample emitter_sample)
+{
+	if (emitter_sample.m_flag == EMITTER_GEOMETRY)
+	{
+        const vec3 s_to_e = emitter_sample.m_position - position; // surface to emitter
+        const float sqr_length = dot(s_to_e, s_to_e);
+        const float len = sqrt(sqr_length);
+        const vec3 norm_s_to_e = s_to_e / len;
+
+        // check cosine(s_to_e) * cosine(e_to_s)
+        const float cos_cos = abs(dot(norm_s_to_e, snormal) * dot(norm_s_to_e, emitter_sample.m_gnormal));
+        if (cos_cos <= SMALL_VALUE) { return vec3(0.0f); }
+
+        // test shadow ray
+        Ray shadow_ray = Ray_create(position, s_to_e, DEFAULT_TMIN, 1.0f - DEFAULT_TMIN);
+        is_intersect = true;
+        trace_shadow_ray(shadow_ray, tlas, 1);
+        if (is_intersect) { return vec3(0.0f); }
+
+        // evaluate material
+        Onb onb = Onb_create(snormal);
+        const vec3 bsdf_local_incoming = Onb_to_local(onb, incoming);
+        const vec3 bsdf_local_outgoing = Onb_to_local(onb, s_to_e);
+        vec3 bsdf_contrib; 
+        if (!Material_eval(bsdf_contrib, material, bsdf_local_incoming, bsdf_local_outgoing)) { return vec3(0.0f); }
+
+        return bsdf_contrib * cos_cos / sqr_length * emitter_sample.m_emission;
+    }
+    else
+	{
+		return vec3(0.0f);
+	}
+}
+
 vec3
 li(Ray ray,
    const int sample_index)
 {
-    /*
-    vec3 emitter_position = vec3(0.0f);
-    vec3 emitter_gnormal = vec3(0.0f);
-    vec3 emitter_snormal = vec3(0.0f);
-    vec2 emitter_texcoord = vec2(0.0f);
-    vec3 emitter_emission = vec3(0.0f);
-    int emitter_flag = sample_emitter(emitter_position,
-                   emitter_gnormal,
-                   emitter_snormal,
-                   emitter_texcoord,
-                   emitter_emission,
-                   rand2());*/
+    EmitterSample emitter_sample = sample_emitter(rand2());
 
     float ior = 1.0f; // air IOR = 1.0
     vec3 radiance = vec3(0.0f);
@@ -78,12 +109,12 @@ li(Ray ray,
     vec2 samples = rand2();
     float next_sample = rand();
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 2; i++)
     {
+        const vec3 incoming = -normalize(ray.m_direction);
+
         // trace ray
 		trace_ray(ray, tlas, 0);
-
-        const vec3 incoming = -ray.m_direction;
 
 		// determine whether we should temrinate or not
 		if (prd.m_t < 0)

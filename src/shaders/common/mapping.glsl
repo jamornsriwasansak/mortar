@@ -1,6 +1,24 @@
 #extension GL_GOOGLE_include_directive : enable
 #include "constant.glsl"
 
+vec2
+traingle_from_square(const vec2 samples)
+{
+	// A Low - Distortion Map Between Triangle and Square, Eric Heitz
+	if (samples.y > samples.x)
+	{
+		float x = samples.x * 0.5f;
+		float y = samples.y - x;
+		return vec2(x, y);
+	}
+	else
+	{
+		float y = samples.y * 0.5f;
+		float x = samples.x - y;
+		return vec2(x, y);
+	}
+}
+
 vec3
 cosine_hemisphere_from_square(const vec2 samples)
 {

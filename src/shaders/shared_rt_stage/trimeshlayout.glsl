@@ -1,5 +1,6 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
+#include "common/emittersample.glsl"
 #include "shared.glsl.h"
 
 #define DECLARE_TRIMESH_LAYOUT(SET) \
@@ -24,9 +25,6 @@ layout(set = SET, binding = 4) buffer TMaterialBuffer\
 	Material materials[];\
 } mat;\
 layout(set = SET, binding = 5) uniform sampler2D textures[];
-
-#define EMITTER_GEOMETRY 0
-#define EMITTER_ENVMAP 1
 
 #define DECLARE_EMITTER_LAYOUT(SET) \
 layout(set = SET, binding = 0) uniform EmitterInfoBlock\
@@ -84,41 +82,45 @@ int sample_emitter_face(out float prob, out float rescaled_s, const int cdf_tabl
 	prob = p1 - p0;\
     return first - 1;\
 }\
-int sample_emitter(out vec3 position, out vec3 gnormal, out vec3 snormal, out vec2 texcoord, out vec3 emission, vec2 samples)\
+EmitterSample sample_emitter(vec2 samples)\
 {\
 	float sample_instance_prob = 0.0f;\
 	float sample_face_prob = 0.0f;\
 	const int instance_id = sample_emitter_instance_index(sample_instance_prob, samples.x, samples.x);\
+	EmitterSample emitter_sample;\
     if (instance_id < emitter_info_block.info.m_envmap_emitter_offset)\
     {\
 		const int face_id = sample_emitter_face(sample_face_prob, samples.x, instance_id, samples.x);\
         const uint index0 = faces_arrays[instance_id].faces[face_id * 3 + 0];\
         const uint index1 = faces_arrays[instance_id].faces[face_id * 3 + 1];\
         const uint index2 = faces_arrays[instance_id].faces[face_id * 3 + 2];\
+		const vec2 baryccoord = traingle_from_square(samples);\
        	/* position and tex u */\
 	    const vec4 pu0 = pus_arrays[instance_id].position_and_us[index0];\
 	    const vec4 pu1 = pus_arrays[instance_id].position_and_us[index1];\
 	    const vec4 pu2 = pus_arrays[instance_id].position_and_us[index2];\
-	    const vec4 pu = mix_barycoord(samples, pu0, pu1, pu2);\
+	    const vec4 pu = mix_barycoord(baryccoord, pu0, pu1, pu2);\
 	    /* normal and tex v */\
 	    const vec4 nv0 = nvs_arrays[instance_id].normal_and_vs[index0];\
 	    const vec4 nv1 = nvs_arrays[instance_id].normal_and_vs[index1];\
 	    const vec4 nv2 = nvs_arrays[instance_id].normal_and_vs[index2];\
-	    const vec4 nv = mix_barycoord(samples, nv0, nv1, nv2);\
+	    const vec4 nv = mix_barycoord(baryccoord, nv0, nv1, nv2);\
 	    /* correct normals and make sure normal share the same direction as incoming vector (= -ray.m_direction)*/\
-	    gnormal = normalize(cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz));\
-	    snormal = normalize(nv.xyz);\
-	    snormal = dot(gnormal, snormal) >= 0.0f ? snormal : -snormal;\
+	    emitter_sample.m_gnormal = normalize(cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz));\
+	    emitter_sample.m_snormal = normalize(nv.xyz);\
+	    emitter_sample.m_snormal = dot(emitter_sample.m_gnormal, emitter_sample.m_snormal) >= 0.0f ? emitter_sample.m_snormal : -emitter_sample.m_snormal;\
 	    /* organize the values */\
-	    position = pu.xyz;\
-	    texcoord = vec2(pu.w, nv.w);\
+	    emitter_sample.m_position = pu.xyz;\
+	    vec2 texcoord = vec2(pu.w, nv.w);\
 	    /* material */\
 	    const uint material_id = material_ids_arrays[instance_id].material_ids[face_id];\
 	    Material material = mat.materials[material_id];\
 		DECODE_MATERIAL(material, textures, texcoord);\
-		emission = material.m_emission;\
-        return EMITTER_GEOMETRY;\
+		emitter_sample.m_emission = material.m_emission;\
+        emitter_sample.m_flag = EMITTER_GEOMETRY;\
+		return emitter_sample;\
     }\
-    position = vec3(0.0f);\
-    return EMITTER_ENVMAP;\
+    emitter_sample.m_position = vec3(0.0f);\
+    emitter_sample.m_flag = EMITTER_ENVMAP;\
+	return emitter_sample;\
 }

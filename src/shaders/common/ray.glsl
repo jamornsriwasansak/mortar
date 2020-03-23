@@ -14,6 +14,20 @@ struct Ray
 
 Ray
 Ray_create(const vec3 origin,
+           const vec3 direction,
+           const float tmin,
+           const float tmax)
+{
+    Ray result;
+    result.m_origin = origin;
+    result.m_direction = direction;
+    result.m_tmin = tmin;
+    result.m_tmax = tmax;
+    return result;
+}
+
+Ray
+Ray_create(const vec3 origin,
            const vec3 direction)
 {
     Ray result;

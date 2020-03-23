@@ -342,8 +342,71 @@ Ggx_transmit_eval(out vec3 bsdf_val,
 //
 
 bool
+Material_eval(out vec3 bsdf_val,
+			  const Material material,
+			  const vec3 incoming,
+			  const vec3 outgoing)
+{
+	const float diffuse_weight = length(material.m_diffuse_refl);
+	const float ggx_refl_weight = length(material.m_spec_refl);
+	const float ggx_trans_weight = length(material.m_spec_trans);
+	const float sum_weight = diffuse_weight + ggx_refl_weight + ggx_trans_weight;
+
+	// break if both weight are too low.
+	// probably a light source or a completely dark material.
+	if (sum_weight <= SMALL_VALUE) { return false; }
+
+	// note: SUM(f_i(v, l)) / SUM(p_i(v, l)) corresponded to applying MIS on top of bsdf sampling techniques
+	// thus, reduces level of noise.
+	vec3 bsdf_val_sum = vec3(0.0f);
+	float bsdf_pdf_sum = 0.0f;
+
+	// eval diffuse
+	if (diffuse_weight > 0.0f)
+	{
+		vec3 diffuse_bsdf_val;
+		float diffuse_pdf;
+
+		if (Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing))
+		{
+			bsdf_val_sum += diffuse_bsdf_val;
+			bsdf_pdf_sum += diffuse_pdf;
+		}
+	}
+
+	// eval ggx reflection
+	if (ggx_refl_weight > 0.0f)
+	{
+		vec3 ggx_refl_bsdf_val;
+		float ggx_refl_pdf;
+		if (Ggx_reflect_eval(ggx_refl_bsdf_val, ggx_refl_pdf, material, incoming, outgoing))
+		{
+			bsdf_val_sum += ggx_refl_bsdf_val;
+			bsdf_pdf_sum += ggx_refl_pdf;
+		}
+	}
+
+	// eval ggx transmission
+	if (ggx_trans_weight > 0.0f)
+	{
+		vec3 ggx_trans_bsdf_val;
+		float ggx_trans_pdf;
+		if (Ggx_transmit_eval(ggx_trans_bsdf_val, ggx_trans_pdf, material, incoming, outgoing))
+		{
+			bsdf_val_sum += ggx_trans_bsdf_val;
+			bsdf_pdf_sum += ggx_trans_pdf;
+		}
+	}
+
+	// use mis to compute bsdf_weight
+	bsdf_val = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_val_sum / bsdf_pdf_sum;
+
+	return true;
+}
+
+bool
 Material_cos_sample(out vec3 outgoing,
-					out vec3 bsdf_cos_contrib,
+					out vec3 bsdf_contrib,
 					inout float ior,
 					const Material material,
 					const vec3 incoming,
@@ -397,7 +460,7 @@ Material_cos_sample(out vec3 outgoing,
 
 	// note: SUM(f_i(v, l)) / SUM(p_i(v, l)) corresponded to applying MIS on top of bsdf sampling techniques
 	// thus, reduces level of noise.
-	vec3 bsdf_cos_val_sum = vec3(0.0f);
+	vec3 bsdf_val_sum = vec3(0.0f);
 	float bsdf_pdf_sum = 0.0f;
 
 	// eval diffuse
@@ -407,7 +470,7 @@ Material_cos_sample(out vec3 outgoing,
 		float diffuse_pdf;
 		if (Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing))
 		{
-			bsdf_cos_val_sum += diffuse_bsdf_val;
+			bsdf_val_sum += diffuse_bsdf_val;
 			bsdf_pdf_sum += diffuse_pdf * diffuse_cprob;
 		}
 	}
@@ -419,7 +482,7 @@ Material_cos_sample(out vec3 outgoing,
 		float ggx_refl_pdf;
 		if (Ggx_reflect_eval(ggx_refl_bsdf_val, ggx_refl_pdf, material, incoming, outgoing))
 		{
-			bsdf_cos_val_sum += ggx_refl_bsdf_val;
+			bsdf_val_sum += ggx_refl_bsdf_val;
 			bsdf_pdf_sum += ggx_refl_pdf * ggx_refl_cprob;
 		}
 	}
@@ -431,13 +494,13 @@ Material_cos_sample(out vec3 outgoing,
 		float ggx_trans_pdf;
 		if (Ggx_transmit_eval(ggx_trans_bsdf_val, ggx_trans_pdf, material, incoming, outgoing))
 		{
-			bsdf_cos_val_sum += ggx_trans_bsdf_val;
+			bsdf_val_sum += ggx_trans_bsdf_val;
 			bsdf_pdf_sum += ggx_trans_pdf * ggx_trans_cprob;
 		}
 	}
 
 	// use mis to compute bsdf_weight
-	bsdf_cos_contrib = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_cos_val_sum / bsdf_pdf_sum * abs(outgoing.y);
+	bsdf_contrib = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_val_sum / bsdf_pdf_sum * abs(outgoing.y);
 
 	return true;
 }
