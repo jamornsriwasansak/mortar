@@ -84,7 +84,7 @@ connect_emitter_sample(const vec3 position,
         // evaluate material
         Onb onb = Onb_create(snormal);
         const vec3 bsdf_local_incoming = Onb_to_local(onb, incoming);
-        const vec3 bsdf_local_outgoing = Onb_to_local(onb, s_to_e);
+        const vec3 bsdf_local_outgoing = Onb_to_local(onb, norm_s_to_e);
         vec3 bsdf_contrib; 
         if (!Material_eval(bsdf_contrib, material, bsdf_local_incoming, bsdf_local_outgoing)) { return vec3(0.0f); }
 
@@ -111,7 +111,7 @@ li(Ray ray,
 
     for (int i = 0; i < 2; i++)
     {
-        const vec3 incoming = -normalize(ray.m_direction);
+        const vec3 incoming = -ray.m_direction;
 
         // trace ray
 		trace_ray(ray, tlas, 0);

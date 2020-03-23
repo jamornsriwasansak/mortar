@@ -366,7 +366,6 @@ Material_eval(out vec3 bsdf_val,
 	{
 		vec3 diffuse_bsdf_val;
 		float diffuse_pdf;
-
 		if (Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing))
 		{
 			bsdf_val_sum += diffuse_bsdf_val;
@@ -399,7 +398,7 @@ Material_eval(out vec3 bsdf_val,
 	}
 
 	// use mis to compute bsdf_weight
-	bsdf_val = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_val_sum / bsdf_pdf_sum;
+	bsdf_val = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_val_sum;
 
 	return true;
 }
