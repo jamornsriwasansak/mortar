@@ -26,7 +26,6 @@ In its current early stage, it supports:
 
 ### Issue
 1. Rough dielectric was not tested properly. It might not produce correct result if such material is used.
-2. There will be crash when exit due to unhandled GLFW surface deleter.
-3. 
+2. There will be crash when the application exits due to unhandled GLFW surface deleter.
 
 <sup>I started this project around March, 1st since I was curious of the vulkan raytracing performance. On the first day of this project, I spent an entire day building a new PC to house RTX2060. This is probably the most costly project I ever invested with my own money. :(
