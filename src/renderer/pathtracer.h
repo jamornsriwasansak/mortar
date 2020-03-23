@@ -21,9 +21,12 @@ struct PathTracer
 		const uint32_t num_triangle_instances = static_cast<uint32_t>(scene.m_triangle_instances.size());
 		const uint32_t num_textures = static_cast<uint32_t>(scene.m_images_cache->m_images.size());
 
-		// create rtao pipeline
+		/*
+		* ray gen
+		*/
 		Shader raygen_shader("shaders/renderer/pathtracer/pathtracer.rgen",
 							 vk::ShaderStageFlagBits::eRaygenNV);
+		// triangle attributes
 		raygen_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
 		raygen_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
 		raygen_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
@@ -31,6 +34,14 @@ struct PathTracer
 		raygen_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
 		raygen_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
 
+		// emittor info
+		raygen_shader.m_uniforms_set.at({ 2, 1 })->m_num_descriptors = 1u;
+		raygen_shader.m_uniforms_set.at({ 2, 2 })->m_num_descriptors = 1u;
+		raygen_shader.m_uniforms_set.at({ 2, 3 })->m_num_descriptors = num_triangle_instances;
+
+		/*
+		* ray closest hit
+		*/
 		Shader raychit_shader("shaders/shared_rt_stage/raytrace.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
 		raychit_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
@@ -40,6 +51,9 @@ struct PathTracer
 		raychit_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
 		raychit_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
 
+		/*
+		* ray any hit
+		*/
 		Shader rayahit_shader("shaders/shared_rt_stage/raytrace.rahit",
 							  vk::ShaderStageFlagBits::eAnyHitNV);
 		rayahit_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
@@ -79,7 +93,6 @@ struct PathTracer
 	void
 	run(Scene * scene,
 		FpsCamera * camera,
-		const RgbaImage2d<float> & envmap,
 		const int num_spp_per_frame = 1)
 	{
 		BlueNoiseRng rng;
@@ -125,12 +138,21 @@ struct PathTracer
 											  vk::BufferUsageFlagBits::eUniformBuffer));
 		}
 
+		EmitterInfo emitter_info;
+		emitter_info.m_num_emitter = scene->get_num_emitters();
+		emitter_info.m_envmap_emitter_offset = static_cast<int>(scene->m_triangle_instances.size());
+		Buffer emitter_info_buffer(sizeof(EmitterInfo),
+								   vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible,
+								   vk::BufferUsageFlagBits::eUniformBuffer);
+		emitter_info_buffer.copy_from(&emitter_info,
+									  sizeof(emitter_info));
+
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_0 = rt_pipeline
 			.build_descriptor_sets(0)
 			.set_accel_struct(0, *scene->m_tlas.m_vk_accel_struct)
 			.set_storage_image(1, storage)
 			.set_uniform_buffer_chain(2, cam_prop_buffers)
-			.set_sampler(3, envmap)
+			.set_sampler(3, *scene->m_envmap)
 			.build();
 
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_1 = rt_pipeline
@@ -145,6 +167,14 @@ struct PathTracer
 
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_2 = rt_pipeline
 			.build_descriptor_sets(2)
+			.set_uniform_buffer(0, emitter_info_buffer)
+			.set_storage_buffer(1, *scene->m_cdf_table_sizes)
+			.set_storage_buffer(2, *scene->m_top_level_emitters_cdf)
+			.set_storage_buffers_array(3, scene->get_bottom_level_emitters_cdf())
+			.build();
+
+		std::vector<vk::DescriptorSet> rt_descriptor_sets_3 = rt_pipeline
+			.build_descriptor_sets(3)
 			.set_storage_buffer(0, rng.m_sobol_sequence_buffer)
 			.set_storage_buffer(1, rng.m_scrambling_tile_buffer)
 			.set_storage_buffer(2, rng.m_ranking_tile_buffer)
@@ -184,6 +214,7 @@ struct PathTracer
 											rt_descriptor_sets_0[i],
 											rt_descriptor_sets_1[i],
 											rt_descriptor_sets_2[i],
+											rt_descriptor_sets_3[i],
 										  },
 										  { });
 			cmd_buffer.traceRaysNV(rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_raygen_offset,

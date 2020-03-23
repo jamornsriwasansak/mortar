@@ -180,6 +180,11 @@ struct RgbaImage2d
 	uint32_t					m_width;
 	uint32_t					m_height;
 	size_t						m_num_channels;
+	vec4						m_average = vec4(0.0f);
+
+	RgbaImage2d()
+	{
+	}
 
 	RgbaImage2d(const void * data,
 				const uint32_t width,
@@ -367,6 +372,18 @@ struct RgbaImage2d
 		transition_image_layout(*m_vk_image,
 								vk::ImageLayout::eTransferDstOptimal,
 								vk_image_layout);
+
+		// compute average
+		vec4 average = vec4(0.0f);
+		const float * tdata = static_cast<const float *>(data);
+		for (size_t i = 0; i < width * height; i += 4)
+		{
+			average.x += tdata[i + 0];
+			average.y += tdata[i + 1];
+			average.z += tdata[i + 2];
+			average.w += tdata[i + 3];
+		}
+		m_average = average / static_cast<float>(width * height);
 	}
 
 	std::vector<ScalarType>
@@ -412,7 +429,8 @@ struct RgbaImage2d
 		return result;
 	}
 
-	void save_pfm(const std::filesystem::path & filepath)
+	void
+	save_pfm(const std::filesystem::path & filepath)
 	{
 		std::vector<ScalarType> read_result = download();
 

@@ -3,16 +3,17 @@
 #extension GL_GOOGLE_include_directive : require
 
 // switch between Heitz's blue-noise and PCG here
-#define USE_PCG
-//#define USE_BLUE_RAND
+//#define USE_PCG
+#define USE_BLUE_RAND
 
 #include "common/bluenoise.glsl"
 #include "common/bsdf.glsl"
+#include "common/math.glsl"
 #include "common/onb.glsl"
 #include "common/pcg.glsl"
 #include "common/traceray.glsl"
 #include "shared_rt_stage/hitpayload.glsl"
-#include "shared_rt_stage/trimeshbuffer.glsl"
+#include "shared_rt_stage/trimeshlayout.glsl"
 
 layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
@@ -26,17 +27,17 @@ layout(set = 0, binding = 2) uniform CameraProperties
     mat4 m_inv_view;
     mat4 m_inv_proj;
     uvec4 m_is_moved;
-}
-cam;
+} cam;
 layout(set = 0, binding = 3) uniform sampler2D envmap;
 
 DECLARE_TRIMESH_LAYOUT(1)
-DECLARE_BLUENOISE_LAYOUT(2)
+DECLARE_EMITTER_LAYOUT(2)
+DECLARE_BLUENOISE_LAYOUT(3)
 
 Ray
-generate_primary_ray()
+generate_primary_ray(const vec2 samples)
 {
-    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + rand2();
+    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + samples;
     const vec2 ndc = pixel_center / vec2(gl_LaunchSizeNV.xy);
     const vec2 d = ndc * 2 - 1;
 
@@ -53,15 +54,23 @@ generate_primary_ray()
     return result;
 }
 
-void
-sample_point_on_light_source()
-{
-}
-
 vec3
 li(Ray ray,
    const int sample_index)
 {
+    /*
+    vec3 emitter_position = vec3(0.0f);
+    vec3 emitter_gnormal = vec3(0.0f);
+    vec3 emitter_snormal = vec3(0.0f);
+    vec2 emitter_texcoord = vec2(0.0f);
+    vec3 emitter_emission = vec3(0.0f);
+    int emitter_flag = sample_emitter(emitter_position,
+                   emitter_gnormal,
+                   emitter_snormal,
+                   emitter_texcoord,
+                   emitter_emission,
+                   rand2());*/
+
     float ior = 1.0f; // air IOR = 1.0
     vec3 radiance = vec3(0.0f);
     vec3 importance = vec3(1.0f);
@@ -88,6 +97,16 @@ li(Ray ray,
 
 		// compute position
 		const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
+
+        /*
+        if (emitter_flag == EMITTER_GEOMETRY)
+        {
+            return vec3(dot(emitter_position - position, prd.m_snormal) / sqr(distance2(position, emitter_position))) * emitter_emission;
+        }
+        else
+        {
+            return vec3(0.0f);
+        }*/
 
         // add radiance
         radiance += importance * prd.m_material.m_emission;
@@ -137,7 +156,6 @@ main()
     float num_spp = 0.0f;
 
     if (!(cam.m_is_moved.x == 1))
-    //if (false)
     {
 		vec4 accumulated_radiance_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
 		accumulated_radiance = accumulated_radiance_and_num_spp.xyz;
@@ -150,7 +168,7 @@ main()
     float sum = 0.0f;
 
 	// trace ray based on camera properties
-	Ray initial_ray = generate_primary_ray();
+	Ray initial_ray = generate_primary_ray(rand2());
 
     // estimate the radiance and accumulate it.
     vec3 estimated_radiance = li(initial_ray, int(num_spp));

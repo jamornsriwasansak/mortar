@@ -246,7 +246,7 @@ Ggx_transmit_cos_sample(out vec3 outgoing,
 		if (h.y * incoming.y < 0.0f) { return false; }
 
 		const float eta = incoming.y > 0 ? material.m_ior : 1.0f / material.m_ior;
-		outgoing = refract(normalize(-incoming), h, eta);
+		outgoing = refract(-incoming, h, eta);
 		bsdf_cos_contrib = material.m_spec_trans;
 
 		const float f_term = clamp(Dielectric_fresnel(abs(incoming.y), abs(outgoing.y), eta), 0.0f, 1.0f);

@@ -12,22 +12,9 @@
 int
 main()
 {
-	std::vector<float> blank_image(4, 0);
-#if 1
-	RgbaImage2d<float> hdr_envmap(blank_image.data(),
-								  1,
-								  1,
-								  vk::ImageTiling::eOptimal,
-								  RgbaImage2d<float>::RgbaUsageFlagBits);
-	hdr_envmap.init_sampler();
-#else
-	RgbaImage2d<float> hdr_envmap("envmap/palermo_sidewalk_1k.hdr");
-#endif
-
-	int num_spp = 1;
-
 	// setup the scene
 	Scene scene;
+	scene.set_envmap(RgbaImage2d<float>("envmap/palermo_sidewalk_1k.hdr"));
 	//scene.add_mesh("bistro/exterior/exterior.obj", true);
 	//scene.add_mesh("test/mitsuba-sphere.obj", true);
 	//scene.add_mesh("sponza/sponza.obj", true);
@@ -53,7 +40,7 @@ main()
 	rtao.run(&scene, &camera);
 #else
 	PathTracer path_tracer;
-	path_tracer.run(&scene, &camera, hdr_envmap);
+	path_tracer.run(&scene, &camera);
 #endif
 
 	return 0;

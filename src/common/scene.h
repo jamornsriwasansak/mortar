@@ -13,6 +13,10 @@ struct Scene
 	std::shared_ptr<ImageStorage>		m_images_cache;
 	TriangleMeshStorage					m_triangle_meshes_storage;
 	RtTlas								m_tlas;
+	std::unique_ptr<Buffer>				m_top_level_emitters_cdf = nullptr;
+	std::unique_ptr<Buffer>				m_cdf_table_sizes = nullptr;
+	std::unique_ptr<RgbaImage2d<float>>	m_envmap = nullptr;
+	float								m_envmap_emissive_weight = 0.0f;
 
 	vec3								m_bbox_min;
 	vec3								m_bbox_max;
@@ -23,6 +27,15 @@ struct Scene
 		m_images_cache(std::make_shared<ImageStorage>()),
 		m_triangle_meshes_storage()
 	{
+		// init envmap with a blank image
+		std::vector<float> blank_image(4, 0);
+		m_envmap = std::make_unique<RgbaImage2d<float>>(blank_image.data(),
+														1,
+														1,
+														vk::ImageTiling::eOptimal,
+														RgbaImage2d<float>::RgbaUsageFlagBits);
+		m_envmap->init_sampler();
+
 		m_triangle_meshes_storage.m_image_storage = m_images_cache;
 	}
 
@@ -47,7 +60,9 @@ struct Scene
 	void
 	build_rt()
 	{
-		// build tlas
+		/*
+		* build tlas
+		*/
 		std::vector<RtBlas *> rt_blases(m_triangle_instances.size());
 		for (size_t i = 0; i < rt_blases.size(); i++)
 		{
@@ -55,7 +70,55 @@ struct Scene
 		}
 		m_tlas = RtTlas(rt_blases);
 
-		// and build materials buffer
+		/*
+		* build emitter support
+		*/
+		// all shapes are emitters but shapes without emissive values will have sampling probability of zero
+		float sum = 0.0f;
+		const size_t num_shapes = m_triangle_instances.size();
+		const size_t num_envmap = 1;
+		const size_t num_emitters = get_num_emitters();
+		std::vector<float> top_level_pdf(num_emitters);
+		std::vector<float> top_level_cdf(num_emitters + 1);
+		std::vector<uint32_t> cdf_table_sizes(num_emitters);
+		for (size_t i = 0; i < num_emitters; i++)
+		{
+			if (0 <= i && i < num_shapes)
+			{
+				cdf_table_sizes[i] = m_triangle_instances[i].m_triangle_mesh->m_cdf_buffer->m_num_elements;
+				top_level_pdf[i] = m_triangle_instances[i].m_triangle_mesh->m_emission_weight;
+			}
+			else
+			{
+				cdf_table_sizes[i] = m_envmap->m_height * m_envmap->m_width;
+				top_level_pdf[i] = m_envmap_emissive_weight;
+			}
+			sum += top_level_pdf[i];
+		}
+		// normalize pdf
+		for (size_t i = 0; i < num_emitters; i++)
+		{
+			top_level_pdf[i] /= sum;
+		}
+		// cdf
+		top_level_cdf[0] = 0.0f;
+		for (size_t i = 0; i < num_emitters; i++)
+		{
+			top_level_cdf[i + 1] = top_level_pdf[i] + top_level_cdf[i];
+		}
+		THROW_ASSERT(std::abs(top_level_cdf[num_emitters] - 1.0f) <= SMALL_VALUE,
+					 "last element of cdf table is not 1.0f");
+		top_level_cdf[num_emitters] = 1.0f;
+		m_top_level_emitters_cdf = std::make_unique<Buffer>(top_level_cdf,
+															vk::MemoryPropertyFlagBits::eDeviceLocal,
+															vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+		m_cdf_table_sizes = std::make_unique<Buffer>(cdf_table_sizes,
+													 vk::MemoryPropertyFlagBits::eDeviceLocal,
+													 vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+
+		/*
+		* and build materials buffer
+		*/
 		m_triangle_meshes_storage.build_materials_buffer();
 
 		m_images_cache->generate_if_no_image();
@@ -105,10 +168,38 @@ struct Scene
 		return buffers;
 	}
 
+	std::vector<const Buffer *>
+	get_bottom_level_emitters_cdf() const
+	{
+		std::vector<const Buffer *> buffers;
+		for (size_t i = 0; i < m_triangle_instances.size(); i++)
+		{
+			buffers.push_back(m_triangle_instances[i].m_triangle_mesh->m_cdf_buffer.get());
+		}
+		return buffers;
+	}
+
 	Buffer *
 	get_materials_buffer_storage() const
 	{
 		return m_triangle_meshes_storage.m_materials_buffer.get();
 	}
-};
 
+	void
+	set_envmap(RgbaImage2d<float> & envmap)
+	{
+		m_envmap = std::make_unique<RgbaImage2d<float>>();
+		*m_envmap = std::move(envmap);
+		vec3 envmap_emission_average = vec3(m_envmap->m_average);
+		m_envmap_emissive_weight = length(envmap_emission_average);
+	}
+
+	size_t
+	get_num_emitters()
+	{
+		const size_t num_shapes = m_triangle_instances.size();
+		const size_t num_envmap = 1;
+		const size_t num_emitters = num_shapes + num_envmap;
+		return num_emitters;
+	}
+};

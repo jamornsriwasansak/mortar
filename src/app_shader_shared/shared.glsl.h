@@ -25,6 +25,13 @@ struct Material
     float m_padding;
 };
 
+struct EmitterInfo
+{
+    int m_num_emitter;
+    int m_envmap_emitter_offset;
+    float _padding[2];
+};
+
 Material
 Material_create()
 {

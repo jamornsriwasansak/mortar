@@ -7,7 +7,7 @@
 #include "common/ray.glsl"
 #include "shared.glsl.h"
 #include "shared_rt_stage/hitpayload.glsl"
-#include "shared_rt_stage/trimeshbuffer.glsl"
+#include "shared_rt_stage/trimeshlayout.glsl"
 
 layout(location = RAY_PRD_LOCATION) rayPayloadInNV HitPayload prd;
 hitAttributeNV vec3 attribs;

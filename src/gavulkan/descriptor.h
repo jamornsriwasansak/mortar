@@ -82,6 +82,18 @@ struct DescriptorSetsBuilder
 
 		return *this;
 	}
+	DescriptorSetsBuilder &
+	set_uniform_buffer(const size_t i_binding,
+					   const Buffer & buffer)
+	{
+		for (size_t i_frame = 0; i_frame < m_num_swapchain_frames; i_frame++)
+		{
+			set_uniform_buffer(i_frame,
+							   i_binding,
+							   buffer);
+		}
+		return *this;
+	}
 
 	DescriptorSetsBuilder &
 	set_uniform_buffer_chain(const size_t i_binding,
