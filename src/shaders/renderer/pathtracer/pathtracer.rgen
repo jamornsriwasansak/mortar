@@ -16,7 +16,7 @@
 #include "shared_rt_stage/trimeshlayout.glsl"
 
 //#define USE_MIS
-#define USE_NEE_ONLY
+//#define USE_NEE_ONLY
 
 layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
