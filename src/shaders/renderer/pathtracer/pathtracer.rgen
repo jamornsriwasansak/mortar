@@ -15,7 +15,7 @@
 #include "shared_rt_stage/hitpayload.glsl"
 #include "shared_rt_stage/trimeshlayout.glsl"
 
-//#define USE_MIS
+#define USE_MIS
 //#define USE_NEE_ONLY
 
 layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;

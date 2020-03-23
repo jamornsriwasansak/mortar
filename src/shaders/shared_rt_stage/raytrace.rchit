@@ -55,5 +55,5 @@ void main()
     prd.m_gnormal = gnormal;
     prd.m_instance_id = gl_InstanceID;
     prd.m_face_id = gl_PrimitiveID;
-    prd.m_face_area = length(crossed);
+    prd.m_face_area = length(crossed) * 0.5f;
 }
