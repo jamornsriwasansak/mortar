@@ -150,7 +150,7 @@ li(Ray ray,
     // trace ray
     trace_ray(ray, tlas, 0);
 
-    int path_length = 2;
+    int path_length = 3;
     float prev_bsdf_pdf_w = 0.0f;
     for (int i = 0; i < path_length; i++)
     {
