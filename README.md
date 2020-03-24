@@ -33,4 +33,4 @@ It then proceed to guess roughness from specular exponent (Ns value) using Blinn
 1. Rough dielectric (frosty glass), especially PDF evaluation, was not tested properly. It might not produce correct result if such material is used.
 2. The application will crash while exitting due to an unhandled GLFW surface destructor.
 
-<sup>I started this project around March, 1st since I was curious of the vulkan raytracing performance. On the first day of this project, I spent an entire day building a new PC to house RTX2060. This is probably the most costly project I ever invested with my own money. :(
+<sup>I started this project around early of March since I was curious of the vulkan raytracing performance. On the first day of this project, I spent an entire day building a new PC to house RTX2060. This is probably the most costly project I ever invested with my own money. :(
