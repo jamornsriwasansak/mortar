@@ -163,11 +163,11 @@ Ggx_reflect_cos_sample(out vec3 outgoing,
 	{
 		outgoing = reflect(-incoming, h);
 		// f_r						= f(i, h) * d(h) * g_2(i, o) / (4 * dot(i, n) * dot(o, n))
-		// f_r * dot(o, n)			= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n))
-		// pdf						= 			d(h) * g_1(i)		   /      dot(i, n)  * jacobian
+		// f_r * dot(o, n)			= f(i, h) * d(h) * g_1(i) * g_1(o)
+		// pdf						= 			d(h) * g_1(i)		   * jacobian
 		// pdf						=			d(h) * g_1(i)          / (4 * dot(i, n))
 		// f_r * dot(o, n) / pdf	= f(i, h) 				  * g_1(o)
-		// where refoection jacobian = 1 / 4 * dot(i, n)
+		// where reflection jacobian = 1 / 4 * dot(i, n)
 		const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
 		const float g_term = Microfacet_g1(outgoing, alpha);
 		bsdf_cos_contrib = f_term * g_term;
@@ -257,27 +257,23 @@ Ggx_transmit_cos_sample(out vec3 outgoing,
 		{
 			// f_r						= f(i, h) * d(h) * g_2(i, o) / (4 * dot(i, n) * dot(o, n))
 			// f_r * dot(o, n)			= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n))
-			// pdf						= 			d(h) * g_1(i)		   /      dot(i, n)  * jacobian
-			// where refoection jacobian = 1 / 4 * dot(i, n)
-			// pdf						=			d(h) * g_1(i)          / (4 * dot(i, n))
-			// f_r * dot(o, n) / pdf	= f(i, h) 				  * g_1(o)
+			// Pr * pdf					= f(i, h) *	d(h) * g_1(i)		   * jacobian
+			// pdf						= f(i, h) * d(h) * g_1(i)          / (4 * dot(i, n))
+			// f_r*dot(o, n) / (Pr*pdf)	=		 				  * g_1(o)
+			// where reflection jacobian = 1 / 4 * dot(i, n)
 
 			next_sample = next_sample / f_term;
 			outgoing = reflect(-incoming, h);
-			bsdf_cos_contrib *= f_term;
 		}
 		else
 		{
 			// f_t						= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * dot(o, n) * (dot(i, h) + eta * dot(o, h))^2)
-			// f_t * dot(o, n)			= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
-			// pdf						= dot(i, h)										* d(h) * g_1(i)	* jacobian													/ dot(i ,n)
-			// where jacobian(dh / di)	=			  dot(o, h) * eta^2											 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
-			// pdf						= dot(i, h) * dot(o, h)	* eta^2					* d(h) * g_1(i)			 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
-			// and since dot(i, h) = dot(o, h)
-			// f_t * dot(o, n) / pdf	=								  (1 - f(i, h))					* g_1(o)
-
+			// f_t * dot(o, n)			= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n)			  * (dot(i, h) + eta * dot(o, h))^2)
+			// pdf * Pr					= dot(i, h)						* (1 - f(i, h))	* d(h) * g_1(i)			 / (dot(i ,n))			  * jacobian													
+			// where jacobian(dh / di)	=			  dot(o, h) * eta^2											 / (						(dot(i, h) + eta * dot(o, h))^2)
+			// pdf * Pr					= dot(i, h) * dot(o, h)	* eta^2	* (1 - f(i, h))	* d(h) * g_1(i)			 / (dot(i, n)			  * (dot(i, h) + eta * dot(o, h))^2)
+			// f_t*dot(o, n) / (pdf*Pr)	=																* g_1(o)
 			next_sample = (next_sample - f_term) / (1.0f - f_term);
-			bsdf_cos_contrib *= 1.0f - f_term;
 		}
 
 		const float g_term = Microfacet_g1(outgoing, alpha);
@@ -315,13 +311,13 @@ Ggx_transmit_eval(out vec3 bsdf_val,
 	{
 		// same side: must be reflection
 		// f_r						= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n) * dot(o, n))
-		// pdf						= f(i, h) * d(h) * g_1(i)          / (4 * dot(i, n))
+		// pdf * Pr					= f(i, h) * d(h) * g_1(i)          / (4 * dot(i, n))
 		if (d_term == 0.0f)
 		{
 			return false;
 		}
 		bsdf_val *= f_term * d_term * g1_i_term * g1_o_term / (4.0f * abs(incoming.y) * abs(outgoing.y));
-		pdf = f_term * d_term * g1_i_term / (4.0f * abs(incoming.y));
+		pdf =		d_term * g1_i_term				/ (4.0f * abs(incoming.y));
 	}
 	else
 	{
@@ -329,11 +325,10 @@ Ggx_transmit_eval(out vec3 bsdf_val,
 		const float dot_o_h = abs(dot(outgoing, h));
 		// different side: must be refraction
 		// f_t						= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * dot(o, n) * (dot(i, h) + eta * dot(o, h))^2)
-		// pdf						= dot(i, h) * dot(o, h)	* eta^2					* d(h) * g_1(i)			 / (dot(i, n) * (dot(i, h) + eta * dot(o, h))^2)
+		// pdf * Pr					= dot(i, h) * dot(o, h)	* eta^2	* (1 - f(i, h))	* d(h) * g_1(i)			 / (dot(i, n)			  * (dot(i, h) + eta * dot(o, h))^2)
 		bsdf_val *= dot_i_h * dot_o_h * sqr(eta) * (1.0f - f_term) * d_term * g1_i_term * g1_o_term / (abs(incoming.y) * abs(outgoing.y) * sqr(dot_i_h + eta * dot_o_h));
-		pdf = dot_i_h * dot_o_h * sqr(eta) * d_term * g1_i_term / (abs(incoming.y) * sqr(dot_i_h + eta * dot_o_h));
+		pdf =		dot_i_h * dot_o_h * sqr(eta)  * d_term * g1_i_term				/ (abs(incoming.y)					 * sqr(dot_i_h + eta * dot_o_h));
 	}
-
 	return true;
 }
 
@@ -474,6 +469,7 @@ Material_cos_sample(out vec3 outgoing,
 	float bsdf_pdf_sum = 0.0f;
 
 	// eval diffuse
+	bool success = false;
 	if (diffuse_cprob > 0.0f)
 	{
 		vec3 diffuse_bsdf_val;
@@ -482,6 +478,7 @@ Material_cos_sample(out vec3 outgoing,
 		{
 			bsdf_val_sum += diffuse_bsdf_val;
 			bsdf_pdf_sum += diffuse_pdf * diffuse_cprob;
+			success = true;
 		}
 	}
 
@@ -494,6 +491,7 @@ Material_cos_sample(out vec3 outgoing,
 		{
 			bsdf_val_sum += ggx_refl_bsdf_val;
 			bsdf_pdf_sum += ggx_refl_pdf * ggx_refl_cprob;
+			success = true;
 		}
 	}
 
@@ -506,6 +504,7 @@ Material_cos_sample(out vec3 outgoing,
 		{
 			bsdf_val_sum += ggx_trans_bsdf_val;
 			bsdf_pdf_sum += ggx_trans_pdf * ggx_trans_cprob;
+			success = true;
 		}
 	}
 
@@ -513,5 +512,5 @@ Material_cos_sample(out vec3 outgoing,
 	bsdf_contrib = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_val_sum / bsdf_pdf_sum * abs(outgoing.y);
 	bsdf_pdf = bsdf_pdf_sum;
 
-	return true;
+	return success;
 }

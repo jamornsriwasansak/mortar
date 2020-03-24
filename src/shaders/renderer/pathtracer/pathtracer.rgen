@@ -141,7 +141,6 @@ li(Ray ray,
 {
     EmitterSample emitter_sample = sample_emitter(rand2());
 
-    float ior = 1.0f; // air IOR = 1.0
     vec3 radiance = vec3(0.0f);
     vec3 importance = vec3(1.0f);
 
