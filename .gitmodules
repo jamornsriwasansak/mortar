@@ -10,3 +10,6 @@
 [submodule "dependencies/stb"]
 	path = dependencies/stb
 	url = https://github.com/nothings/stb.git
+[submodule "dependencies/tinyobjloader"]
+	path = dependencies/tinyobjloader
+	url = https://github.com/tinyobjloader/tinyobjloader.git
