@@ -5,6 +5,10 @@ A physically-based renderer utilizing vulkan raytracing api.
 ![The Toilet Scene](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/toilet.jpg)
 ![Fireplace Room](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/fireplace.jpg)
 
+### Input
+The application guesses the ggx parameters from MTL file provided along with OBJ.
+Roughness values are mapped from specular exponents (Ns values) using Blinn-Phong to microfacet mapping mentioned in [Brian Karis' blog](http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html).
+
 ### Features
 In its current early stage, it supports:
 * IBL environment map
@@ -16,10 +20,6 @@ In its current early stage, it supports:
 * Lambert diffuse BRDF
 * GGX Microfacet BSDF (rough conductor and rough dielectric)
 * FPS-style camera for traversing the scene
-
-### Note
-The application guesses the material from MTL file provided along with OBJ.
-It then proceed to guess roughness from specular exponent (Ns value) using Blinn-Phong to microfacet mapping mentioned in [Brian Karis' blog](http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html).
 
 ### Dependencies
 * vulkan sdk
