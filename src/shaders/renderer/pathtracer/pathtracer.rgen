@@ -3,8 +3,8 @@
 #extension GL_GOOGLE_include_directive : require
 
 // switch between Heitz's blue-noise and PCG here
-#define USE_PCG
-//#define USE_BLUE_RAND
+//#define USE_PCG
+#define USE_BLUE_RAND
 
 #include "common/bluenoise.glsl"
 #include "common/bsdf.glsl"
@@ -73,6 +73,7 @@ connect_emitter_sample(out vec3 weighted_contrib,
                        const Material material,
                        const EmitterSample emitter_sample)
 {
+    #if defined(USE_MIS) || defined(USE_NEE_ONLY)
     if (emitter_sample.m_flag == EMITTER_GEOMETRY)
     {
         const vec3 s_to_e = emitter_sample.m_position - position; // surface to emitter
@@ -111,16 +112,13 @@ connect_emitter_sample(out vec3 weighted_contrib,
             return false;
         }
 
-        // compute bsdf pdf in area domain from solid angle domain
-        float bsdf_pdf_a = bsdf_pdf_w * abs(cos_e2s) / sqr_length;
-
         // compute mis weight
         #ifdef USE_MIS
+        // compute bsdf pdf in area domain from solid angle domain
+        const float bsdf_pdf_a = bsdf_pdf_w * abs(cos_e2s) / sqr_length;
         const float mis_weight = mi_weight(emitter_sample.m_pdf, bsdf_pdf_a);
         #elif defined(USE_NEE_ONLY)
         const float mis_weight = 1.0f;
-        #else
-        const float mis_weight = 0.0f;
         #endif
 
         const float geometry_term = cos_cos / sqr_length;
@@ -129,10 +127,9 @@ connect_emitter_sample(out vec3 weighted_contrib,
         weighted_contrib = mis_weight * bsdf_val * geometry_term * emitter_sample.m_emission / emitter_sample.m_pdf;
         return true;
     }
-    else
-    {
-        return false;
-    }
+    #endif
+
+    return false;
 }
 
 vec3
@@ -169,6 +166,7 @@ li(Ray ray,
         }
         else if (length(prd.m_material.m_emission) > 0.0f)
         {
+            // we would not weight directly seen emitters
             if (i > 0)
             {            
                 // hit shape with emissive value
