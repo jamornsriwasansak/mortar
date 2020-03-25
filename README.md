@@ -35,9 +35,8 @@ In its current early stage, it supports:
 
 ### Plan
 I found out too late that MIS is extremely heavy weight for real-time rendering.
-Given I have time, I probably gonna improve the performance first.
-* Implement one indirect ray, two shadow rays + path mollification which seems to be a standard in denoising papers. For instance [Chaitanya et al.](http://www.achaitanya.com/files/projects/dnn/dnn.html )\[2017] and [Scheid et al.](https://research.nvidia.com/publication/2017-07_Spatiotemporal-Variance-Guided-Filtering%3A) \[2017]
-Then denoise!
+Given I have time, I probably gonna improve the performance first then implement some cool stuffs.
+* Implement one indirect ray, two shadow rays + path mollification which seems to be a standard in denoising papers. For instance [Chaitanya et al.](http://www.achaitanya.com/files/projects/dnn/dnn.html ) \[2017] and [Scheid et al.](https://research.nvidia.com/publication/2017-07_Spatiotemporal-Variance-Guided-Filtering%3A) \[2017]
 * Implement ASVGF
 
 ### Issues
