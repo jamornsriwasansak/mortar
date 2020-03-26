@@ -18,16 +18,16 @@ struct Rtao
 	create_rtao_pipeline(const Scene & scene)
 	{
 		// create rtao pipeline
-		Shader raygen_shader("shaders/renderer/rtao/raytrace.rgen",
+		Shader raygen_shader("shaders/renderer/rtao/rtao.rgen",
 							 vk::ShaderStageFlagBits::eRaygenNV);
-		Shader raychit_shader("shaders/renderer/rtao/raytrace.rchit",
+		Shader raychit_shader("shaders/renderer/rtao/rtao.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
 		const uint32_t num_traingle_instances = static_cast<uint32_t>(scene.m_triangle_instances.size());
 		raychit_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_traingle_instances;
 		raychit_shader.m_uniforms_set.at({ 2, 0 })->m_num_descriptors = num_traingle_instances;
-		Shader shadow_raymiss_shader("shaders/renderer/rtao/rayshadow.rmiss",
+		Shader shadow_raymiss_shader("shaders/renderer/rtao/rtaoshadow.rmiss",
 									 vk::ShaderStageFlagBits::eMissNV);
-		Shader raymiss_shader("shaders/renderer/rtao/raytrace.rmiss",
+		Shader raymiss_shader("shaders/renderer/rtao/rtao.rmiss",
 							  vk::ShaderStageFlagBits::eMissNV);
 		RayTracingPipeline rt_pipeline({ &raygen_shader,
 										 &raychit_shader,
