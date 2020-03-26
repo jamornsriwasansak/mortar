@@ -13,7 +13,8 @@ struct CameraProperties
 	//
 	mat4 m_inv_proj;
 	//
-	uvec4 m_is_moved;
+	int m_is_moved;
+	float padding[3];
 };
 
 struct FpsCamera
@@ -137,7 +138,7 @@ struct FpsCamera
 		result.m_proj[1][1] *= -1.0f;
 		result.m_inv_view = glm::inverse(result.m_view);
 		result.m_inv_proj = glm::inverse(result.m_proj);
-		result.m_is_moved = m_is_moved ? uvec4(1) : uvec4(0);
+		result.m_is_moved = m_is_moved ? 1 : 0;
 		return result;
 	}
 };

@@ -29,7 +29,8 @@ layout(set = 0, binding = 2) uniform CameraProperties
     mat4 m_proj;
     mat4 m_inv_view;
     mat4 m_inv_proj;
-    uvec4 m_is_moved;
+    int m_is_moved;
+	float _padding[3];
 } cam;
 layout(set = 0, binding = 3) uniform sampler2D envmap;
 
@@ -256,7 +257,7 @@ main()
     vec3 accumulated_radiance = vec3(0.0f);
     float num_spp = 0.0f;
 
-    if (!(cam.m_is_moved.x == 1))
+    if (cam.m_is_moved == 0)
     {
         vec4 accumulated_radiance_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
         accumulated_radiance = accumulated_radiance_and_num_spp.xyz;

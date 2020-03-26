@@ -92,8 +92,7 @@ struct PathTracer
 
 	void
 	run(Scene * scene,
-		FpsCamera * camera,
-		const int num_spp_per_frame = 1)
+		FpsCamera * camera)
 	{
 		BlueNoiseRng rng;
 
@@ -139,7 +138,7 @@ struct PathTracer
 		}
 
 		EmitterInfo emitter_info;
-		emitter_info.m_num_emitter = scene->get_num_emitters();
+		emitter_info.m_num_emitter = static_cast<int>(scene->get_num_emitters());
 		emitter_info.m_envmap_emitter_offset = static_cast<int>(scene->m_triangle_instances.size());
 		Buffer emitter_info_buffer(sizeof(EmitterInfo),
 								   vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible,

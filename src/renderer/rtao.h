@@ -53,9 +53,11 @@ struct Rtao
 	}
 
 	void
-		run(Scene * scene,
-			FpsCamera * camera)
+	run(Scene * scene,
+		FpsCamera * camera)
 	{
+		BlueNoiseRng rng;
+
 		/*
 		*  pipelines
 		*/
@@ -114,11 +116,17 @@ struct Rtao
 			.set_storage_buffers_array(0, scene->get_normal_v_storage())
 			.build();
 
+		std::vector<vk::DescriptorSet> rtao_descriptor_sets_3 = rtao_pipeline
+			.build_descriptor_sets(3)
+			.set_storage_buffer(0, rng.m_sobol_sequence_buffer)
+			.set_storage_buffer(1, rng.m_scrambling_tile_buffer)
+			.set_storage_buffer(2, rng.m_ranking_tile_buffer)
+			.build();
+
 		std::vector<vk::DescriptorSet> final_descriptor_sets_0 = final_pipeline
 			.build_descriptor_sets(0)
 			.set_sampler(0, storage)
 			.build();
-
 		/*
 		*	command buffers
 		*/
@@ -144,7 +152,12 @@ struct Rtao
 			cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingNV,
 										  *rtao_pipeline.m_vk_pipeline_layout,
 										  0,
-										  { rtao_descriptor_sets_0[i], rtao_descriptor_sets_1[i], rtao_descriptor_sets_2[i] },
+										  { 
+											  rtao_descriptor_sets_0[i],
+											  rtao_descriptor_sets_1[i],
+											  rtao_descriptor_sets_2[i],
+											  rtao_descriptor_sets_3[i]
+										  },
 										  { });
 			cmd_buffer.traceRaysNV(rtao_pipeline.sbt_vk_buffer(), rtao_pipeline.m_raygen_offset,
 								   rtao_pipeline.sbt_vk_buffer(), rtao_pipeline.m_miss_offset, rtao_pipeline.m_stride,

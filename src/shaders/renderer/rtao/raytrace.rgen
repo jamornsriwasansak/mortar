@@ -2,22 +2,30 @@
 #extension GL_NV_ray_tracing : require
 #extension GL_GOOGLE_include_directive : enable
 
-#include "renderer/rtao/hitpayload.glsl"
+//#define USE_PCG
+#define USE_BLUE_RAND
 #include "common/pcg.glsl"
+#include "common/bluenoise.glsl"
+
+#include "renderer/rtao/hitpayload.glsl"
 #include "common/mapping.glsl"
 #include "common/traceray.glsl"
 #include "common/onb.glsl"
 
-layout(binding = 0, set = 0) uniform accelerationStructureNV tlas;
-layout(binding = 1, set = 0, rgba32f) uniform image2D image;
-layout(binding = 2, set = 0) uniform CameraProperties
+layout(set = 0, binding = 0) uniform accelerationStructureNV tlas;
+layout(set = 0, binding = 1, rgba32f) uniform image2D image;
+layout(set = 0, binding = 2) uniform CameraProperties
 {
     mat4 m_view;
     mat4 m_proj;
     mat4 m_inv_view;
     mat4 m_inv_proj;
+    int m_is_moved;
+	float _padding[3];
 }
 cam;
+
+DECLARE_BLUENOISE_LAYOUT(3)
 
 layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;
 layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
@@ -25,7 +33,7 @@ layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
 Ray
 generate_primary_ray()
 {
-    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + vec2(0.5);
+    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + rand2();
     const vec2 ndc = pixel_center / vec2(gl_LaunchSizeNV.xy);
     const vec2 d = ndc * 2 - 1;
 
@@ -39,35 +47,40 @@ generate_primary_ray()
 void
 main() 
 {
-    // init rng
-    uint seed = gl_LaunchIDNV.x + gl_LaunchSizeNV.x * gl_LaunchIDNV.y;
-    Pcg32 rng = Pcg_create(seed);
+    // if camera is not moved reuse accumulated radiance
+    float accumulated_value = 0.0f;
+    float num_spp = 0.0f;
 
-    const int spp = 10;
-    float sum = 0.0f;
+    if (cam.m_is_moved == 0)
+    {
+        vec4 accumulated_value_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
+        accumulated_value = accumulated_value_and_num_spp.x;
+        num_spp = accumulated_value_and_num_spp.w;
+    }
+
+    // init rng
+    srand(uvec2(gl_LaunchIDNV), uvec2(gl_LaunchSizeNV), uint(num_spp));
 
 	// trace ray based on camera properties
 	Ray ray = generate_primary_ray();
 	trace_ray(ray, tlas, 0);
 
-	// determine whether we should temrinate or not
+	// hit envmap
 	if (prd.m_t < 0)
 	{
-		imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(0.0));
-		return;
+        // accumulate zero value
+		accumulated_value = ((accumulated_value * num_spp) + 0.0f) / (num_spp + 1.0f);
 	}
+    else
+    {
+		// compute position
+		const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
 
-	// compute position
-	const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
+		// generate orthonormal basis and get local incoming direction
+		const Onb onb = Onb_create(prd.m_normal);
 
-	// generate orthonormal basis and get local incoming direction
-	const Onb onb = Onb_create(prd.m_normal);
-
-	for (int i_spp = 0; i_spp < spp; i_spp++)
-	{
 		// sample next direction
-		const vec2 samples = Pcg_next_vec2(rng);
-		const vec3 local_outgoing = Mapping_cosine_hemisphere_from_square(samples);
+		const vec3 local_outgoing = cosine_hemisphere_from_square(rand2());
 		const vec3 outgoing = Onb_to_world(onb, local_outgoing); 
 
 		// check shadow ray
@@ -75,8 +88,10 @@ main()
 		is_intersect = true;
 		trace_shadow_ray(shadow_ray, tlas, 1);
 		
-		sum += 1.0f - float(is_intersect);
+		float visible = 1.0f - float(is_intersect);
+
+		// accumulate the sample
+		accumulated_value = ((accumulated_value * num_spp) + visible) / (num_spp + 1.0f);
     }
-    float avg = sum / float(spp);
-	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(vec3(avg), 1.0));
+	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(vec3(accumulated_value), num_spp + 1.0f));
 }
