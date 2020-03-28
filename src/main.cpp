@@ -39,7 +39,7 @@ main()
 #if 0
 	Rtao rtao;
 	rtao.run(&scene, &camera);
-#elif 0
+#elif 1
 	PathTracer path_tracer;
 	path_tracer.run(&scene, &camera);
 #else
