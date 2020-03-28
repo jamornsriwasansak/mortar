@@ -1,9 +1,13 @@
+#ifndef MAPPING_GLSL
+#define MAPPING_GLSL
+
 #extension GL_GOOGLE_include_directive : enable
 #include "constant.glsl"
 
 vec2
-traingle_from_square(const vec2 samples)
+triangle_from_square(const vec2 samples)
 {
+#if 1
 	// A Low - Distortion Map Between Triangle and Square, Eric Heitz
 	if (samples.y > samples.x)
 	{
@@ -17,6 +21,13 @@ traingle_from_square(const vec2 samples)
 		float x = samples.x - y;
 		return vec2(x, y);
 	}
+#else
+	// a well known sqrt mapping for uniformly sample a triangle
+	float sqrt_sample0 = sqrt(samples.x);
+	float b1 = sqrt_sample0 * (1.0f - samples.y);
+	float b2 = samples.y * sqrt_sample0;
+	return vec2(b1, b2);
+#endif
 }
 
 vec3
@@ -36,3 +47,4 @@ latlong_texcoord_from_direction(const vec3 dir)
 	const float v = acos(dir[1]) * M_1_PI;
 	return vec2(u, v);
 }
+#endif

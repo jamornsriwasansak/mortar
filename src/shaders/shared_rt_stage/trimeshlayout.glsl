@@ -1,6 +1,7 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
 #include "common/emittersample.glsl"
+#include "common/mapping.glsl"
 #include "shared.glsl.h"
 
 #define DECLARE_TRIMESH_LAYOUT(SET) \
@@ -94,7 +95,7 @@ EmitterSample sample_emitter(vec2 samples)\
         const uint index0 = faces_arrays[instance_id].faces[face_id * 3 + 0];\
         const uint index1 = faces_arrays[instance_id].faces[face_id * 3 + 1];\
         const uint index2 = faces_arrays[instance_id].faces[face_id * 3 + 2];\
-		const vec2 baryccoord = traingle_from_square(samples);\
+		const vec2 baryccoord = triangle_from_square(samples);\
        	/* position and tex u */\
 	    const vec4 pu0 = pus_arrays[instance_id].position_and_us[index0];\
 	    const vec4 pu1 = pus_arrays[instance_id].position_and_us[index1];\

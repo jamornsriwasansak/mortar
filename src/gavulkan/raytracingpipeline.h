@@ -18,7 +18,8 @@ struct RayTracingPipeline
 	uint32_t					m_hit_offset;
 	uint32_t					m_stride;
 
-	RayTracingPipeline(const std::vector<const Shader *> & unsorted_shaders):
+	RayTracingPipeline(const std::vector<const Shader *> & unsorted_shaders,
+					   const uint32_t recursion_depth = 1):
 		m_descriptor_manager(unsorted_shaders)
 	{
 		// first of all make sure that the shaders are sorted by types
@@ -28,7 +29,8 @@ struct RayTracingPipeline
 		const uint32_t num_shader_groups = create_ray_tracing_pipeline(rt_shaders.m_raygen_shader,
 																	   rt_shaders.m_miss_shaders,
 																	   rt_shaders.m_closest_hit_shader,
-																	   rt_shaders.m_any_hit_shader);
+																	   rt_shaders.m_any_hit_shader,
+																	   recursion_depth);
 		m_sbt_buffer = create_sbt_buffer(*m_vk_pipeline, num_shader_groups);
 
 		// count hit shaders
@@ -53,7 +55,8 @@ struct RayTracingPipeline
 	create_ray_tracing_pipeline(const Shader * raygen_shader,
 								std::vector<const Shader *> & miss_shaders,
 								const Shader * closest_hit_shader,
-								const Shader * any_hit_shader)
+								const Shader * any_hit_shader,
+								const uint32_t recursion_depth)
 	{
 		auto & device = Core::Inst().m_vk_device;
 
@@ -118,7 +121,7 @@ struct RayTracingPipeline
 			ray_pipeline_ci.setPStages(shader_stages.data());
 			ray_pipeline_ci.setGroupCount(static_cast<uint32_t>(shader_groups.size()));
 			ray_pipeline_ci.setPGroups(shader_groups.data());
-			ray_pipeline_ci.setMaxRecursionDepth(1);
+			ray_pipeline_ci.setMaxRecursionDepth(recursion_depth);
 			ray_pipeline_ci.setLayout(*m_vk_pipeline_layout);
 		}
 		m_vk_pipeline = device->createRayTracingPipelineNVUnique(nullptr, ray_pipeline_ci);

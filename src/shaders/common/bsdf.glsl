@@ -1,28 +1,15 @@
 #extension GL_GOOGLE_include_directive : enable
 #include "shared.glsl.h"
 #include "mapping.glsl"
+#include "math.glsl"
 
 // note all materials here are "two-sided"
 // diffuse and Ggx_brdf share the same material regardless of the side of the wall.
 // Ggx_btdf, on the other hand, will behave based on the incoming direction
 
-float
-sqr(float v)
-{
-	return v * v;
-}
-
-vec2
-sqr(vec2 v)
-{
-	return v * v;
-}
-
 //
 // Lambert
 //
-
-#define MAT_DIFFUSE_INDEX 0
 
 bool
 Diffuse_cos_sample(out vec3 outgoing,
@@ -54,8 +41,6 @@ Diffuse_eval(out vec3 bsdf_val,
 //
 // Trowbridge-reitz (GGX) Microfacet
 //
-
-#define MAT_GGX_INDEX 1
 
 // Code provided by heitz et al.
 // http://jcgt.org/published/0007/04/01/
@@ -131,7 +116,6 @@ Microfacet_d(const vec3 h,
 }
 
 // F term - shlick fresnel (for ggx_reflect)
-// TODO:: change this to fresnel term for conductor
 vec3
 Microfacet_f_shlick(const vec3 f0,
 					const vec3 incoming)

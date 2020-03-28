@@ -8,6 +8,7 @@
 
 #include "renderer/rtao.h"
 #include "renderer/pathtracer.h"
+#include "renderer/fastpathtracer.h"
 
 int
 main()
@@ -38,9 +39,12 @@ main()
 #if 0
 	Rtao rtao;
 	rtao.run(&scene, &camera);
-#else
+#elif 0
 	PathTracer path_tracer;
 	path_tracer.run(&scene, &camera);
+#else
+	FastPathTracer fast_path_tracer;
+	fast_path_tracer.run(&scene, &camera);
 #endif
 
 	return 0;

@@ -1,0 +1,88 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "common/tea.glsl"
+#include "common/bsdf.glsl"
+#include "common/math.glsl"
+#include "common/onb.glsl"
+#include "common/traceray.glsl"
+#include "renderer/fastpathtracer/fastpathtracerpayload.glsl"
+
+layout(location = RAY_PRD_LOCATION) rayPayloadNV FastPathTracerRayPayload prd;
+layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV FastPathTracerShadowRayPayload is_intersect;
+
+layout(set = 0, binding = 0) uniform accelerationStructureNV tlas;
+layout(set = 0, binding = 1, rgba32f) uniform image2D image;
+layout(set = 0, binding = 2) uniform CameraProperties
+{
+    mat4 m_view;
+    mat4 m_proj;
+    mat4 m_inv_view;
+    mat4 m_inv_proj;
+    int m_is_moved;
+    int m_frame_count;
+} cam;
+layout(set = 0, binding = 3) uniform sampler2D envmap;
+
+Ray
+generate_primary_ray()
+{
+    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + vec2(0.5f);
+    const vec2 ndc = pixel_center / vec2(gl_LaunchSizeNV.xy);
+    const vec2 d = ndc * 2 - 1;
+
+    const vec3 origin = (cam.m_inv_view * vec4(0, 0, 0, 1)).xyz;
+    const vec3 lookat = (cam.m_inv_proj * vec4(d.x, d.y, 1, 1)).xyz;
+    const vec3 direction = (cam.m_inv_view * vec4(normalize(lookat), 0)).xyz;
+
+    Ray result = Ray_create(origin, normalize(direction));
+    return result;
+}
+
+void
+main() 
+{
+    // if camera is not moved reuse accumulated radiance
+    vec3 accumulated_radiance = vec3(0.0f);
+    float num_spp = 0.0f;
+
+    if (cam.m_is_moved == 0)
+    {
+        vec4 accumulated_radiance_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
+        accumulated_radiance = accumulated_radiance_and_num_spp.xyz;
+        num_spp = accumulated_radiance_and_num_spp.w;
+    }
+
+    vec3 radiance = vec3(0.0f);
+
+    // generate ray from a single pixel camera properties
+    Ray ray = generate_primary_ray();
+
+    prd.m_importance = vec3(1.0f);
+    prd.m_color = vec3(0.0f);
+    prd.m_pixel = ivec2(gl_LaunchIDNV);
+
+    // trace ray
+    prd.m_t = 0.0f;
+    prd.m_i_bounce = 0;
+	trace_ray(ray, tlas, 0);
+
+    radiance += prd.m_color;
+
+    ray.m_origin += ray.m_direction * prd.m_t;
+    ray.m_direction = prd.m_sampled_direction;
+
+    // trace ray
+    prd.m_t = 0.0f;
+    prd.m_i_bounce = 1;
+	trace_ray(ray, tlas, 0);
+
+    radiance += prd.m_color;
+
+    // accumulate the sample
+    accumulated_radiance = ((accumulated_radiance * num_spp) + radiance) / (num_spp + 1.0f);
+
+    // determine whether we should temrinate or not
+    imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulated_radiance, num_spp + 1.0f));
+}

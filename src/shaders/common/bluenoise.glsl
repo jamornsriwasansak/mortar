@@ -62,4 +62,16 @@ float blue_rand(int sampleIndex, int sampleDimension) \
 	value = value ^ int(blue_st.scrambling_tile[(sampleDimension % 8) + (pixel_i + pixel_j * 128) * 8]); \
 	float v = (0.5f + value) / 256.0f; \
 	return v; \
+} \
+float blue_rand(ivec2 pixel_index, int sampleIndex, int sampleDimension) \
+{ \
+	int pixel_i = pixel_index.x & 127; \
+	int pixel_j = pixel_index.y & 127; \
+	sampleIndex = sampleIndex & 255; \
+	sampleDimension = sampleDimension & 255; \
+	int rankedSampleIndex = sampleIndex ^ int(blue_rt.ranking_tile[sampleDimension + (pixel_i + pixel_j * 128) * 8]); \
+	int value = int(blue_sobol.sobol_256spp_256d[sampleDimension + rankedSampleIndex * 256]); \
+	value = value ^ int(blue_st.scrambling_tile[(sampleDimension % 8) + (pixel_i + pixel_j * 128) * 8]); \
+	float v = (0.5f + value) / 256.0f; \
+	return v; \
 } 

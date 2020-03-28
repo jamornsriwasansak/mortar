@@ -1,3 +1,5 @@
+#ifndef ONB_GLSL
+#define ONB_GLSL
 // Orthonormal Basis
 struct Onb
 {
@@ -53,3 +55,4 @@ Onb_to_world(const Onb onb, const vec3 dir)
 {
 	return onb.m_x * dir.x + onb.m_y * dir.y + onb.m_z * dir.z;
 }
+#endif

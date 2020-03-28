@@ -448,7 +448,7 @@ struct RgbaImage2d
 			for (int x = 0; x < width; x++)
 				for (int c = 0; c < 3; c++)
 				{
-					float v = read_result[(y * m_width + x) * 4 + c];
+					float v = static_cast<float>(read_result[(y * m_width + x) * 4 + c]);
 					os.write((char *)(&v), sizeof(float));
 				}
 

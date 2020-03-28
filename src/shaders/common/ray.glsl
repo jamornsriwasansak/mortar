@@ -1,3 +1,6 @@
+#ifndef RAY_GLSL
+#define RAY_GLSL
+
 #define RAY_PRD_LOCATION 0
 #define SHADOW_RAY_PRD_LOCATION 1
 
@@ -37,3 +40,4 @@ Ray_create(const vec3 origin,
     result.m_tmax = DEFAULT_TMAX;
     return result;
 }
+#endif

@@ -4,6 +4,7 @@
 #include "common/scene.h"
 #include "common/camera.h"
 #include "common/stopwatch.h"
+#include "common/bluenoise.h"
 
 #include "gavulkan/appcore.h"
 #include "gavulkan/image.h"
@@ -12,27 +13,67 @@
 #include "gavulkan/raytracingpipeline.h"
 #include "gavulkan/graphicspipeline.h"
 
-struct Rtao
+struct FastPathTracer
 {
 	RayTracingPipeline
-	create_rtao_pipeline(const Scene & scene)
+	create_path_tracer_pipeline(const Scene & scene)
 	{
-		// create rtao pipeline
-		Shader raygen_shader("shaders/renderer/rtao/rtao.rgen",
-							 vk::ShaderStageFlagBits::eRaygenNV);
-		Shader raychit_shader("shaders/renderer/rtao/rtao.rchit",
-							  vk::ShaderStageFlagBits::eClosestHitNV);
 		const uint32_t num_triangle_instances = static_cast<uint32_t>(scene.m_triangle_instances.size());
+		const uint32_t num_textures = static_cast<uint32_t>(scene.m_images_cache->m_images.size());
+
+		/*
+		* ray gen
+		*/
+		Shader raygen_shader("shaders/renderer/fastpathtracer/fastpathtracer.rgen",
+							 vk::ShaderStageFlagBits::eRaygenNV);
+
+		/*
+		* ray closest hit
+		*/
+		Shader raychit_shader("shaders/renderer/fastpathtracer/fastpathtracer.rchit",
+							  vk::ShaderStageFlagBits::eClosestHitNV);
 		raychit_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
-		raychit_shader.m_uniforms_set.at({ 2, 0 })->m_num_descriptors = num_triangle_instances;
-		Shader shadow_raymiss_shader("shaders/renderer/rtao/rtaoshadow.rmiss",
-									 vk::ShaderStageFlagBits::eMissNV);
-		Shader raymiss_shader("shaders/renderer/rtao/rtao.rmiss",
+		raychit_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
+		raychit_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
+		raychit_shader.m_uniforms_set.at({ 1, 3 })->m_num_descriptors = num_triangle_instances;
+		raychit_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
+		raychit_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
+
+		// emittor info
+		raychit_shader.m_uniforms_set.at({ 2, 1 })->m_num_descriptors = 1u;
+		raychit_shader.m_uniforms_set.at({ 2, 2 })->m_num_descriptors = 1u;
+		raychit_shader.m_uniforms_set.at({ 2, 3 })->m_num_descriptors = num_triangle_instances;
+
+		/*
+		* ray closest hit
+		*/
+		Shader rayahit_shader("shaders/renderer/fastpathtracer/fastpathtracer.rahit",
+							  vk::ShaderStageFlagBits::eAnyHitNV);
+		rayahit_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
+		rayahit_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
+		rayahit_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
+		rayahit_shader.m_uniforms_set.at({ 1, 3 })->m_num_descriptors = num_triangle_instances;
+		rayahit_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
+		rayahit_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
+
+		/*
+		* Radiance Miss and Shadow Miss
+		*/
+
+		Shader raymiss_shader("shaders/renderer/fastpathtracer/fastpathtracer.rmiss",
 							  vk::ShaderStageFlagBits::eMissNV);
+		Shader shadow_raymiss_shader("shaders/renderer/fastpathtracer/fastpathtracershadow.rmiss",
+									 vk::ShaderStageFlagBits::eMissNV);
+
+		// since we do shadow ray test while check where the ray was hit
+		const uint32_t recursion_depth = 2;
+
 		RayTracingPipeline rt_pipeline({ &raygen_shader,
 										 &raychit_shader,
+										 &rayahit_shader,
 										 &raymiss_shader,
-										 &shadow_raymiss_shader });
+										 &shadow_raymiss_shader },
+									   recursion_depth);
 
 		return std::move(rt_pipeline);
 	}
@@ -63,7 +104,7 @@ struct Rtao
 		*/
 
 		// create rtao pipeline
-		RayTracingPipeline rtao_pipeline = create_rtao_pipeline(*scene);
+		RayTracingPipeline rt_pipeline = create_path_tracer_pipeline(*scene);
 
 		// fetch image_views
 		std::vector<const vk::ImageView *> image_views = raw_ptrs(Core::Inst().m_vk_swapchain_image_views);
@@ -75,7 +116,7 @@ struct Rtao
 										Extent.height);
 		DepthAttachment depth_attachment(&depth_image.m_vk_image_view.get());
 
-		// create final pipeline (for output rtao image buffer to screen)
+		// create final pipeline (for output rt image buffer to screen)
 		GraphicsPipeline final_pipeline = create_final_pipeline({ color_attachment },
 																depth_attachment);
 
@@ -99,24 +140,42 @@ struct Rtao
 											  vk::BufferUsageFlagBits::eUniformBuffer));
 		}
 
-		std::vector<vk::DescriptorSet> rtao_descriptor_sets_0 = rtao_pipeline
+		EmitterInfo emitter_info;
+		emitter_info.m_num_emitter = static_cast<int>(scene->get_num_emitters());
+		emitter_info.m_envmap_emitter_offset = static_cast<int>(scene->m_triangle_instances.size());
+		Buffer emitter_info_buffer(sizeof(EmitterInfo),
+								   vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible,
+								   vk::BufferUsageFlagBits::eUniformBuffer);
+		emitter_info_buffer.copy_from(&emitter_info,
+									  sizeof(emitter_info));
+
+		std::vector<vk::DescriptorSet> rt_descriptor_sets_0 = rt_pipeline
 			.build_descriptor_sets(0)
 			.set_accel_struct(0, *scene->m_tlas.m_vk_accel_struct)
 			.set_storage_image(1, storage)
 			.set_uniform_buffer_chain(2, cam_prop_buffers)
+			.set_sampler(3, *scene->m_envmap)
 			.build();
 
-		std::vector<vk::DescriptorSet> rtao_descriptor_sets_1 = rtao_pipeline
+		std::vector<vk::DescriptorSet> rt_descriptor_sets_1 = rt_pipeline
 			.build_descriptor_sets(1)
 			.set_storage_buffers_array(0, scene->get_indices_arrays_storage())
+			.set_storage_buffers_array(1, scene->get_position_u_storage())
+			.set_storage_buffers_array(2, scene->get_normal_v_storage())
+			.set_storage_buffers_array(3, scene->get_material_id_storage())
+			.set_storage_buffer(4, *scene->get_materials_buffer_storage())
+			.set_samplers(5, scene->m_images_cache->get_images())
 			.build();
 
-		std::vector<vk::DescriptorSet> rtao_descriptor_sets_2 = rtao_pipeline
+		std::vector<vk::DescriptorSet> rt_descriptor_sets_2 = rt_pipeline
 			.build_descriptor_sets(2)
-			.set_storage_buffers_array(0, scene->get_normal_v_storage())
+			.set_uniform_buffer(0, emitter_info_buffer)
+			.set_storage_buffer(1, *scene->m_cdf_table_sizes)
+			.set_storage_buffer(2, *scene->m_top_level_emitters_cdf)
+			.set_storage_buffers_array(3, scene->get_bottom_level_emitters_cdf())
 			.build();
 
-		std::vector<vk::DescriptorSet> rtao_descriptor_sets_3 = rtao_pipeline
+		std::vector<vk::DescriptorSet> rt_descriptor_sets_3 = rt_pipeline
 			.build_descriptor_sets(3)
 			.set_storage_buffer(0, rng.m_sobol_sequence_buffer)
 			.set_storage_buffer(1, rng.m_scrambling_tile_buffer)
@@ -127,6 +186,7 @@ struct Rtao
 			.build_descriptor_sets(0)
 			.set_sampler(0, storage)
 			.build();
+
 		/*
 		*	command buffers
 		*/
@@ -148,21 +208,21 @@ struct Rtao
 
 			// ray tracing pipeline
 			cmd_buffer.bindPipeline(vk::PipelineBindPoint::eRayTracingNV,
-									*rtao_pipeline.m_vk_pipeline);
+									*rt_pipeline.m_vk_pipeline);
 			cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingNV,
-										  *rtao_pipeline.m_vk_pipeline_layout,
+										  *rt_pipeline.m_vk_pipeline_layout,
 										  0,
-										  { 
-											  rtao_descriptor_sets_0[i],
-											  rtao_descriptor_sets_1[i],
-											  rtao_descriptor_sets_2[i],
-											  rtao_descriptor_sets_3[i]
+										  {
+											rt_descriptor_sets_0[i],
+											rt_descriptor_sets_1[i],
+											rt_descriptor_sets_2[i],
+											rt_descriptor_sets_3[i],
 										  },
 										  { });
-			cmd_buffer.traceRaysNV(rtao_pipeline.sbt_vk_buffer(), rtao_pipeline.m_raygen_offset,
-								   rtao_pipeline.sbt_vk_buffer(), rtao_pipeline.m_miss_offset, rtao_pipeline.m_stride,
-								   rtao_pipeline.sbt_vk_buffer(), rtao_pipeline.m_hit_offset, rtao_pipeline.m_stride,
-								   rtao_pipeline.sbt_vk_buffer(), 0, 0,
+			cmd_buffer.traceRaysNV(rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_raygen_offset,
+								   rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_miss_offset, rt_pipeline.m_stride,
+								   rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_hit_offset, rt_pipeline.m_stride,
+								   rt_pipeline.sbt_vk_buffer(), 0, 0,
 								   Extent.width, Extent.height, 1);
 
 			// draw ray tracing result
@@ -180,7 +240,6 @@ struct Rtao
 			cmd_buffer.end();
 		}
 
-
 		int frame_counter = 0;
 
 		/*
@@ -196,8 +255,9 @@ struct Rtao
 				stopwatch.reset();
 
 				// update camera
-				camera->update(float(frame_time));
+				camera->update(static_cast<float>(frame_time));
 				CameraProperties cam_props = camera->get_camera_props();
+				cam_props.m_i_frame = frame_counter;
 
 				cam_prop_buffers[params.m_image_index].copy_from(&cam_props,
 																 sizeof(cam_props));
@@ -219,6 +279,9 @@ struct Rtao
 				// graphics queue submit
 				Core::Inst().m_vk_graphics_queue.submit(submit_info,
 														params.m_inflight_fence);
+				frame_counter++;
 			});
+
+		storage.save_pfm("result.pfm");
 	}
 };
