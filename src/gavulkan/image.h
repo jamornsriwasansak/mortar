@@ -192,7 +192,7 @@ struct RgbaImage2d
 				const vk::ImageTiling & vk_image_tiling,
 				const vk::ImageUsageFlags & vk_image_usage_flags,
 				const bool use_srgb = false,
-				const bool is_downloadable = false):
+				const bool can_copied_to_host = false):
 		m_width(width),
 		m_height(height),
 		m_vk_image_layout(vk::ImageLayout::eUndefined)
@@ -219,7 +219,7 @@ struct RgbaImage2d
 		}
 
 		vk::ImageUsageFlags usage_flag = vk_image_usage_flags;
-		if (is_downloadable)
+		if (can_copied_to_host)
 		{
 			usage_flag |= vk::ImageUsageFlagBits::eTransferSrc;
 		}
@@ -280,26 +280,26 @@ struct RgbaImage2d
 	RgbaImage2d(const uint32_t width,
 				const uint32_t height,
 				const vk::ImageUsageFlags & vk_image_usage_flags,
-				const bool is_downloadable = false):
+				const bool can_copied_to_host = false):
 		RgbaImage2d(nullptr,
 					width,
 					height,
 					vk::ImageTiling::eOptimal,
 					vk_image_usage_flags,
 					false,
-					is_downloadable)
+					can_copied_to_host)
 	{
 	}
 
 	RgbaImage2d(const StbiUint8Result & stbi_result,
-				const bool is_downloadable = false):
+				const bool can_copied_to_host = false):
 		RgbaImage2d(stbi_result.m_stbi_data,
 					stbi_result.m_width,
 					stbi_result.m_height,
 					vk::ImageTiling::eOptimal,
 					RgbaUsageFlagBits,
 					true,
-					is_downloadable)
+					can_copied_to_host)
 	{
 		if constexpr (!std::is_same<uint8_t, ScalarType>::value)
 		{
@@ -309,14 +309,14 @@ struct RgbaImage2d
 	}
 
 	RgbaImage2d(const StbiFloat32Result & stbi_result,
-				const bool is_downloadable = false):
+				const bool can_copied_to_host = false):
 		RgbaImage2d(stbi_result.m_stbi_data,
 					stbi_result.m_width,
 					stbi_result.m_height,
 					vk::ImageTiling::eOptimal,
 					RgbaUsageFlagBits,
 					false,
-					is_downloadable)
+					can_copied_to_host)
 	{
 		if constexpr (!std::is_same<float, ScalarType>::value)
 		{
@@ -326,17 +326,17 @@ struct RgbaImage2d
 	}
 
 	RgbaImage2d(const std::filesystem::path & filepath,
-				const bool is_downloadable = false)
+				const bool can_copied_to_host = false)
 	{
 		if (filepath.extension() == ".hdr")
 		{
 			*this = std::move(RgbaImage2d(StbiFloat32Result(filepath),
-										  is_downloadable));
+										  can_copied_to_host));
 		}
 		else
 		{
 			*this = std::move(RgbaImage2d(StbiUint8Result(filepath),
-										  is_downloadable));
+										  can_copied_to_host));
 		}
 	}
 
@@ -372,18 +372,6 @@ struct RgbaImage2d
 		transition_image_layout(*m_vk_image,
 								vk::ImageLayout::eTransferDstOptimal,
 								vk_image_layout);
-
-		// compute average
-		vec4 average = vec4(0.0f);
-		const float * tdata = static_cast<const float *>(data);
-		for (size_t i = 0; i < width * height; i += 4)
-		{
-			average.x += tdata[i + 0];
-			average.y += tdata[i + 1];
-			average.z += tdata[i + 2];
-			average.w += tdata[i + 3];
-		}
-		m_average = average / static_cast<float>(width * height);
 	}
 
 	std::vector<ScalarType>

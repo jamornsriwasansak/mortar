@@ -160,7 +160,7 @@ li(Ray ray,
         if (prd.m_t < 0)
         {
             // fetch emissive value from envmap
-            const vec2 latlong_texcoord = latlong_texcoord_from_direction(ray.m_direction);
+            const vec2 latlong_texcoord = panorama_from_world(ray.m_direction);
             const vec3 emission = texture(envmap, latlong_texcoord).xyz;
             radiance += importance * emission;
             break;

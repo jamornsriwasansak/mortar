@@ -94,7 +94,7 @@ Fast_Ggx_reflect_cos_sample(out vec3 outgoing,
 	pdf = d_term * g1_i_term / (4.0f * abs(incoming.y) + SMALL_VALUE);
 
 	// compute brdf contrib
-	const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
+	const vec3 f_term = material.m_spec_refl;//Microfacet_f_shlick(material.m_spec_refl, incoming);
 	const float g1_o_term = Microfacet_g1(outgoing, alpha);
 	return f_term * g1_o_term;
 }
@@ -112,7 +112,7 @@ Fast_Ggx_reflect_eval(out float pdf,
 	const float d_term = Microfacet_d(h, alpha);
 	const float g1_i_term = Microfacet_g1(incoming, alpha);
 	const float g1_o_term = Microfacet_g1(outgoing, alpha);
-	const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
+	const vec3 f_term = material.m_spec_refl;// Microfacet_f_shlick(material.m_spec_refl, incoming);
 
 	// pdf = d(h) * g_1(v) * jacobian
 	// where reflection jacobian = 1 / 4 * dot(v, n)
@@ -120,7 +120,8 @@ Fast_Ggx_reflect_eval(out float pdf,
 	pdf = d_term * g1_i_term / (4.0f * abs(incoming.y) + SMALL_VALUE);
 
 	// brdf = G * D * F / (4 * dot(v, n) * dot(l, n))
-	return g1_o_term * f_term * pdf / (outgoing.y + SMALL_VALUE);
+	//return g1_o_term * f_term * pdf / (outgoing.y + SMALL_VALUE);
+	return f_term;
 }
 
 vec3
@@ -131,8 +132,8 @@ Fast_Material_cos_sample(out vec3 outgoing,
 						 vec2 samples)
 {
 	// compute probability of choosing a material
-	const float diffuse_weight = luminance(material.m_diffuse_refl) + SMALL_VALUE;
-	const float ggx_weight = luminance(material.m_spec_refl) + SMALL_VALUE;
+	const float diffuse_weight = luminance(material.m_diffuse_refl);
+	const float ggx_weight = luminance(material.m_spec_refl);
 	const float diffuse_cprob = diffuse_weight / (diffuse_weight + ggx_weight);
 	const float ggx_cprob = 1.0f - diffuse_cprob;
 
@@ -154,7 +155,7 @@ Fast_Material_cos_sample(out vec3 outgoing,
 		vec3 ggx_brdf_cos = Fast_Ggx_reflect_eval(ggx_pdf, material, incoming, outgoing) * outgoing.y;
 
 		brdf_val_cos = diffuse_brdf_cos + ggx_brdf_cos;
-		brdf_pdf = diffuse_pdf*diffuse_cprob + ggx_pdf*ggx_cprob;
+		brdf_pdf = diffuse_pdf * diffuse_cprob + ggx_pdf * ggx_cprob;
 	}
 	else
 	{

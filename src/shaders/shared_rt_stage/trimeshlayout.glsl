@@ -44,6 +44,7 @@ layout(set = SET, binding = 3) buffer TBottomLevelCdfTable\
 {\
 	float cdf[];\
 } emitter_blcdf[];\
+layout(set = SET, binding = 4) uniform sampler2D emitter_envmap;\
 int sample_emitter_instance_index(out float prob, out float rescaled_s, const float s)\
 {\
 	/* upperbound implementation - https://en.cppreference.com/w/cpp/algorithm/upper_bound */\
@@ -65,7 +66,7 @@ int sample_emitter_instance_index(out float prob, out float rescaled_s, const fl
 	prob = p1 - p0;\
 	return first - 1;\
 }\
-int sample_emitter_face(out float prob, out float rescaled_s, const int cdf_table_index, const float s)\
+int sample_emitter_bottom_level(out float prob, out float rescaled_s, const int cdf_table_index, const float s)\
 {\
     int first = 0;\
     int count = emitter_blcdf_size.size[cdf_table_index];\
@@ -91,7 +92,7 @@ EmitterSample sample_emitter(vec2 samples)\
     if (instance_id < emitter_info_block.info.m_envmap_emitter_offset)\
     {\
 		float sample_face_id_prob = 0.0f;\
-		const int face_id = sample_emitter_face(sample_face_id_prob, samples.x, instance_id, samples.x);\
+		const int face_id = sample_emitter_bottom_level(sample_face_id_prob, samples.x, instance_id, samples.x);\
         const uint index0 = faces_arrays[instance_id].faces[face_id * 3 + 0];\
         const uint index1 = faces_arrays[instance_id].faces[face_id * 3 + 1];\
         const uint index2 = faces_arrays[instance_id].faces[face_id * 3 + 2];\
@@ -125,9 +126,23 @@ EmitterSample sample_emitter(vec2 samples)\
 		emitter_sample.m_pdf = sample_instance_id_prob * sample_face_id_prob * sample_face_pdf;\
 		return emitter_sample;\
     }\
-    emitter_sample.m_position = vec3(0.0f);\
-    emitter_sample.m_flag = EMITTER_ENVMAP;\
-	return emitter_sample;\
+    else /* instance >= emitter_info_block.info.m_envmap_emitter_offset */\
+    {\
+    	float sample_pixel_prob = 0.0f;\
+    	const uint pixel_id = sample_emitter_bottom_level(sample_pixel_prob, samples.x, instance_id, samples.x);\
+		const uint pixel_x = pixel_id % emitter_info_block.info.m_envmap_size.x;\
+		const uint pixel_y = pixel_id / emitter_info_block.info.m_envmap_size.x;\
+		const vec2 resolution = vec2(emitter_info_block.info.m_envmap_size);\
+		const vec2 uv = (vec2(pixel_x, pixel_y) + samples) / resolution;\
+		const vec3 position = world_from_panorama(uv);\
+		const float sine = sqrt(1.0f - sqr(position.y));\
+		const float jacobian = resolution.x * resolution.y * M_1_PI * M_1_PI * 0.5f / sine;\
+		emitter_sample.m_emission = texture(emitter_envmap, uv).xyz;\
+    	emitter_sample.m_position = position;\
+	    emitter_sample.m_flag = EMITTER_ENVMAP;\
+	    emitter_sample.m_pdf = sample_instance_id_prob * sample_pixel_prob * jacobian;\
+		return emitter_sample;\
+    }\
 }\
 float geometry_emitter_pdf(const int instance_id, const int face_id, const float triangle_area)\
 {\

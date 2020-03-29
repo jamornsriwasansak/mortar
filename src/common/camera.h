@@ -14,7 +14,9 @@ struct CameraProperties
 	mat4 m_inv_proj;
 	//
 	int m_is_moved;
-	float padding[3];
+	int m_i_frame;
+	//
+	float padding[2];
 };
 
 struct FpsCamera

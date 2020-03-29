@@ -152,7 +152,7 @@ Ggx_reflect_cos_sample(out vec3 outgoing,
 		// pdf						=			d(h) * g_1(i)          / (4 * dot(i, n))
 		// f_r * dot(o, n) / pdf	= f(i, h) 				  * g_1(o)
 		// where reflection jacobian = 1 / 4 * dot(i, n)
-		const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
+		const vec3 f_term = material.m_spec_refl;// Microfacet_f_shlick(material.m_spec_refl, incoming);
 		const float g_term = Microfacet_g1(outgoing, alpha);
 		bsdf_cos_contrib = f_term * g_term;
 	}
@@ -180,7 +180,7 @@ Ggx_reflect_eval(out vec3 bsdf_val,
 	const float g1_i_term = Microfacet_g1(incoming, alpha);
 	const float g1_o_term = Microfacet_g1(outgoing, alpha);
 	const float g_term = g1_i_term * g1_o_term;
-	const vec3 f_term = Microfacet_f_shlick(material.m_spec_refl, incoming);
+	const vec3 f_term = material.m_spec_refl;//Microfacet_f_shlick(material.m_spec_refl, incoming);
 
 	// brdf = G * D * F / (4 * dot(v, n) * dot(l, n))
 	bsdf_val = g_term * d_term * f_term / (4.0f * incoming.y * outgoing.y);

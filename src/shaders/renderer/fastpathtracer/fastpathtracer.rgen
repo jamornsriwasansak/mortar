@@ -59,6 +59,7 @@ main()
     // generate ray from a single pixel camera properties
     Ray ray = generate_primary_ray();
 
+    // init color, importance and pixel index
     prd.m_importance = vec3(1.0f);
     prd.m_color = vec3(0.0f);
     prd.m_pixel = ivec2(gl_LaunchIDNV);
@@ -70,15 +71,22 @@ main()
 
     radiance += prd.m_color;
 
-    ray.m_origin += ray.m_direction * prd.m_t;
-    ray.m_direction = prd.m_sampled_direction;
+    /*
+    // trace indirect ray
+    if (prd.m_t >= 0.0f)
+    {
+		ray.m_origin += ray.m_direction * prd.m_t;
+		ray.m_direction = prd.m_sampled_direction;
 
-    // trace ray
-    prd.m_t = 0.0f;
-    prd.m_i_bounce = 1;
-	trace_ray(ray, tlas, 0);
+		// trace ray
+		prd.m_t = 0.0f;
+		prd.m_i_bounce = 1;
+        prd.m_color = vec3(0.0f);
+		trace_ray(ray, tlas, 0);
 
-    radiance += prd.m_color;
+		radiance += prd.m_color;
+	}
+    */
 
     // accumulate the sample
     accumulated_radiance = ((accumulated_radiance * num_spp) + radiance) / (num_spp + 1.0f);

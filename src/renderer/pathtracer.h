@@ -20,6 +20,7 @@ struct PathTracer
 	{
 		const uint32_t num_triangle_instances = static_cast<uint32_t>(scene.m_triangle_instances.size());
 		const uint32_t num_textures = static_cast<uint32_t>(scene.m_images_cache->m_images.size());
+		const uint32_t num_emitters = num_triangle_instances + 1; // we assume all objects are emitters + 1 envmap
 
 		/*
 		* ray gen
@@ -37,7 +38,7 @@ struct PathTracer
 		// emittor info
 		raygen_shader.m_uniforms_set.at({ 2, 1 })->m_num_descriptors = 1u;
 		raygen_shader.m_uniforms_set.at({ 2, 2 })->m_num_descriptors = 1u;
-		raygen_shader.m_uniforms_set.at({ 2, 3 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 2, 3 })->m_num_descriptors = num_emitters;
 
 		/*
 		* ray closest hit
@@ -151,7 +152,7 @@ struct PathTracer
 			.set_accel_struct(0, *scene->m_tlas.m_vk_accel_struct)
 			.set_storage_image(1, storage)
 			.set_uniform_buffer_chain(2, cam_prop_buffers)
-			.set_sampler(3, *scene->m_envmap)
+			.set_sampler(3, scene->m_envmap.m_image)
 			.build();
 
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_1 = rt_pipeline
@@ -167,7 +168,7 @@ struct PathTracer
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_2 = rt_pipeline
 			.build_descriptor_sets(2)
 			.set_uniform_buffer(0, emitter_info_buffer)
-			.set_storage_buffer(1, *scene->m_cdf_table_sizes)
+			.set_storage_buffer(1, *scene->m_bottom_level_cdf_table_sizes)
 			.set_storage_buffer(2, *scene->m_top_level_emitters_cdf)
 			.set_storage_buffers_array(3, scene->get_bottom_level_emitters_cdf())
 			.build();

@@ -3,6 +3,7 @@
 #include "common/mortar.h"
 #include "common/trimesh.h"
 #include "common/camera.h"
+#include "common/envmap.h"
 
 #include "gavulkan/appcore.h"
 #include "gavulkan/raytracingaccel.h"
@@ -14,9 +15,8 @@ struct Scene
 	TriangleMeshStorage					m_triangle_meshes_storage;
 	RtTlas								m_tlas;
 	std::unique_ptr<Buffer>				m_top_level_emitters_cdf = nullptr;
-	std::unique_ptr<Buffer>				m_cdf_table_sizes = nullptr;
-	std::unique_ptr<RgbaImage2d<float>>	m_envmap = nullptr;
-	float								m_envmap_emissive_weight = 0.0f;
+	std::unique_ptr<Buffer>				m_bottom_level_cdf_table_sizes = nullptr;
+	Envmap								m_envmap;
 
 	vec3								m_bbox_min;
 	vec3								m_bbox_max;
@@ -25,17 +25,9 @@ struct Scene
 		m_bbox_max(vec3(std::numeric_limits<float>::lowest())),
 		m_bbox_min(vec3(std::numeric_limits<float>::max())),
 		m_images_cache(std::make_shared<ImageStorage>()),
-		m_triangle_meshes_storage()
+		m_triangle_meshes_storage(),
+		m_envmap(true)
 	{
-		// init envmap with a blank image
-		std::vector<float> blank_image(4, 0);
-		m_envmap = std::make_unique<RgbaImage2d<float>>(blank_image.data(),
-														1,
-														1,
-														vk::ImageTiling::eOptimal,
-														RgbaImage2d<float>::RgbaUsageFlagBits);
-		m_envmap->init_sampler();
-
 		m_triangle_meshes_storage.m_image_storage = m_images_cache;
 	}
 
@@ -90,8 +82,8 @@ struct Scene
 			}
 			else
 			{
-				cdf_table_sizes[i] = m_envmap->m_height * m_envmap->m_width;
-				top_level_pdf[i] = m_envmap_emissive_weight;
+				cdf_table_sizes[i] = m_envmap.m_cdf_table.m_num_elements;
+				top_level_pdf[i] = m_envmap.m_emissive_weight;
 			}
 			sum += top_level_pdf[i];
 		}
@@ -112,9 +104,9 @@ struct Scene
 		m_top_level_emitters_cdf = std::make_unique<Buffer>(top_level_cdf,
 															vk::MemoryPropertyFlagBits::eDeviceLocal,
 															vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
-		m_cdf_table_sizes = std::make_unique<Buffer>(cdf_table_sizes,
-													 vk::MemoryPropertyFlagBits::eDeviceLocal,
-													 vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+		m_bottom_level_cdf_table_sizes = std::make_unique<Buffer>(cdf_table_sizes,
+																  vk::MemoryPropertyFlagBits::eDeviceLocal,
+																  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
 
 		/*
 		* and build materials buffer
@@ -176,6 +168,7 @@ struct Scene
 		{
 			buffers.push_back(m_triangle_instances[i].m_triangle_mesh->m_cdf_buffer.get());
 		}
+		buffers.push_back(&m_envmap.m_cdf_table);
 		return buffers;
 	}
 
@@ -186,12 +179,11 @@ struct Scene
 	}
 
 	void
-	set_envmap(RgbaImage2d<float> & envmap)
+	set_envmap(const std::filesystem::path & path,
+			   const bool build_cdf_table)
 	{
-		m_envmap = std::make_unique<RgbaImage2d<float>>();
-		*m_envmap = std::move(envmap);
-		vec3 envmap_emission_average = vec3(m_envmap->m_average);
-		m_envmap_emissive_weight = length(envmap_emission_average);
+		m_envmap = Envmap(path,
+						  build_cdf_table);
 	}
 
 	size_t

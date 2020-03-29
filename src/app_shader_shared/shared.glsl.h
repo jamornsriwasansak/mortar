@@ -29,7 +29,7 @@ struct EmitterInfo
 {
     int m_num_emitter;
     int m_envmap_emitter_offset;
-    float _padding[2];
+    uvec2 m_envmap_size;
 };
 
 Material
