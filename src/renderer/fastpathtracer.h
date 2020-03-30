@@ -178,12 +178,14 @@ struct FastPathTracer
 			.set_sampler(4, scene->m_envmap.m_image)
 			.build();
 
+		/*
 		std::vector<vk::DescriptorSet> rt_descriptor_sets_3 = rt_pipeline
 			.build_descriptor_sets(3)
 			.set_storage_buffer(0, rng.m_sobol_sequence_buffer)
 			.set_storage_buffer(1, rng.m_scrambling_tile_buffer)
 			.set_storage_buffer(2, rng.m_ranking_tile_buffer)
 			.build();
+			*/
 
 		std::vector<vk::DescriptorSet> final_descriptor_sets_0 = final_pipeline
 			.build_descriptor_sets(0)
@@ -219,7 +221,7 @@ struct FastPathTracer
 											rt_descriptor_sets_0[i],
 											rt_descriptor_sets_1[i],
 											rt_descriptor_sets_2[i],
-											rt_descriptor_sets_3[i],
+											//rt_descriptor_sets_3[i],
 										  },
 										  { });
 			cmd_buffer.traceRaysNV(rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_raygen_offset,
@@ -283,6 +285,8 @@ struct FastPathTracer
 				Core::Inst().m_vk_graphics_queue.submit(submit_info,
 														params.m_inflight_fence);
 				frame_counter++;
+
+				return true;
 			});
 
 		storage.save_pfm("result.pfm");

@@ -276,6 +276,8 @@ struct PathTracer
 				// graphics queue submit
 				Core::Inst().m_vk_graphics_queue.submit(submit_info,
 														params.m_inflight_fence);
+
+				return true;
 			});
 
 		storage.save_pfm("result.pfm");

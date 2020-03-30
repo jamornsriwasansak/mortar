@@ -102,7 +102,7 @@ struct Core
 	};
 
 	void
-	loop(const std::function<void(const LoopCallbackParameters & cb_params)> & callback)
+	loop(const std::function<bool(const LoopCallbackParameters & cb_params)> & callback)
 	{
 		const int MaxFrameInFlight = 3;
 		std::vector<vk::UniqueSemaphore> image_available_semaphores(MaxFrameInFlight);
@@ -152,7 +152,10 @@ struct Core
 			cb_params.m_signal_semaphores = { signal_semaphore };
 			cb_params.m_image_index = image_index;
 			cb_params.m_inflight_fence = *inflight_fences[i_inflight_frame];
-			callback(cb_params);
+			if (!callback(cb_params))
+			{
+				return;
+			}
 			
 			// create present info
 			vk::PresentInfoKHR present_info = {};
