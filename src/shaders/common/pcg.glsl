@@ -82,31 +82,44 @@ pcg32_srandom_r(inout pcg32_random_t rng,
 
 // PCG helper function
 
-struct Pcg32
+#ifdef USE_PCG
+struct RngState
 {
     pcg32_random_t pcg_rng;
 };
 
-Pcg32
-Pcg_create(uint64_t seed,
-           uint64_t stream_id)
+// A single iteration of Bob Jenkins' One-At-A-Time hashing algorithm.
+uint hash(uint x) {
+    x += (x << 10u);
+    x ^= (x >> 6u);
+    x += (x << 3u);
+    x ^= (x >> 11u);
+    x += (x << 15u);
+    return x;
+}
+
+RngState
+srand(uvec2 pixel_index,
+      uvec2 image_size,
+      uint sample_index)
 {
-    Pcg32 rng;
-    pcg32_srandom_r(rng.pcg_rng,
+    RngState rng_state;
+    uint seed = pixel_index.x + image_size.x * pixel_index.y;
+    pcg32_srandom_r(rng_state.pcg_rng,
                     seed,
-                    stream_id);
-    return rng;
+                    hash(sample_index));
+    return rng_state;
 }
 
 float
-Pcg_next_float(inout Pcg32 rng)
+rand(inout RngState rng)
 {
     const uint v = pcg32_random_r(rng.pcg_rng);
     return float(v) / float(UINT32_MAX);
 }
 
 vec2
-Pcg_next_vec2(inout Pcg32 rng)
+rand2(inout RngState rng)
 {
     const uint u = pcg32_random_r(rng.pcg_rng);
     const uint v = pcg32_random_r(rng.pcg_rng);
@@ -114,7 +127,7 @@ Pcg_next_vec2(inout Pcg32 rng)
 }
 
 vec3
-Pcg_next_vec3(inout Pcg32 rng)
+rand3(inout RngState rng)
 {
     const uint u = pcg32_random_r(rng.pcg_rng);
     const uint v = pcg32_random_r(rng.pcg_rng);
@@ -122,36 +135,4 @@ Pcg_next_vec3(inout Pcg32 rng)
     return vec3(u, v, w) / float(UINT32_MAX);
 }
 
-Pcg32 GLOBAL_PCG;
-
-#ifdef USE_PCG
-
-void
-srand(uvec2 pixel_index,
-      uvec2 image_size,
-      uint sample_index)
-{
-    uint seed = pixel_index.x + image_size.x * pixel_index.y;
-    // note: we have to modify sample_index to make sure that error distribution looks nice and not very correlated
-	GLOBAL_PCG = Pcg_create(seed,
-                            sample_index * image_size.x * image_size.y + 1);
-}
-
-float
-rand()
-{
-    return Pcg_next_float(GLOBAL_PCG);
-}
-
-vec2
-rand2()
-{
-    return Pcg_next_vec2(GLOBAL_PCG);
-}
-
-vec3
-rand3()
-{
-    return Pcg_next_vec3(GLOBAL_PCG);
-}
 #endif

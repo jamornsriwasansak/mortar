@@ -63,6 +63,9 @@ main()
     prd.m_importance = vec3(1.0f);
     prd.m_color = vec3(0.0f);
     prd.m_pixel = ivec2(gl_LaunchIDNV);
+	prd.m_rng_state = srand(uvec2(gl_LaunchIDNV),
+                            uvec2(gl_LaunchSizeNV),
+                            uint(num_spp));
 
     // trace ray
     prd.m_t = 0.0f;

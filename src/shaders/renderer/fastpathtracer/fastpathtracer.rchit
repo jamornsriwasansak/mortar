@@ -12,8 +12,8 @@
 #include "shared.glsl.h"
 #include "shared_rt_stage/trimeshlayout.glsl"
 
-#define USE_BLUE_RAND
-#include "common/bluenoise.glsl"
+//#define USE_BLUE_RAND
+//#include "common/bluenoise.glsl"
 
 layout(set = 0, binding = 0) uniform accelerationStructureNV tlas;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
@@ -41,7 +41,7 @@ DECLARE_TRIMESH_LAYOUT(1)
 DECLARE_EMITTER_LAYOUT(2)
 
 // set 3: bluenoise sampler
-DECLARE_BLUENOISE_LAYOUT(3)
+//DECLARE_BLUENOISE_LAYOUT(3)
 
 float eval_mi_weight(const float pdf1, const float pdf2)
 {
@@ -104,9 +104,8 @@ void main()
     */
 
     // sample emitter
-    const float rn0 = blue_rand(prd.m_pixel, cam.m_i_frame, random_number_offset + 0);
-    const float rn1 = blue_rand(prd.m_pixel, cam.m_i_frame, random_number_offset + 1);
-    EmitterSample emitter_sample = sample_emitter(vec2(rn0, rn1));
+	const vec2 samples = rand2(prd.m_rng_state);
+    EmitterSample emitter_sample = sample_emitter(samples);
     vec3 light_contrib = vec3(0.0f);
 
     if (emitter_sample.m_flag == EMITTER_GEOMETRY)
@@ -129,7 +128,7 @@ void main()
         const vec3 local_to_emitter = Onb_to_local(onb, normalize(to_emitter));
         const vec3 brdf_term = Fast_Material_eval(brdf_pdf_w, material, local_to_incoming, local_to_emitter);
 
-        // compute mis weight if we are at the first bounce
+        // compute mis weight if we are not at the last bounce yet
         if (prd.m_i_bounce < num_bounces - 1)
         {
             // change of variable for brdf_pdf
@@ -166,10 +165,11 @@ void main()
         const vec3 local_to_emitter = Onb_to_local(onb, to_emitter);
         const vec3 brdf_term = Fast_Material_eval(brdf_pdf_w, material, local_to_incoming, local_to_emitter);
 
-    	light_contrib = brdf_term * visibility * emitter_sample.m_emission * geometry_term / emitter_sample.m_pdf;
+    	light_contrib = brdf_term * visibility * emitter_sample.m_emission * geometry_term / (emitter_sample.m_pdf + SMALL_VALUE);
     }
 
     prd.m_color += prd.m_importance * light_contrib;
+
 
     /*
     * BRDF Sampling
@@ -193,13 +193,18 @@ void main()
     if (prd.m_i_bounce < num_bounces - 1)
     {
 		// random number for sampling next direction
-		const float rn2 = blue_rand(prd.m_pixel, cam.m_i_frame, random_number_offset + 2);
-		const float rn3 = blue_rand(prd.m_pixel, cam.m_i_frame, random_number_offset + 3);
+        const vec2 samples = rand2(prd.m_rng_state);
 
 		// sample next direction
 		float brdf_cos_sampling_pdf;
 		vec3 local_next_direction;
-		prd.m_importance *= Fast_Material_cos_sample(local_next_direction, brdf_cos_sampling_pdf, material, local_to_incoming, vec2(rn2, rn3));
+		prd.m_importance *= Fast_Material_cos_sample(local_next_direction,
+                                                     brdf_cos_sampling_pdf,
+                                                     material,
+                                                     local_to_incoming,
+                                                     samples);
+
+        // update next direction
 		prd.m_sampled_direction = Onb_to_world(onb, local_next_direction);
 		prd.m_sampled_direction_pdf_w = brdf_cos_sampling_pdf;
     }

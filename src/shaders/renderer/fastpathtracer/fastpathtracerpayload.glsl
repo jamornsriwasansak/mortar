@@ -1,7 +1,7 @@
 #include "shared.glsl.h"
 
-#define FPT_RAY_PRD_LOCATION
-#define FPT_SHAROW_PRD_LOCATION
+#define USE_PCG
+#include "common/pcg.glsl"
 
 struct FastPathTracerRayPayload
 {
@@ -12,6 +12,7 @@ struct FastPathTracerRayPayload
 	vec3		m_importance;
 	float		m_sampled_direction_pdf_w;
 	ivec2		m_pixel;
+	RngState	m_rng_state;
 };
 
 struct FastPathTracerShadowRayPayload
