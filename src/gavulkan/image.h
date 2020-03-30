@@ -462,10 +462,29 @@ struct RgbaImage2d
 	}
 
 	void
-	init_sampler()
+	init_sampler(const bool is_envmap = false)
 	{
 		// create image sampler
 		vk::SamplerCreateInfo sampler_ci = {};
+		if (is_envmap)
+		{
+			sampler_ci.setMagFilter(vk::Filter::eNearest);
+			sampler_ci.setMinFilter(vk::Filter::eNearest);
+			sampler_ci.setAddressModeU(vk::SamplerAddressMode::eRepeat);
+			sampler_ci.setAddressModeV(vk::SamplerAddressMode::eMirroredRepeat);
+			sampler_ci.setAddressModeW(vk::SamplerAddressMode::eRepeat);
+			sampler_ci.setAnisotropyEnable(false);
+			sampler_ci.setMaxAnisotropy(1);
+			sampler_ci.setBorderColor(vk::BorderColor::eIntOpaqueBlack);
+			sampler_ci.setUnnormalizedCoordinates(false);
+			sampler_ci.setCompareEnable(false);
+			sampler_ci.setCompareOp(vk::CompareOp::eAlways);
+			sampler_ci.setMipmapMode(vk::SamplerMipmapMode::eNearest);
+			sampler_ci.setMipLodBias(0.0f);
+			sampler_ci.setMinLod(0.0f);
+			sampler_ci.setMaxLod(0.0f);
+		}
+		else
 		{
 			sampler_ci.setMagFilter(vk::Filter::eLinear);
 			sampler_ci.setMinFilter(vk::Filter::eLinear);

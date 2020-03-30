@@ -25,7 +25,7 @@ struct Envmap
 									 1, // height = 1
 									 vk::ImageTiling::eOptimal,
 									 RgbaImage2d<float>::RgbaUsageFlagBits);
-		m_image.init_sampler();
+		m_image.init_sampler(true);
 		m_resolution = uvec2(1, 1);
 
 		// build cdf table if requested
@@ -67,7 +67,7 @@ struct Envmap
 
 		m_emissive_weight = length(average);
 		m_image = RgbaImage2d<float>(stbi_float_result);
-		m_image.init_sampler();
+		m_image.init_sampler(true);
 		m_resolution = uvec2(width,
 							 height);
 
@@ -104,7 +104,7 @@ struct Envmap
 				const vec3 weighted_value = sine_term * value;
 
 				// assign value to pdf_table
-				pdf_table[data_index] = 1.0f;// length(value);
+				pdf_table[data_index] = length(value);
 			}
 		}
 
