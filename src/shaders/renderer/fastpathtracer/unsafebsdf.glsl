@@ -120,8 +120,7 @@ Fast_Ggx_reflect_eval(out float pdf,
 	pdf = d_term * g1_i_term / (4.0f * abs(incoming.y) + SMALL_VALUE);
 
 	// brdf = G * D * F / (4 * dot(v, n) * dot(l, n))
-	//return g1_o_term * f_term * pdf / (outgoing.y + SMALL_VALUE);
-	return f_term;
+	return g1_o_term * f_term * pdf / (outgoing.y + SMALL_VALUE);
 }
 
 vec3
@@ -155,7 +154,7 @@ Fast_Material_cos_sample(out vec3 outgoing,
 		vec3 ggx_brdf_cos = Fast_Ggx_reflect_eval(ggx_pdf, material, incoming, outgoing) * outgoing.y;
 
 		brdf_val_cos = diffuse_brdf_cos + ggx_brdf_cos;
-		brdf_pdf = diffuse_pdf * diffuse_cprob + ggx_pdf * ggx_cprob;
+		brdf_pdf = diffuse_pdf*diffuse_cprob + ggx_pdf*ggx_cprob;
 	}
 	else
 	{

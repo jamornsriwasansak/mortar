@@ -27,26 +27,26 @@ struct FastPathTracer
 		*/
 		Shader raygen_shader("shaders/renderer/fastpathtracer/fastpathtracer.rgen",
 							 vk::ShaderStageFlagBits::eRaygenNV);
+		raygen_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 1, 3 })->m_num_descriptors = num_triangle_instances;
+		raygen_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
+		raygen_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
+
+		// emittor info
+		raygen_shader.m_uniforms_set.at({ 2, 1 })->m_num_descriptors = 1u;
+		raygen_shader.m_uniforms_set.at({ 2, 2 })->m_num_descriptors = 1u;
+		raygen_shader.m_uniforms_set.at({ 2, 3 })->m_num_descriptors = num_emitters;
 
 		/*
 		* ray closest hit
 		*/
 		Shader raychit_shader("shaders/renderer/fastpathtracer/fastpathtracer.rchit",
 							  vk::ShaderStageFlagBits::eClosestHitNV);
-		raychit_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
-		raychit_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
-		raychit_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
-		raychit_shader.m_uniforms_set.at({ 1, 3 })->m_num_descriptors = num_triangle_instances;
-		raychit_shader.m_uniforms_set.at({ 1, 4 })->m_num_descriptors = 1u;
-		raychit_shader.m_uniforms_set.at({ 1, 5 })->m_num_descriptors = num_textures;
-
-		// emittor info
-		raychit_shader.m_uniforms_set.at({ 2, 1 })->m_num_descriptors = 1u;
-		raychit_shader.m_uniforms_set.at({ 2, 2 })->m_num_descriptors = 1u;
-		raychit_shader.m_uniforms_set.at({ 2, 3 })->m_num_descriptors = num_emitters;
 
 		/*
-		* ray closest hit
+		* ray anyhit
 		*/
 		Shader rayahit_shader("shaders/renderer/fastpathtracer/fastpathtracer.rahit",
 							  vk::ShaderStageFlagBits::eAnyHitNV);
@@ -175,7 +175,6 @@ struct FastPathTracer
 			.set_storage_buffer(1, *scene->m_bottom_level_cdf_table_sizes)
 			.set_storage_buffer(2, *scene->m_top_level_emitters_cdf)
 			.set_storage_buffers_array(3, scene->get_bottom_level_emitters_cdf())
-			.set_sampler(4, scene->m_envmap.m_image)
 			.build();
 
 		/*

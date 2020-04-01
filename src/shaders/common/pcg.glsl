@@ -1,3 +1,5 @@
+#ifndef PCG_GLSL
+#define PCG_GLSL
 #extension GL_GOOGLE_include_directive : enable
 #include "constant.glsl"
 
@@ -135,4 +137,5 @@ rand3(inout RngState rng)
     return vec3(u, v, w) / float(UINT32_MAX);
 }
 
+#endif
 #endif

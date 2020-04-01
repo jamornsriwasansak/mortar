@@ -1,3 +1,6 @@
+#ifndef BSDF_GLSL
+#define BSDF_GLSL
+
 #extension GL_GOOGLE_include_directive : enable
 #include "shared.glsl.h"
 #include "mapping.glsl"
@@ -498,3 +501,4 @@ Material_cos_sample(out vec3 outgoing,
 
 	return success;
 }
+#endif

@@ -2,15 +2,20 @@
 #extension GL_NV_ray_tracing : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "common/tea.glsl"
+#define USE_PCG
+
 #include "common/bsdf.glsl"
 #include "common/math.glsl"
 #include "common/onb.glsl"
+#include "common/pcg.glsl"
 #include "common/traceray.glsl"
 #include "renderer/fastpathtracer/fastpathtracerpayload.glsl"
+#include "renderer/fastpathtracer/unsafebsdf.glsl"
+#include "shared_rt_stage/trimeshlayout.glsl"
+#include "shared_rt_stage/emitterlayout.glsl"
 
 layout(location = RAY_PRD_LOCATION) rayPayloadNV FastPathTracerRayPayload prd;
-layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV FastPathTracerShadowRayPayload is_intersect;
+layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV FastPathTracerShadowRayPayload shadow_prd;
 
 layout(set = 0, binding = 0) uniform accelerationStructureNV tlas;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
@@ -24,6 +29,49 @@ layout(set = 0, binding = 2) uniform CameraProperties
     int m_frame_count;
 } cam;
 layout(set = 0, binding = 3) uniform sampler2D envmap;
+
+// set 1: triangle attributes
+DECLARE_TRIMESH_LAYOUT(1)
+
+// set 2: emitter sampling information
+DECLARE_EMITTER_LAYOUT(2, envmap)
+
+// set 3: bluenoise sampler
+//DECLARE_BLUENOISE_LAYOUT(3)
+
+#define FAST_PT_PRIMITIVE 0
+#define FAST_PT_NEE_ONLY 1
+#define FAST_PT_MIS 2
+
+#define STAGE_NEE 0
+#define STAGE_BRDF_SAMPLING 1
+
+float
+compute_mi_weight(const float brdf_pdf,
+                  const float emitter_pdf,
+                  const int mode,
+                  const int stage)
+{
+    if (mode == FAST_PT_PRIMITIVE)
+    {
+		return stage == STAGE_NEE ? 0.0f : 1.0f;
+    }
+    else if (mode == FAST_PT_NEE_ONLY)
+    {
+        return stage == STAGE_NEE ? 1.0f : 0.0f;
+    }
+    else // mode == MIS
+    {
+        if (stage == STAGE_NEE)
+        {
+            return emitter_pdf / (emitter_pdf + brdf_pdf);
+        }
+        else
+        {
+            return brdf_pdf / (emitter_pdf + brdf_pdf);
+        }
+    }
+}
 
 Ray
 generate_primary_ray()
@@ -54,44 +102,242 @@ main()
         num_spp = accumulated_radiance_and_num_spp.w;
     }
 
-    vec3 radiance = vec3(0.0f);
+    int num_path_vertices = 2;
 
-    // generate ray from a single pixel camera properties
-    Ray ray = generate_primary_ray();
+    // mode
+    //int mode = FAST_PT_MIS;
+	int mode = FAST_PT_PRIMITIVE;
 
-    // init color, importance and pixel index
-    prd.m_importance = vec3(1.0f);
-    prd.m_color = vec3(0.0f);
-    prd.m_pixel = ivec2(gl_LaunchIDNV);
-	prd.m_rng_state = srand(uvec2(gl_LaunchIDNV),
-                            uvec2(gl_LaunchSizeNV),
-                            uint(num_spp));
+	// init rng
+	RngState rng_state = srand(uvec2(gl_LaunchIDNV),
+							   uvec2(gl_LaunchSizeNV),
+							   uint(cam.m_frame_count));
 
-    // trace ray
-    prd.m_t = 0.0f;
-    prd.m_i_bounce = 0;
-	trace_ray(ray, tlas, 0);
+	// result
+    vec3 direct_light_estimate = vec3(0.0f);
+    vec3 indirect_light_estimate = vec3(0.0f);
+    vec3 importance = vec3(1.0f);
 
-    radiance += prd.m_color;
+    //  attributes from prev vertices
+    Ray ray;
+    vec3 position;
+    vec3 gnormal;
+    vec3 snormal;
+    vec2 texcoord;
+    float triangle_area;
+    Material material;
+    Onb onb;
 
-    /*
-    // trace indirect ray
-    if (prd.m_t >= 0.0f)
+    for (int i_bounce = 0; i_bounce < num_path_vertices; i_bounce++)
     {
-		ray.m_origin += ray.m_direction * prd.m_t;
-		ray.m_direction = prd.m_sampled_direction;
+		const vec3 local_incoming = Onb_to_local(onb, -ray.m_direction);
 
-		// trace ray
-		prd.m_t = 0.0f;
-		prd.m_i_bounce = 1;
-        prd.m_color = vec3(0.0f);
+        // do next event estimation
+        if (i_bounce != 0 && (mode == FAST_PT_MIS || mode == FAST_PT_NEE_ONLY)) // we do not do nee with camera vertex
+        {
+			// sample emitter
+			const vec2 samples = rand2(rng_state);
+            float emitter_pdf;
+            float emitter_jacobian;
+            int emitter_type;
+            Ray shadow_ray;
+            const vec3 emitter_contrib = sample_emitter(emitter_pdf, shadow_ray, emitter_type, emitter_jacobian, position, snormal, samples);
+            const vec3 to_emitter = shadow_ray.m_direction;
+
+            // do visibility test
+			shadow_prd.m_visibility = 0.0f;
+			trace_shadow_ray(shadow_ray, tlas, 1);
+			const float visibility = shadow_prd.m_visibility;
+
+            // compute brdf term
+            float brdf_pdf;
+			const vec3 local_to_emitter = Onb_to_local(onb, to_emitter);
+			const vec3 brdf_term = Fast_Material_eval(brdf_pdf, material, local_incoming, local_to_emitter);
+            const float cosine_term = max(local_to_emitter.y, 0.0f);
+
+            // estimate nee
+            vec3 nee_estimate = importance * brdf_term * cosine_term * emitter_contrib * visibility;
+
+            // depends on flag we switch between nee only, brdf sampling only, and mis
+            brdf_pdf = emitter_type == EMITTER_TYPE_SURFACE ? brdf_pdf * emitter_jacobian : brdf_pdf;
+            float weight = compute_mi_weight(brdf_pdf, emitter_pdf, mode, STAGE_NEE);
+
+            // accumulate weighted estimate
+            const vec3 weighted_estimate = nee_estimate * weight;
+            const bool weighted_estimate_nan = any(isnan(weighted_estimate));
+            if (i_bounce == 1) direct_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+            if (i_bounce > 1) indirect_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+        }
+
+        // generate ray to next bounce
+        float brdf_sampling_pdf_w;
+        if (i_bounce == 0)
+        {
+        	// from camera generate primary ray
+		    ray = generate_primary_ray();
+        }
+        else
+        {
+            // sample next direction
+			const vec2 samples = rand2(rng_state);
+            vec3 local_outgoing;
+            Fast_Material_cos_sample(local_outgoing, brdf_sampling_pdf_w, material, local_incoming, samples);
+
+            // compute next position and direction
+	        const vec3 next_position = ray.m_origin + ray.m_direction * prd.m_t; 
+        	const vec3 next_direction = Onb_to_world(onb, local_outgoing);
+        	ray = Ray_create(next_position, next_direction);
+        }
+
+        // trace ray
 		trace_ray(ray, tlas, 0);
 
-		radiance += prd.m_color;
+        // eval emission at the next bounce
+        const bool is_intersect_surface = prd.m_t > 0.0f;
+        if (is_intersect_surface) // intersect surface
+        {
+        	// extract hit information
+    		extract_hit_info(position, snormal, gnormal, texcoord, triangle_area, 
+    						 prd.m_instance_id, prd.m_primitive_id, prd.m_barycoord);
+
+			// decode material
+			const uint material_id = material_ids_arrays[prd.m_instance_id].material_ids[prd.m_primitive_id];
+			material = mat.materials[material_id];
+			DECODE_MATERIAL(material, textures, texcoord);
+
+			// correct normals
+			gnormal = gnormal * sign(dot(gnormal, -ray.m_direction));
+			snormal = snormal * sign(dot(gnormal, snormal));
+
+			// create onb
+			onb = Onb_create(snormal);
+        }
+        else // intersect envmap
+        {
+            // fetch emissive value from envmap
+            const vec2 latlong_texcoord = panorama_from_world(ray.m_direction);
+            const vec3 emission = texture(envmap, latlong_texcoord).xyz;
+            const float emitter_pdf = envmap_emitter_pdf(latlong_texcoord);
+            direct_light_estimate += vec3(emitter_pdf);
+            break;
+        }
+    }
+
+    /*
+    // generate ray from a single pixel camera properties
+
+    vec3 direct_light_estimate = vec3(0.0f);
+    vec3 indirect_light_estimate = vec3(0.0f);
+    vec3 importance = vec3(1.0f);
+
+    // do shading if our ray intersect something
+	if (is_primary_ray_intersect)
+	{
+		// correct normals
+		gnormal = gnormal * sign(dot(gnormal, -ray.m_direction));
+		snormal = snormal * sign(dot(gnormal, snormal));
+
+		// decode material
+		const uint material_id = material_ids_arrays[prd.m_instance_id].material_ids[prd.m_primitive_id];
+		Material material = mat.materials[material_id];
+		DECODE_MATERIAL(material, textures, texcoord);
+
+		// prepare onb and convert camera to local
+		Onb onb = Onb_create(snormal);
+		const vec3 local_incoming = Onb_to_local(onb, -ray.m_direction);
+
+        // direct light rendering
+        if (do_direct_light)
+        {
+
+
+			// add to direct light estimate
+            direct_light_estimate += importance * brdf_term * cosine_term * emitter_contrib * visibility;
+        }
+        
+        // trace next bounce if
+        // 1. indirect light is required or
+        // 2. mis for direct light is required
+        float brdf_sampling_pdf_w;
+        bool is_indirect_ray_intersect = false;
+        if (do_indirect_light || do_use_mis)
+        {
+            // sample next direction
+			const vec2 samples = rand2(rng_state);
+            vec3 local_outgoing;
+            importance *= Fast_Material_cos_sample(local_outgoing, brdf_sampling_pdf_w, material, local_incoming, samples);
+
+            // compute next position and direction
+	        const vec3 next_position = ray.m_direction * prd.m_t; 
+        	const vec3 next_direction = Onb_to_world(onb, local_outgoing);
+
+            // trace ray
+            ray = Ray_create(next_position, next_direction);
+            trace_ray(ray, tlas, 0);
+
+            // extract indirect hit if necessary
+			is_indirect_ray_intersect = prd.m_t > 0.0f;
+            if (is_indirect_ray_intersect)
+            {
+            	// extract hit information
+		        extract_hit_info(position, snormal, gnormal, texcoord, triangle_area,
+		                         prd.m_instance_id, prd.m_primitive_id, prd.m_barycoord);
+
+
+				// decode material
+				const uint material_id = material_ids_arrays[prd.m_instance_id].material_ids[prd.m_primitive_id];
+				material = mat.materials[material_id];
+				DECODE_MATERIAL(material, textures, texcoord);
+
+				// prepare onb and convert camera to local
+				Onb onb = Onb_create(snormal);
+				const vec3 local_incoming = Onb_to_local(onb, -ray.m_direction);
+            }
+        }
+
+        // do mis for direct light rendering
+        if (do_use_mis)
+        {
+            if (is_indirect_ray_intersect) // intersect surface
+            {
+                const float dist = prd.m_t;
+                const float cosine = abs(dot(-ray.m_direction, gnormal));
+                const float brdf_sampling_pdf_a = brdf_sampling_pdf_w * cosine / (dist * dist + SMALL_VALUE);
+                const float emitter_sampling_pdf_a = geometry_emitter_pdf(prd.m_instance_id, prd.m_primitive_id, triangle_area);
+                //direct_light_estimate += 
+            }
+            else // intersect envmap
+            {
+            }
+        }
+        
+        // indirect light rendering
+        if (do_indirect_light && is_indirect_ray_intersect)
+        {
+			// sample emitter
+			const vec2 samples = rand2(rng_state);
+            float emitter_sampling_pdf;
+            Ray shadow_ray;
+            const vec3 emitter_contrib = sample_emitter(emitter_sampling_pdf, shadow_ray, position, snormal, samples);
+
+            // compute brdf term
+            float brdf_pdf_w;
+			const vec3 local_to_emitter = Onb_to_local(onb, normalize(shadow_ray.m_direction));
+			const vec3 brdf_term = Fast_Material_eval(brdf_pdf_w, material, local_incoming, local_to_emitter);
+            const float cosine_term = max(local_to_emitter.y, 0.0f);
+            
+            // do visibility test
+			shadow_prd.m_visibility = 0.0f;
+			trace_shadow_ray(shadow_ray, tlas, 1);
+			const float visibility = shadow_prd.m_visibility;
+
+            indirect_light_estimate += importance * brdf_term * cosine_term * emitter_contrib * visibility;
+        }
 	}
-    */
+*/
 
     // accumulate the sample
+    vec3 radiance = direct_light_estimate + indirect_light_estimate;
     accumulated_radiance = ((accumulated_radiance * num_spp) + radiance) / (num_spp + 1.0f);
 
     // determine whether we should temrinate or not
