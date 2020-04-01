@@ -101,11 +101,12 @@ vec3 sample_emitter(out float pdf, out Ray vis, out int emitter_type, out float 
 		DECODE_MATERIAL(material, textures, texcoord);\
 		const vec3 emission = material.m_emission;\
 		const vec3 to_emitter = emitter_position - position;\
-		const vec3 norm_to_emitter = normalize(to_emitter);\
-		const float length2 = dot(to_emitter, to_emitter);\
-		const float geometry_term = abs(dot(gnormal, norm_to_emitter)) / length2;\
+		const float len2 = dot(to_emitter, to_emitter);\
+		const float len = sqrt(len2);\
+		const vec3 norm_to_emitter = to_emitter / len;\
+		const float geometry_term = abs(dot(gnormal, norm_to_emitter)) / len2;\
 		pdf = sample_instance_id_prob * sample_face_id_prob * sample_face_pdf;\
-		vis = Ray_create(position, norm_to_emitter, DEFAULT_TMIN, 1.0f - DEFAULT_TMIN);\
+		vis = Ray_create(position, norm_to_emitter, DEFAULT_TMIN, len - DEFAULT_TMIN);\
 		emitter_type = EMITTER_TYPE_SURFACE;\
 		s_to_a_jacobian = geometry_term;\
 		return geometry_term * emission / pdf;\

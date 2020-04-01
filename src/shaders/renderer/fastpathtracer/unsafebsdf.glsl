@@ -184,6 +184,12 @@ Fast_Material_eval(out float pdf,
 				   const vec3 incoming,
 				   const vec3 outgoing)
 {
+	if (incoming.y * outgoing.y <= 0.0f)
+	{
+		pdf = 0.0f;
+		return vec3(0.0f);
+	}
+
 	// compute probability of choosing a material
 	const float diffuse_weight = luminance(material.m_diffuse_refl) + SMALL_VALUE;
 	const float ggx_weight = luminance(material.m_spec_refl) + SMALL_VALUE;
