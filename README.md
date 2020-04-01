@@ -13,9 +13,13 @@ Roughness values are mapped from specular exponents (Ns values) using Blinn-Phon
 As I do not have much time at this moment, changing the scene requires you to modify the code by yourself.
 An example is in "src/main.cpp"
 
+There are two pathtracers in the system.
+PathTracer class is quite slow but I am certain that it definitely produces correct result.
+FastPathTracer class is much faster but does not take care of BSDF (only BRDF) and handled edge cases through several assumptions.
+
 ### Features
 In its current early stage, it supports:
-* IBL environment map
+* Environment map importance sampling
 * Alpha-testing
 * Ambient occlusion Integrator
 * Path tracer with next event estimation utilizing MIS [Veach's thesis](https://graphics.stanford.edu/papers/veach_thesis) \[1997]
@@ -34,13 +38,11 @@ In its current early stage, it supports:
 * glm (included as a submodule)
 
 ### Plan
-I found out too late that MIS is extremely heavy weight for real-time rendering.
-Given I have time, I probably gonna improve the performance first then implement some cool stuffs.
 * Implement one indirect ray, two shadow rays + path mollification which seems to be a standard in denoising papers. For instance [Chaitanya et al.](http://www.achaitanya.com/files/projects/dnn/dnn.html ) \[2017] and [Scheid et al.](https://research.nvidia.com/publication/2017-07_Spatiotemporal-Variance-Guided-Filtering%3A) \[2017]
 * Implement ASVGF
 
 ### Issues
 1. Rough dielectric (frosty glass), especially PDF evaluation, was not tested properly. It might not produce correct result if such material is used.
-2. The application will crash while exitting due to an unhandled GLFW surface destructor. I will probably revisit this issue some time in the future.
+2. The application will crash while exitting due to an unhandled GLFW surface destructor. I believe there is a way to handle this properly with newer vulkan versions. I will thus revisit this issue in the future.
 
 <sup>I started this project around early of March since I was curious of the vulkan raytracing performance. On the first day of this project, I spent an entire day building a new PC to house RTX2060. This is probably the most costly project I ever invested with my own money. :(
