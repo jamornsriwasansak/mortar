@@ -131,7 +131,7 @@ struct TriangleMeshStorage
 	{
 		m_materials_buffer = std::make_shared<Buffer>(m_materials,
 													  vk::MemoryPropertyFlagBits::eDeviceLocal,
-													  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+													  vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	std::shared_ptr<Buffer>
@@ -143,7 +143,7 @@ struct TriangleMeshStorage
 			empty.push_back(-1.0f);
 			m_empty_pdf_cdf_buffer = std::make_shared<Buffer>(empty,
 															  vk::MemoryPropertyFlagBits::eDeviceLocal,
-															  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+															  vk::BufferUsageFlagBits::eStorageBuffer);
 		}
 
 		return m_empty_pdf_cdf_buffer;
@@ -518,13 +518,13 @@ struct TriangleMeshStorage
 			{
 				material_id_buffer = std::make_shared<Buffer>(shape_material_ids_arrays[i_shape],
 															  vk::MemoryPropertyFlagBits::eDeviceLocal,
-															  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+															  vk::BufferUsageFlagBits::eStorageBuffer);
 
 				if (shape_emissive_weights[i_shape] > SMALL_VALUE)
 				{
 					cdf_table = std::make_shared<Buffer>(shape_cdf_table_arrays[i_shape],
 														 vk::MemoryPropertyFlagBits::eDeviceLocal,
-														 vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+														 vk::BufferUsageFlagBits::eStorageBuffer);
 				}
 				else
 				{

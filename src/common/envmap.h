@@ -130,6 +130,6 @@ struct Envmap
 		// create cdf table
 		m_cdf_table = Buffer(cdf_table,
 							 vk::MemoryPropertyFlagBits::eDeviceLocal,
-							 vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+							 vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 };

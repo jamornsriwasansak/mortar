@@ -103,10 +103,10 @@ struct Scene
 		top_level_cdf[num_emitters] = 1.0f;
 		m_top_level_emitters_cdf = std::make_unique<Buffer>(top_level_cdf,
 															vk::MemoryPropertyFlagBits::eDeviceLocal,
-															vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+															vk::BufferUsageFlagBits::eStorageBuffer);
 		m_bottom_level_cdf_table_sizes = std::make_unique<Buffer>(cdf_table_sizes,
 																  vk::MemoryPropertyFlagBits::eDeviceLocal,
-																  vk::BufferUsageFlagBits::eRayTracingNV | vk::BufferUsageFlagBits::eStorageBuffer);
+																  vk::BufferUsageFlagBits::eStorageBuffer);
 
 		/*
 		* and build materials buffer
