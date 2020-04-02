@@ -102,7 +102,6 @@ struct TriangleMesh
 	std::shared_ptr<Buffer>	m_index_buffer;
 	std::shared_ptr<Buffer>	m_material_id_buffer;
 	std::shared_ptr<Buffer>	m_cdf_buffer;
-	std::shared_ptr<Buffer>	m_pdf_buffer;
 	RtBlas					m_rt_blas;
 	float					m_emission_weight = 0.0f;
 };

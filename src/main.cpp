@@ -15,8 +15,8 @@ main()
 {
 	// setup the scene
 	Scene scene;
-	scene.set_envmap(RgbaImage2d<float>("envmap/palermo_sidewalk_1k.hdr"));
 	//scene.add_mesh("bistro/exterior/exterior.obj", true);
+	scene.set_envmap("envmap/palermo_sidewalk_1k.hdr", true);
 	//scene.add_mesh("test/mitsuba-sphere.obj", true);
 	//scene.add_mesh("sponza/sponza.obj", true);
 	scene.add_mesh("fireplace_room/fireplace_room.obj", true);
