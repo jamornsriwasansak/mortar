@@ -71,6 +71,7 @@ struct ImageStorage
 		}
 
 		// else load the image
+		m_image_index_from_path[path] = m_images.size();
 		m_images.emplace_back(std::move(RgbaImage2d<uint8_t>(raw_image)),
 							  is_opaque);
 
