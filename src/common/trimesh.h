@@ -486,12 +486,10 @@ struct TriangleMeshStorage
 
 		std::shared_ptr<Buffer> position_and_u_buffer = std::make_shared<Buffer>(position_and_us,
 																				 vk::MemoryPropertyFlagBits::eDeviceLocal,
-																				 vertex_buffer_usage_flag,
-																				 vk::Format::eR32G32B32Sfloat);
+																				 vertex_buffer_usage_flag);
 		std::shared_ptr<Buffer> normal_and_v_buffer = std::make_shared<Buffer>(normal_and_vs,
 																			   vk::MemoryPropertyFlagBits::eDeviceLocal,
-																			   vertex_buffer_usage_flag,
-																			   vk::Format::eR32G32B32Sfloat);
+																			   vertex_buffer_usage_flag);
 
 		/*
 		* load all indices

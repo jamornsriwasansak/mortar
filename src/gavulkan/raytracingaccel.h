@@ -37,7 +37,7 @@ struct RtBlas
 		triangles.setVertexOffset(0);
 		triangles.setVertexCount(vertex_buffer.m_num_elements);
 		triangles.setVertexStride(vertex_buffer.m_element_size_in_bytes);
-		triangles.setVertexFormat(vertex_buffer.m_vk_format);
+		triangles.setVertexFormat(vk::Format::eR32G32B32Sfloat);
 		triangles.setIndexData(*index_buffer.m_vk_buffer);
 		triangles.setIndexOffset(0);
 		triangles.setIndexCount(index_buffer.m_num_elements);

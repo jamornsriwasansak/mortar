@@ -14,7 +14,6 @@ struct Buffer
 	vk::UniqueBuffer			m_vk_buffer;
 	vk::UniqueDeviceMemory		m_vk_memory;
 	vk::BufferUsageFlags		m_vk_buffer_usage_flags;
-	vk::Format					m_vk_format;
 	vk::DeviceSize				m_element_size_in_bytes;
 	uint32_t					m_num_elements;
 
@@ -31,14 +30,12 @@ struct Buffer
 		   const vk::DeviceSize element_size_in_bytes,
 		   const uint32_t num_elements,
 		   const vk::MemoryPropertyFlags & mem_prop_flags,
-		   const vk::BufferUsageFlags & buffer_usage_flags,
-		   const vk::Format & format = vk::Format()):
+		   const vk::BufferUsageFlags & buffer_usage_flags):
 		m_vk_buffer(nullptr),
 		m_vk_memory(nullptr),
 		m_vk_buffer_usage_flags(buffer_usage_flags),
 		m_element_size_in_bytes(element_size_in_bytes),
-		m_num_elements(num_elements),
-		m_vk_format(format)
+		m_num_elements(num_elements)
 	{
 		if (mem_prop_flags & vk::MemoryPropertyFlagBits::eDeviceLocal)
 		{
@@ -103,27 +100,23 @@ struct Buffer
 	template<typename T>
 	Buffer(const std::vector<T> data,
 		   const vk::MemoryPropertyFlags & mem_prop_flags,
-		   const vk::BufferUsageFlags & buffer_usage_flags,
-		   const vk::Format & format = vk::Format()):
+		   const vk::BufferUsageFlags & buffer_usage_flags):
 		Buffer(data.data(),
 			   sizeof(T),
 			   static_cast<int>(data.size()),
 			   mem_prop_flags,
-			   buffer_usage_flags,
-			   format)
+			   buffer_usage_flags)
 	{
 	}
 
 	Buffer(const vk::DeviceSize size_in_bytes,
 		   const vk::MemoryPropertyFlags & mem_prop_flags,
-		   const vk::BufferUsageFlags & buffer_usage_flags,
-		   const vk::Format & format = vk::Format()):
+		   const vk::BufferUsageFlags & buffer_usage_flags):
 		Buffer(nullptr,
 			   size_in_bytes,
 			   1,
 			   mem_prop_flags,
-			   buffer_usage_flags,
-			   format)
+			   buffer_usage_flags)
 	{
 	}
 
