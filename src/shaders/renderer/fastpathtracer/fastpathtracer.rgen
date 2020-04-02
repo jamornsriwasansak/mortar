@@ -102,7 +102,7 @@ main()
         num_spp = accumulated_radiance_and_num_spp.w;
     }
 
-    int num_path_vertices = 2;
+    int num_path_vertices = 3;
 
     // mode
     int mode = FAST_PT_MIS;
