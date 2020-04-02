@@ -66,15 +66,11 @@ struct FastPathTracer
 		Shader shadow_raymiss_shader("shaders/renderer/fastpathtracer/fastpathtracershadow.rmiss",
 									 vk::ShaderStageFlagBits::eMissNV);
 
-		// since we do shadow ray test while check where the ray was hit
-		const uint32_t recursion_depth = 2;
-
 		RayTracingPipeline rt_pipeline({ &raygen_shader,
 										 &raychit_shader,
 										 &rayahit_shader,
 										 &raymiss_shader,
-										 &shadow_raymiss_shader },
-									   recursion_depth);
+										 &shadow_raymiss_shader });
 
 		return std::move(rt_pipeline);
 	}
