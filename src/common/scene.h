@@ -36,10 +36,10 @@ struct Scene
 			 const bool do_create_blas = false)
 	{
 		std::vector<TriangleMesh *> triangle_meshes = m_triangle_meshes_storage.
-			add_obj_mesh(path,
-						 do_create_blas,
-						 &m_bbox_min,
-						 &m_bbox_max);
+			add_obj_mesh_single(path,
+								do_create_blas,
+								&m_bbox_min,
+								&m_bbox_max);
 		for (size_t i = 0; i < triangle_meshes.size(); i++)
 		{
 			TriangleMeshInstance triangle_instance;
