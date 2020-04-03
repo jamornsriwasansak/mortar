@@ -15,7 +15,7 @@ An example is in "src/main.cpp"
 
 There are two pathtracers in the system.
 PathTracer class is quite slow but I am certain that it definitely produces correct result.
-FastPathTracer class is much faster but does not take care of BSDF (only BRDF) and handled edge cases through several assumptions.
+FastPathTracer class is much faster but only takes care of BRDF (not BSDF) and handled edge cases through several assumptions.
 
 ### Features
 In its current early stage, it supports:
