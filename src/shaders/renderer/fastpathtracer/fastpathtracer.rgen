@@ -168,7 +168,7 @@ main()
             const vec3 weighted_estimate = importance * nee_estimate * weight;
             const bool weighted_estimate_nan = any(isnan(weighted_estimate));
             if (i_bounce == 1) direct_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
-            //if (i_bounce > 1) indirect_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+            if (i_bounce > 1) indirect_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
         }
 
         // generate ray to next bounce
