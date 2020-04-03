@@ -264,9 +264,9 @@ struct TriangleMeshStorage
 				if (tmat.roughness > 0.0f) { return tmat.roughness; }
 				// the conversion is borrowed from Brian Karis, http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
 				// power = 2 / alpha2 - 2
+				// I however found that using power = 2 / alpha - 2 gives better result
 				const float alpha2 = 2.0f / (tmat.shininess + 2.0f);
-				const float alpha = std::sqrt(alpha2);
-				const float roughness = std::sqrt(alpha);
+				const float roughness = std::sqrt(alpha2);
 				return roughness;
 			};
 
