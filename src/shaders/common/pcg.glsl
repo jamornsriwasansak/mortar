@@ -127,15 +127,5 @@ rand2(inout RngState rng)
     const uint v = pcg32_random_r(rng.pcg_rng);
     return vec2(u, v) / float(UINT32_MAX);
 }
-
-vec3
-rand3(inout RngState rng)
-{
-    const uint u = pcg32_random_r(rng.pcg_rng);
-    const uint v = pcg32_random_r(rng.pcg_rng);
-    const uint w = pcg32_random_r(rng.pcg_rng);
-    return vec3(u, v, w) / float(UINT32_MAX);
-}
-
 #endif
 #endif

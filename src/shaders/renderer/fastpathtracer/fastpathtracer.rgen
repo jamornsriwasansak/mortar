@@ -2,12 +2,14 @@
 #extension GL_NV_ray_tracing : require
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_PCG
+//#define USE_PCG
+#define USE_BLUE_RAND
+#include "common/pcg.glsl"
+#include "common/bluenoise.glsl"
 
 #include "common/bsdf.glsl"
 #include "common/math.glsl"
 #include "common/onb.glsl"
-#include "common/pcg.glsl"
 #include "common/traceray.glsl"
 #include "renderer/fastpathtracer/fastpathtracerpayload.glsl"
 #include "renderer/fastpathtracer/unsafebsdf.glsl"
@@ -37,7 +39,7 @@ DECLARE_TRIMESH_LAYOUT(1)
 DECLARE_EMITTER_LAYOUT(2, envmap)
 
 // set 3: bluenoise sampler
-//DECLARE_BLUENOISE_LAYOUT(3)
+DECLARE_BLUENOISE_LAYOUT(3)
 
 #define FAST_PT_PRIMITIVE 0
 #define FAST_PT_NEE_ONLY 1
