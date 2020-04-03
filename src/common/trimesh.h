@@ -582,22 +582,41 @@ struct TriangleMeshStorage
 			m_triangle_meshes.push_back(std::move(triangle_mesh));
 		};
 
-		const auto [emissive_opaque_cdf_table, emissive_opaque_weight] = compute_cdf_table_and_emissive_weight(emissive_opaque_indices,
-																											   position_and_us,
-																											   emissive_opaque_material_ids);
+		std::vector<float> emissive_opaque_cdf_table = std::vector<float>();
+		std::vector<float> nonemissive_opaque_cdf_table = std::vector<float>();
+		std::vector<float> emissive_nonopaque_cdf_table = std::vector<float>();
+		std::vector<float> nonemissive_nonopaque_cdf_table = std::vector<float>();
+		float emissive_opaque_weight = 0.0f;
+		float nonemissive_opaque_weight = 0.0f;
+		float emissive_nonopaque_weight = 0.0f;
+		float nonemissive_nonopaque_weight = 0.0f;
 
-		const auto [emissive_nonopaque_cdf_table, emissive_nonopaque_weight] = compute_cdf_table_and_emissive_weight(emissive_nonopaque_indices,
-																													 position_and_us,
-																													 emissive_nonopaque_material_ids);
+		if (emissive_opaque_indices.size() > 0)
+		{
+			auto eo = compute_cdf_table_and_emissive_weight(emissive_opaque_indices,
+															position_and_us,
+															emissive_opaque_material_ids);
+			emissive_opaque_cdf_table = eo.first;
+			emissive_opaque_weight = eo.second;
+		}
+
+		if (emissive_nonopaque_indices.size() > 0)
+		{
+			auto en = compute_cdf_table_and_emissive_weight(emissive_nonopaque_indices,
+															position_and_us,
+															emissive_nonopaque_material_ids);
+			emissive_nonopaque_cdf_table = en.first;
+			emissive_nonopaque_weight = en.second;
+		}
 
 		const std::array<std::vector<uint32_t>, 4>
 			indices_arrays = {		emissive_nonopaque_indices,		emissive_opaque_indices,		nonemissive_nonopaque_indices,		nonemissive_opaque_indices };
 		const std::array<std::vector<uint32_t>, 4>
 			material_ids_arrays = { emissive_nonopaque_material_ids,emissive_opaque_material_ids,	nonemissive_nonopaque_material_ids, nonemissive_opaque_material_ids };
 		const std::array<std::vector<float>, 4>
-			emission_cdf_tables = { emissive_nonopaque_cdf_table,	emissive_opaque_cdf_table,		std::vector<float>(),				std::vector<float>()};
+			emission_cdf_tables = { emissive_nonopaque_cdf_table,	emissive_opaque_cdf_table,		nonemissive_nonopaque_cdf_table,	nonemissive_opaque_cdf_table };
 		const std::array<float, 4>
-			emissive_weights = {	emissive_nonopaque_weight,		emissive_opaque_weight,			0.0f,								0.0f};
+			emissive_weights = {	emissive_nonopaque_weight,		emissive_opaque_weight,			nonemissive_nonopaque_weight,		nonemissive_opaque_weight };
 		const std::array<bool, 4>
 			is_opaques =	{ 		false,							true,							false,								true};
 
