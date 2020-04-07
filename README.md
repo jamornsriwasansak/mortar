@@ -38,7 +38,6 @@ In its current early stage, it supports:
 * glm (included as a submodule)
 
 ### Plan
-* Implement one indirect ray, two shadow rays + path mollification which seems to be a standard in denoising papers. For instance [Chaitanya et al.](http://www.achaitanya.com/files/projects/dnn/dnn.html ) \[2017] and [Scheid et al.](https://research.nvidia.com/publication/2017-07_Spatiotemporal-Variance-Guided-Filtering%3A) \[2017]
 * Implement ASVGF
 
 ### Issues
