@@ -68,7 +68,7 @@ set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 	add_custom_target(mortar_shaders_copy)
 	add_custom_command(TARGET mortar_shaders_copy POST_BUILD
 					   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/ ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/shaders/
-					   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/src/app_shader_shared/shared.glsl.h ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/shaders/)
+					   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src/app_shader_shared/ ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/shaders/)
 	add_custom_target(mortar_resource_copy)
 	add_custom_command(TARGET mortar_resource_copy POST_BUILD
 					   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resource/ ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/resource/)
