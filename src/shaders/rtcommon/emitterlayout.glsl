@@ -1,9 +1,9 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
+#include "emitter.glsl.h"
 #include "common/emittersample.glsl"
 #include "common/mapping.glsl"
 #include "common/ray.glsl"
-#include "shared.glsl.h"
 
 #define EMITTER_TYPE_ENVMAP 0
 #define EMITTER_TYPE_SURFACE 1
@@ -98,7 +98,7 @@ vec3 sample_emitter(out float pdf, out Ray vis, out int emitter_type, out float 
 	    /* material */\
 	    const uint material_id = material_ids_arrays[instance_id].material_ids[face_id];\
 	    Material material = mat.materials[material_id];\
-		DECODE_MATERIAL(material, textures, texcoord);\
+		decode_material(material, texcoord);\
 		const vec3 emission = material.m_emission;\
 		const vec3 to_emitter = emitter_position - position;\
 		const float len2 = dot(to_emitter, to_emitter);\

@@ -1,7 +1,7 @@
 #ifndef PCG_GLSL
 #define PCG_GLSL
 #extension GL_GOOGLE_include_directive : enable
-#include "constant.glsl"
+#include "common/constant.glsl"
 
 #extension GL_ARB_gpu_shader_int64 : require
 

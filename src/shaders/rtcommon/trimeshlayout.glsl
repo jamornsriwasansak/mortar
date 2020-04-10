@@ -1,8 +1,9 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
+#include "material.glsl.h"
+#include "common/math.glsl"
 #include "common/emittersample.glsl"
 #include "common/mapping.glsl"
-#include "shared.glsl.h"
 
 #define DECLARE_TRIMESH_LAYOUT(SET) \
 layout(set = SET, binding = 0) buffer TFace\
@@ -25,7 +26,7 @@ layout(set = SET, binding = 4) buffer TMaterialBuffer\
 {\
 	Material materials[];\
 } mat;\
-layout(set = SET, binding = 5) uniform sampler2D textures[];\
+layout(set = SET, binding = 5) uniform sampler2D material_textures[];\
 void extract_hit_info(out vec3 position,\
 					  out vec3 snormal,\
 					  out vec3 gnormal,\
@@ -56,5 +57,22 @@ void extract_hit_info(out vec3 position,\
     const vec3 crossed = cross(pu0.xyz - pu1.xyz, pu0.xyz - pu2.xyz);\
     const float glen = length(crossed);\
     gnormal = crossed / glen;\
+    snormal = dot(gnormal, snormal) > 0.0f ? snormal : -snormal;\
     triangle_area = glen * 0.5f;\
+}\
+void decode_material(inout Material material,\
+                     const vec2 uv)\
+{\
+	int diffuse_refl_tex_index = -int(material.m_diffuse_refl.x + 1);\
+	material.m_diffuse_refl = diffuse_refl_tex_index >= 0 ? texture(material_textures[diffuse_refl_tex_index], uv).xyz : material.m_diffuse_refl;\
+    int roughness_tex_index = -int(material.m_roughness + 1);\
+	material.m_roughness = roughness_tex_index >= 0 ? texture(material_textures[roughness_tex_index], uv).x : material.m_roughness;\
+	int spec_refl_tex_index = -int(material.m_spec_refl.x + 1);\
+	material.m_spec_refl = spec_refl_tex_index >= 0 ? texture(material_textures[spec_refl_tex_index], uv).xyz : material.m_spec_refl;\
+    int ior_tex_index = -int(material.m_ior + 1);\
+	material.m_ior = ior_tex_index >= 0 ? texture(material_textures[ior_tex_index], uv).x : material.m_ior;\
+	int emission_tex_index = -int(material.m_emission.x + 1);\
+	material.m_emission = emission_tex_index >= 0 ? texture(material_textures[emission_tex_index], uv).xyz : material.m_emission;\
+    int spec_trans_index = -int(material.m_spec_trans.x + 1);\
+	material.m_spec_trans = spec_trans_index >= 0 ? texture(material_textures[spec_trans_index], uv).xyz : material.m_spec_trans;\
 }

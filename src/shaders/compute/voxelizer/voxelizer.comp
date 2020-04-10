@@ -1,0 +1,136 @@
+#version 450
+
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "common/overlaptest.glsl"
+#include "common/math.glsl"
+
+layout(set = 0, binding = 0) uniform Ubo
+{
+	ivec3 m_voxel_resolution;
+	uint m_num_meshes;
+	//
+	vec3 m_voxel_bbox_min;
+	uint m_num_triangles;
+	//
+	vec3 m_voxel_bbox_max;
+	float padding;
+} params;
+
+layout(set = 0, binding = 1, rgba32f) uniform image3D image;
+
+// information related meshes
+
+layout(set = 0, binding = 2) buffer TFace
+{
+	uint faces[];
+} faces_arrays[];
+
+layout(set = 0, binding = 3) buffer TPuArray
+{
+	vec4 positions[];
+} pos_arrays[];
+
+layout(set = 0, binding = 4) buffer TMeshSize
+{
+	int num_faces[];
+} meshes_size; 
+
+bool
+is_plane_overlap_test(const vec3 p,
+					  const vec3 delta_p,
+					  const vec3 n,
+					  const vec3 v0,
+					  const vec3 v1,
+					  const vec3 v2)
+{
+	// Haines and Wallace [1991], plane test
+	vec3 c;
+	c.x = (n.x > 0.0f) ? delta_p.x : 0.0f;
+	c.y = (n.y > 0.0f) ? delta_p.y : 0.0f;
+	c.z = (n.z > 0.0f) ? delta_p.z : 0.0f;
+
+	float d1 = dot(n, c - v0);
+	float d2 = dot(n, (delta_p - c) - v0);
+
+	float term1 = dot(n, p) + d1;
+	float term2 = dot(n, p) + d2;
+	if (term1 * term2 > 0.0f)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+ivec3
+compute_voxel_index(const vec3 p)
+{
+	const vec3 u = (p - params.m_voxel_bbox_min) / (params.m_voxel_bbox_max - params.m_voxel_bbox_min);
+	return ivec3(u * params.m_voxel_resolution);
+}
+
+void
+main()
+{
+	const int id = int(gl_GlobalInvocationID.x);
+
+	// prevent id > triangle faces
+	if (id >= params.m_num_triangles)
+	{
+		return;
+	}
+
+	// given id within range [0, num triangles), find instance_id and face_id
+	int instance_id = -1;
+	int face_id = -1;
+	int acc_num_faces = 0;
+	for (int i_instance = 0; i_instance < params.m_num_meshes; i_instance++)
+	{
+		int next_acc_num_faces = acc_num_faces + meshes_size.num_faces[i_instance];
+		if (id >= acc_num_faces && id < next_acc_num_faces)
+		{
+			instance_id = i_instance;
+			face_id = id - acc_num_faces;
+		}
+		
+		// update acc_num_faces
+		acc_num_faces = next_acc_num_faces;
+	}
+
+	// find out the position
+	const uint index0 = faces_arrays[instance_id].faces[face_id * 3 + 0];
+	const uint index1 = faces_arrays[instance_id].faces[face_id * 3 + 1];
+	const uint index2 = faces_arrays[instance_id].faces[face_id * 3 + 2];
+
+	vec3 pos[3];
+	pos[0] = pos_arrays[instance_id].positions[index0].xyz;
+	pos[1] = pos_arrays[instance_id].positions[index1].xyz;
+	pos[2] = pos_arrays[instance_id].positions[index2].xyz;
+
+	const vec3 normal = normalize(cross(pos[2] - pos[0], pos[1] - pos[0]));
+
+	// find bounding box of these three positions
+	const vec3 tri_bbox_min = min(min(pos[0], pos[1]), pos[2]);
+	const vec3 tri_bbox_max = max(max(pos[0], pos[1]), pos[2]);
+
+	// find voxels that overlap these bounding box
+	const ivec3 tri_voxel_index_min = compute_voxel_index(tri_bbox_min);
+	const ivec3 tri_voxel_index_max = compute_voxel_index(tri_bbox_max);
+
+	const vec3 voxel_size = (params.m_voxel_bbox_max - params.m_voxel_bbox_min) / vec3(params.m_voxel_resolution);
+
+	for (int vx = tri_voxel_index_min.x; vx <= tri_voxel_index_max.x; vx++)
+		for (int vy = tri_voxel_index_min.y; vy <= tri_voxel_index_max.y; vy++)
+			for (int vz = tri_voxel_index_min.z; vz <= tri_voxel_index_max.z; vz++)
+			{
+				const vec3 voxel_bbox_min = voxel_size * ivec3(vx, vy, vz) + params.m_voxel_bbox_min;
+				const vec3 voxel_center = voxel_bbox_min + 0.5f * voxel_size;
+				const vec3 voxel_half_size = voxel_size * 0.5f;
+				if (triBoxOverlap(voxel_center, voxel_half_size, pos))
+				{
+					imageStore(image, ivec3(vx, vy, vz), vec4(vec3(1.0f), 1.0f));
+				}
+			}
+}

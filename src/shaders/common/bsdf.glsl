@@ -1,53 +1,42 @@
-#ifndef BSDF_GLSL
-#define BSDF_GLSL
+// this is almost a duplicate of bsdf.glsl
+// however, there are a few differences.
+// 1. it does not prevent light leak.
+// 2. it assumes that incoming and outgoing are always lie within an upper hemisphere.
+// this helps removing a lot of conditions from the sourcecode (and thus less divergence)
 
 #extension GL_GOOGLE_include_directive : enable
 #include "shared.glsl.h"
-#include "mapping.glsl"
-#include "math.glsl"
+#include "material.glsl.h"
+#include "common/microfacet.glsl"
+#include "common/mapping.glsl"
+#include "common/math.glsl"
 
-// note all materials here are "two-sided"
-// diffuse and Ggx_brdf share the same material regardless of the side of the wall.
-// Ggx_btdf, on the other hand, will behave based on the incoming direction
-
-//
-// Lambert
-//
-
-bool
+vec3
 Diffuse_cos_sample(out vec3 outgoing,
-				   out vec3 bsdf_cos_contrib,
+				   out float pdf,
 				   const Material material,
 				   const vec3 incoming,
 				   const vec2 samples)
 {
-	outgoing = cosine_hemisphere_from_square(samples);
-	// flip outgoing based on incoming direction
-	outgoing.y *= sign(incoming.y);
-	bsdf_cos_contrib = material.m_diffuse_refl;
-	return true;
+	outgoing = cosine_hemisphere_from_square(samples) * sign(incoming.y);
+	pdf = outgoing.y * M_1_PI;
+	return material.m_diffuse_refl;
 }
 
-bool
-Diffuse_eval(out vec3 bsdf_val,
-			 out float pdf,
+vec3
+Diffuse_eval(out float pdf,
 			 const Material material,
 			 const vec3 incoming,
 			 const vec3 outgoing)
 {
-	if (incoming.y * outgoing.y <= 0.0f) return false;
-	bsdf_val = material.m_diffuse_refl * M_1_PI;
-	pdf = abs(outgoing.y) * M_1_PI;
-	return true;
+	const float is_same_side = step(0.0f, incoming.y * outgoing.y);
+	pdf = abs(outgoing.y) * M_1_PI * is_same_side;
+	return material.m_diffuse_refl * M_1_PI * is_same_side;
 }
-
-//
-// Trowbridge-reitz (GGX) Microfacet
-//
 
 // Code provided by heitz et al.
 // http://jcgt.org/published/0007/04/01/
-bool
+void
 Microfacet_sampleGGXVNDF(out vec3 h,
 						 const vec3 incoming,
 						 const vec2 alpha,
@@ -79,345 +68,81 @@ Microfacet_sampleGGXVNDF(out vec3 h,
 	// Section 3.4: transforming the normal back to the ellipsoid configuration
 	vec3 Ne = normalize(vec3(alpha.x * Nh.x, alpha.y * Nh.y, max(0.0f, Nh.z)));
 	h = Ne.xzy;
-	return !any(isnan(h));
 }
 
-// ggx lambda function
-float
-Microfacet_lambda(const vec3 w, const vec2 alpha)
-{
-	vec2 numerator_comps = alpha * w.xz;
-	float numerator = dot(numerator_comps, numerator_comps);
-	float denominator = w.y * w.y;
-	float sqrt_term = sqrt(1.0f + numerator / denominator);
-	return (-1.0f + sqrt_term) * 0.5f;
-}
-
-float
-Microfacet_g1(const vec3 w, const vec2 alpha)
-{
-	return 1.0f / (1.0f + Microfacet_lambda(w, alpha));
-}
-
-// G term - separable masking shadowing function 
-float
-Microfacet_g2(const vec3 v, const vec3 l, const vec2 alpha)
-{
-	// Separable Masking and Shadowing
-	// Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs - equation 98
-	return Microfacet_g1(v, alpha) * Microfacet_g1(l, alpha);
-}
-
-// D term - GGX distribution
-float
-Microfacet_d(const vec3 h,
-			 const vec2 alpha)
-{
-	const float term = sqr(h.x / alpha.x) + sqr(h.z / alpha.y) + sqr(h.y);
-	const float denominator = alpha.x * alpha.y * sqr(term);
-	return M_1_PI / denominator;
-}
-
-// F term - shlick fresnel (for ggx_reflect)
 vec3
-Microfacet_f_shlick(const vec3 f0,
-					const vec3 incoming)
-{
-	const float one_minus_cos = 1.0f - abs(incoming.y);
-	const float exponential = sqr(sqr(one_minus_cos)) * one_minus_cos;
-	return mix(vec3(exponential), vec3(1.0f), f0);
-}
-
-bool
 Ggx_reflect_cos_sample(out vec3 outgoing,
-					   out vec3 bsdf_cos_contrib,
+					   out float pdf,
 					   const Material material,
 					   const vec3 incoming,
 					   const vec2 samples)
 {
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
-
+	const float side = sign(incoming.y);
 	vec3 h;
-	const bool sample_success = Microfacet_sampleGGXVNDF(h,
-														 incoming * sign(incoming.y),
-														 alpha,
-														 samples.x,
-														 samples.y);
-	h *= sign(incoming.y);
+	Microfacet_sampleGGXVNDF(h, incoming * side, alpha, samples.x, samples.y);
+	outgoing = reflect(-incoming, h) * side;
 
-	if (sample_success)
-	{
-		outgoing = reflect(-incoming, h);
-		// f_r						= f(i, h) * d(h) * g_2(i, o) / (4 * dot(i, n) * dot(o, n))
-		// f_r * dot(o, n)			= f(i, h) * d(h) * g_1(i) * g_1(o)
-		// pdf						= 			d(h) * g_1(i)		   * jacobian
-		// pdf						=			d(h) * g_1(i)          / (4 * dot(i, n))
-		// f_r * dot(o, n) / pdf	= f(i, h) 				  * g_1(o)
-		// where reflection jacobian = 1 / 4 * dot(i, n)
-		const vec3 f_term = material.m_spec_refl;// Microfacet_f_shlick(material.m_spec_refl, incoming);
-		const float g_term = Microfacet_g1(outgoing, alpha);
-		bsdf_cos_contrib = f_term * g_term;
-	}
-	return sample_success && (outgoing.y * incoming.y > 0.0f);
+	// f_r							 =			  f(i, h) * d(h) * g_2(i, o)	   / (4 * dot(i, n) * dot(o, n))
+	// f_r * dot(o, n)				 =			  f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n))
+	// pdf							 = dot(i, h)		  * d(h) * g_1(i)		   / (	  dot(i, n)) * jacobian
+	// where reflection jacobian	 = 1										   / (4				 * dot(i, h))
+	// pdf							 = 					  * d(h) * g_1(i)		   / (4 * dot(i, n))
+	// f_r * dot(o, n) / pdf		 = f(i, h) 					 * g_1(o)
+
+	const float is_same_side = step(0.0f, incoming.y * outgoing.y);
+
+	// compute pdf
+	const float d_term = Microfacet_d(h, alpha);
+	const float g1_i_term = Microfacet_g1(incoming, alpha);
+	pdf = d_term * g1_i_term / (4.0f * abs(incoming.y) + SMALL_VALUE) * is_same_side;
+
+	// compute brdf contrib
+	const vec3 f_term = material.m_spec_refl;//Microfacet_f_shlick(material.m_spec_refl, incoming);
+	const float g1_o_term = Microfacet_g1(outgoing, alpha);
+	return f_term * g1_o_term * is_same_side;
 }
 
-bool
-Ggx_reflect_eval(out vec3 bsdf_val,
-				 out float pdf,
+vec3
+Ggx_reflect_eval(out float pdf,
 				 const Material material,
 				 const vec3 incoming,
 				 const vec3 outgoing)
 {
-	// make sure we are evaluating the same side of hemisphere
-	if (outgoing.y * incoming.y <= 0.0f) { return false; }
-
 	const vec2 roughness = vec2(material.m_roughness);
 	const vec2 alpha = sqr(roughness);
 	const vec3 h = normalize(incoming + outgoing);
 
-	// is rare but happens
-	if (any(isnan(h))) { return false; }
-
 	const float d_term = Microfacet_d(h, alpha);
 	const float g1_i_term = Microfacet_g1(incoming, alpha);
 	const float g1_o_term = Microfacet_g1(outgoing, alpha);
-	const float g_term = g1_i_term * g1_o_term;
-	const vec3 f_term = material.m_spec_refl;//Microfacet_f_shlick(material.m_spec_refl, incoming);
+	const vec3 f_term = material.m_spec_refl;// Microfacet_f_shlick(material.m_spec_refl, incoming);
 
-	// brdf = G * D * F / (4 * dot(v, n) * dot(l, n))
-	bsdf_val = g_term * d_term * f_term / (4.0f * incoming.y * outgoing.y);
+	const float is_same_side = step(0.0f, incoming.y * outgoing.y);
 
-	// pdf = d(h) * g_1(v) * jacobian
-	// where reflection jacobian = 1 / 4 * dot(v, n)
-	const float jacobian = 1.0f / (4.0f * abs(incoming.y));
-	pdf = d_term * g1_i_term * jacobian;
+	// pdf = d(h) * g_1(i) / 4 * dot(i, n)
+	pdf = d_term * g1_i_term / (4.0f * abs(incoming.y) + SMALL_VALUE) * is_same_side;
 
-	return true;
+	// brdf = G * D * F / (4 * dot(i, n) * dot(o, n))
+	return g1_o_term * f_term * pdf * step(0.0f, incoming.y * outgoing.y) / (outgoing.y + SMALL_VALUE) * is_same_side;
 }
 
-float
-Dielectric_fresnel(const float costhetai,
-				   const float costhetao,
-				   const float eta)
-{
-	float rhos = (costhetai - eta * costhetao) / (costhetai + eta * costhetao);
-	float rhot = (costhetao - eta * costhetai) / (costhetao + eta * costhetai);
-	return 0.5f * (rhos * rhos + rhot * rhot);
-}
-
-// note: we borrow "future" samples to decide fresnel event
-bool
-Ggx_transmit_cos_sample(out vec3 outgoing,
-						out vec3 bsdf_cos_contrib,
-						const Material material,
-						const vec3 incoming,
-						const vec2 samples,
-						inout float next_sample)
-{
-	const vec2 roughness = vec2(material.m_roughness);
-	const vec2 alpha = sqr(roughness);
-
-	// sample half angle
-	vec3 h;
-	const bool sample_success = Microfacet_sampleGGXVNDF(h,
-														 incoming * sign(incoming.y),
-														 alpha,
-														 samples.x,
-														 samples.y);
-	h *= sign(incoming.y);
-
-	// check whether it's entering or leaving
-	if (sample_success)
-	{
-		if (h.y * incoming.y < 0.0f) { return false; }
-
-		const float eta = incoming.y > 0 ? material.m_ior : 1.0f / material.m_ior;
-		outgoing = refract(-incoming, h, eta);
-		bsdf_cos_contrib = material.m_spec_trans;
-
-		const float f_term = clamp(Dielectric_fresnel(abs(incoming.y), abs(outgoing.y), eta), 0.0f, 1.0f);
-
-		// as we noticed the only difference eval between reflection and refraction is fresnel term
-
-		if (next_sample <= f_term)
-		{
-			// f_r						= f(i, h) * d(h) * g_2(i, o) / (4 * dot(i, n) * dot(o, n))
-			// f_r * dot(o, n)			= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n))
-			// Pr * pdf					= f(i, h) *	d(h) * g_1(i)		   * jacobian
-			// pdf						= f(i, h) * d(h) * g_1(i)          / (4 * dot(i, n))
-			// f_r*dot(o, n) / (Pr*pdf)	=		 				  * g_1(o)
-			// where reflection jacobian = 1 / 4 * dot(i, n)
-
-			next_sample = next_sample / f_term;
-			outgoing = reflect(-incoming, h);
-		}
-		else
-		{
-			// f_t						= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * dot(o, n) * (dot(i, h) + eta * dot(o, h))^2)
-			// f_t * dot(o, n)			= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n)			  * (dot(i, h) + eta * dot(o, h))^2)
-			// pdf * Pr					= dot(i, h)						* (1 - f(i, h))	* d(h) * g_1(i)			 / (dot(i ,n))			  * jacobian													
-			// where jacobian(dh / di)	=			  dot(o, h) * eta^2											 / (						(dot(i, h) + eta * dot(o, h))^2)
-			// pdf * Pr					= dot(i, h) * dot(o, h)	* eta^2	* (1 - f(i, h))	* d(h) * g_1(i)			 / (dot(i, n)			  * (dot(i, h) + eta * dot(o, h))^2)
-			// f_t*dot(o, n) / (pdf*Pr)	=																* g_1(o)
-			next_sample = (next_sample - f_term) / (1.0f - f_term);
-		}
-
-		const float g_term = Microfacet_g1(outgoing, alpha);
-		bsdf_cos_contrib *= g_term;
-	}
-
-	return sample_success;
-}
-
-bool
-Ggx_transmit_eval(out vec3 bsdf_val,
-				  out float pdf,
-				  const Material material,
-				  const vec3 incoming,
-				  const vec3 outgoing)
-{
-	// check whether it's entering or leaving
-	const vec2 roughness = vec2(material.m_roughness);
-	const vec2 alpha = sqr(roughness);
-	const float eta = incoming.y > 0 ? material.m_ior : 1.0f / material.m_ior;
-	vec3 h = normalize(incoming + eta * outgoing);
-	
-	// is rare but happens
-	if (any(isnan(h))) { return false; }
-
-	const float d_term = Microfacet_d(h, alpha);
-	const float g1_i_term = Microfacet_g1(incoming, alpha);
-	const float g1_o_term = Microfacet_g1(outgoing, alpha);
-	const float g_term = g1_i_term * g1_o_term;
-	const float f_term = clamp(Dielectric_fresnel(abs(incoming.y), abs(outgoing.y), eta), 0.0f, 1.0f);
-
-	bsdf_val = material.m_spec_trans;
-
-	if (incoming.y * outgoing.y > 0.0f)
-	{
-		// same side: must be reflection
-		// f_r						= f(i, h) * d(h) * g_1(i) * g_1(o) / (4 * dot(i, n) * dot(o, n))
-		// pdf * Pr					= f(i, h) * d(h) * g_1(i)          / (4 * dot(i, n))
-		if (d_term == 0.0f)
-		{
-			return false;
-		}
-		bsdf_val *= f_term * d_term * g1_i_term * g1_o_term / (4.0f * abs(incoming.y) * abs(outgoing.y));
-		pdf =		d_term * g1_i_term				/ (4.0f * abs(incoming.y));
-	}
-	else
-	{
-		const float dot_i_h = abs(dot(incoming, h));
-		const float dot_o_h = abs(dot(outgoing, h));
-		// different side: must be refraction
-		// f_t						= dot(i, h) * dot(o, h) * eta^2 * (1 - f(i, h)) * d(h) * g_1(i) * g_1(o) / (dot(i, n) * dot(o, n) * (dot(i, h) + eta * dot(o, h))^2)
-		// pdf * Pr					= dot(i, h) * dot(o, h)	* eta^2	* (1 - f(i, h))	* d(h) * g_1(i)			 / (dot(i, n)			  * (dot(i, h) + eta * dot(o, h))^2)
-		bsdf_val *= dot_i_h * dot_o_h * sqr(eta) * (1.0f - f_term) * d_term * g1_i_term * g1_o_term / (abs(incoming.y) * abs(outgoing.y) * sqr(dot_i_h + eta * dot_o_h));
-		pdf =		dot_i_h * dot_o_h * sqr(eta)  * d_term * g1_i_term				/ (abs(incoming.y)					 * sqr(dot_i_h + eta * dot_o_h));
-	}
-	return true;
-}
-
-//
-// Mixed material
-//
-
-bool
-Material_eval(out vec3 bsdf_val,
-			  out float bsdf_pdf,
-			  const Material material,
-			  const vec3 incoming,
-			  const vec3 outgoing)
-{
-	const float diffuse_weight = length(material.m_diffuse_refl);
-	const float ggx_refl_weight = length(material.m_spec_refl);
-	const float ggx_trans_weight = length(material.m_spec_trans);
-	const float sum_weight = diffuse_weight + ggx_refl_weight + ggx_trans_weight;
-
-	// break if both weight are too low.
-	// probably a light source or a completely dark material.
-	if (sum_weight <= SMALL_VALUE) { return false; }
-
-	// probability of choosing each material
-	const float diffuse_cprob = diffuse_weight / sum_weight;
-	const float ggx_refl_cprob = ggx_refl_weight / sum_weight;
-	const float ggx_trans_cprob = ggx_trans_weight / sum_weight;
-
-	// note: SUM(f_i(v, l)) / SUM(p_i(v, l)) corresponded to applying MIS on top of bsdf sampling techniques
-	// thus, reduces level of noise.
-	vec3 bsdf_val_sum = vec3(0.0f);
-	float bsdf_pdf_sum = 0.0f;
-
-	// eval diffuse
-	bool success = false;
-	if (diffuse_weight > 0.0f)
-	{
-		vec3 diffuse_bsdf_val;
-		float diffuse_pdf;
-		if (Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing))
-		{
-			bsdf_val_sum += diffuse_bsdf_val;
-			bsdf_pdf_sum += diffuse_pdf * diffuse_cprob;
-			success = true;
-		}
-	}
-
-	// eval ggx reflection
-	if (ggx_refl_weight > 0.0f)
-	{
-		vec3 ggx_refl_bsdf_val;
-		float ggx_refl_pdf;
-		if (Ggx_reflect_eval(ggx_refl_bsdf_val, ggx_refl_pdf, material, incoming, outgoing))
-		{
-			bsdf_val_sum += ggx_refl_bsdf_val;
-			bsdf_pdf_sum += ggx_refl_pdf * ggx_refl_cprob;
-			success = true;
-		}
-	}
-
-	// eval ggx transmission
-	if (ggx_trans_weight > 0.0f)
-	{
-		vec3 ggx_trans_bsdf_val;
-		float ggx_trans_pdf;
-		if (Ggx_transmit_eval(ggx_trans_bsdf_val, ggx_trans_pdf, material, incoming, outgoing))
-		{
-			bsdf_val_sum += ggx_trans_bsdf_val;
-			bsdf_pdf_sum += ggx_trans_pdf * ggx_trans_cprob;
-			success = true;
-		}
-	}
-
-	// use mis to compute bsdf_weight
-	bsdf_val = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_val_sum;
-	bsdf_pdf = bsdf_pdf_sum;
-
-	return success;
-}
-
-bool
+vec3
 Material_cos_sample(out vec3 outgoing,
-					out vec3 bsdf_contrib,
-					out float bsdf_pdf,
+					out float pdf,
 					const Material material,
 					const vec3 incoming,
-					vec2 samples,
-					inout float next_sample)
+					vec2 samples)
 {
-	const float diffuse_weight = length(material.m_diffuse_refl);
-	const float ggx_refl_weight = length(material.m_spec_refl);
-	const float ggx_trans_weight = length(material.m_spec_trans);
-	const float sum_weight = diffuse_weight + ggx_refl_weight + ggx_trans_weight;
+	// compute probability of choosing a material
+	const float diffuse_weight = luminance(material.m_diffuse_refl);
+	const float ggx_reflect_weight = luminance(material.m_spec_refl);
+	const float diffuse_cprob = diffuse_weight / (diffuse_weight + ggx_reflect_weight);
+	const float ggx_reflect_cprob = 1.0f - diffuse_cprob;
 
-	// break if both weight are too low.
-	// probably a light source or a completely dark material.
-	if (sum_weight <= SMALL_VALUE) { return false; }
-
-	// probability of choosing each material
-	const float diffuse_cprob = diffuse_weight / sum_weight;
-	const float ggx_refl_cprob = ggx_refl_weight / sum_weight;
-	const float ggx_trans_cprob = ggx_trans_weight / sum_weight;
+	vec3 brdf_val_cos;
+	float brdf_pdf;
 
 	if (samples.x < diffuse_cprob) // r is in between [0, diffuse_cprob]
 	{
@@ -425,80 +150,62 @@ Material_cos_sample(out vec3 outgoing,
 		samples.x = samples.x / diffuse_cprob;
 
 		// sample using diffuse
-		vec3 diffuse_bsdf_contrib;
-		const bool sample_success = Diffuse_cos_sample(outgoing, diffuse_bsdf_contrib, material, incoming, samples);
-		if (!sample_success) { return false; }
+		float diffuse_pdf;
+		vec3 diffuse_brdf_cos_contrib = Diffuse_cos_sample(outgoing, diffuse_pdf, material, incoming, samples);
+		vec3 diffuse_brdf_cos = diffuse_brdf_cos_contrib * diffuse_pdf;
+
+		// evaluate ggx reflection
+		float ggx_reflect_pdf;
+		vec3 ggx_reflect_brdf_cos = Ggx_reflect_eval(ggx_reflect_pdf, material, incoming, outgoing) * outgoing.y;
+
+		brdf_val_cos = diffuse_brdf_cos + ggx_reflect_brdf_cos;
+		brdf_pdf = diffuse_pdf*diffuse_cprob + ggx_reflect_pdf*ggx_reflect_cprob;
 	}
-	else if (samples.x < diffuse_cprob + ggx_refl_cprob) // r is in between [diffuse_cprob, diffuse_cprob + ggx_refl_cprob]
+	else
 	{
 		// scale sample
-		samples.x = (samples.x - diffuse_cprob) / ggx_refl_cprob;
+		samples.x = (samples.x - diffuse_cprob) / ggx_reflect_cprob;
 
 		// sample using ggx reflection
-		vec3 ggx_refl_bsdf_contrib;
-		const bool sample_success = Ggx_reflect_cos_sample(outgoing, ggx_refl_bsdf_contrib, material, incoming, samples);
-		if (!sample_success) { return false; }
-	}
-	else // r is in between [diffuse_cprob + ggx_refl_cprob, 1.0]
-	{
-		// scale sample
-		samples.x = (samples.x - (diffuse_cprob + ggx_refl_cprob)) / ggx_trans_cprob;
+		float ggx_pdf;
+		vec3 ggx_brdf_reflect_cos_contrib = Ggx_reflect_cos_sample(outgoing, ggx_pdf, material, incoming, samples);
+		vec3 ggx_brdf_reflect_cos = ggx_brdf_reflect_cos_contrib * ggx_pdf;
 
-		// sample using ggx transmission
-		vec3 ggx_trans_bsdf_contrib;
-		const bool sample_success = Ggx_transmit_cos_sample(outgoing, ggx_trans_bsdf_contrib, material, incoming, samples, next_sample);
-		if (!sample_success) { return false; }
-	}
-
-	// note: SUM(f_i(v, l)) / SUM(p_i(v, l)) corresponded to applying MIS on top of bsdf sampling techniques
-	// thus, reduces level of noise.
-	vec3 bsdf_val_sum = vec3(0.0f);
-	float bsdf_pdf_sum = 0.0f;
-
-	// eval diffuse
-	bool success = false;
-	if (diffuse_cprob > 0.0f)
-	{
-		vec3 diffuse_bsdf_val;
+		// evaluate diffuse
 		float diffuse_pdf;
-		if (Diffuse_eval(diffuse_bsdf_val, diffuse_pdf, material, incoming, outgoing))
-		{
-			bsdf_val_sum += diffuse_bsdf_val;
-			bsdf_pdf_sum += diffuse_pdf * diffuse_cprob;
-			success = true;
-		}
+		vec3 diffuse_brdf_cos = Diffuse_eval(diffuse_pdf, material, incoming, outgoing) * outgoing.y;
+
+		brdf_val_cos = diffuse_brdf_cos + ggx_brdf_reflect_cos;
+		brdf_pdf = diffuse_pdf*diffuse_cprob + ggx_pdf*ggx_reflect_cprob;
 	}
 
-	// eval ggx reflection
-	if (ggx_refl_cprob > 0.0f)
-	{
-		vec3 ggx_refl_bsdf_val;
-		float ggx_refl_pdf;
-		if (Ggx_reflect_eval(ggx_refl_bsdf_val, ggx_refl_pdf, material, incoming, outgoing))
-		{
-			bsdf_val_sum += ggx_refl_bsdf_val;
-			bsdf_pdf_sum += ggx_refl_pdf * ggx_refl_cprob;
-			success = true;
-		}
-	}
-
-	// eval ggx transmission
-	if (ggx_trans_cprob > 0.0f)
-	{
-		vec3 ggx_trans_bsdf_val;
-		float ggx_trans_pdf;
-		if (Ggx_transmit_eval(ggx_trans_bsdf_val, ggx_trans_pdf, material, incoming, outgoing))
-		{
-			bsdf_val_sum += ggx_trans_bsdf_val;
-			bsdf_pdf_sum += ggx_trans_pdf * ggx_trans_cprob;
-			success = true;
-		}
-	}
-
-	// use mis to compute bsdf_weight
-	bsdf_contrib = bsdf_pdf_sum <= 1e-8f ? vec3(0.0f) : bsdf_val_sum / bsdf_pdf_sum * abs(outgoing.y);
-	bsdf_pdf = bsdf_pdf_sum;
-
-	return success;
+	pdf = brdf_pdf;
+	return brdf_val_cos / brdf_pdf;
 }
-#endif
+
+vec3
+Material_eval(out float pdf,
+			  const Material material,
+			  const vec3 incoming,
+			  const vec3 outgoing)
+{
+	// compute probability of choosing a material
+	const float diffuse_weight = luminance(material.m_diffuse_refl) + SMALL_VALUE;
+	const float ggx_reflect_weight = luminance(material.m_spec_refl) + SMALL_VALUE;
+	const float diffuse_cprob = diffuse_weight / (diffuse_weight + ggx_reflect_weight);
+	const float ggx_reflect_cprob = 1.0f - diffuse_cprob;
+
+	// evaluate ggx reflection
+	float ggx_reflect_pdf;
+	vec3 ggx_reflect_brdf = Ggx_reflect_eval(ggx_reflect_pdf, material, incoming, outgoing);
+
+	// evaluate diffuse reflection
+	float diffuse_pdf;
+	vec3 diffuse_brdf = Diffuse_eval(diffuse_pdf, material, incoming, outgoing);
+
+	// compute pdf
+	pdf = ggx_reflect_pdf*ggx_reflect_cprob + diffuse_pdf*diffuse_cprob;
+
+	// compute brdf
+	return ggx_reflect_brdf + diffuse_brdf;
+}

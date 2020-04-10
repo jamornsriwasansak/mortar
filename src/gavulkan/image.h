@@ -49,6 +49,8 @@ struct StbiFloat32Result
 
 	StbiFloat32Result(const std::filesystem::path & filepath)
 	{
+		THROW_ASSERT(std::filesystem::exists(filepath), "cannot open filepath " + filepath.string());
+
 		int width, height, numChannels;
 		const int num_desired_channels = 4;
 		m_stbi_data = stbi_loadf(filepath.string().c_str(),
@@ -164,7 +166,7 @@ struct DepthImage2d
 };
 
 template <typename ScalarType_>
-struct RgbaImage2d
+struct RgbaImage
 {
 	static constexpr uint32_t NumChannels = 4;
 	static constexpr vk::ImageUsageFlags RgbaUsageFlagBits = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
@@ -177,24 +179,21 @@ struct RgbaImage2d
 	vk::UniqueImageView			m_vk_image_view;
 	vk::UniqueSampler			m_vk_sampler;
 	vk::ImageLayout				m_vk_image_layout;
-	uint32_t					m_width;
-	uint32_t					m_height;
+	uvec3						m_resolution;
 	size_t						m_num_channels;
 	vec4						m_average = vec4(0.0f);
 
-	RgbaImage2d()
+	RgbaImage()
 	{
 	}
 
-	RgbaImage2d(const void * data,
-				const uint32_t width,
-				const uint32_t height,
-				const vk::ImageTiling & vk_image_tiling,
-				const vk::ImageUsageFlags & vk_image_usage_flags,
-				const bool use_srgb = false,
-				const bool can_copied_to_host = false):
-		m_width(width),
-		m_height(height),
+	RgbaImage(const void * data,
+			  const uvec3 & resolution,
+			  const vk::ImageTiling & vk_image_tiling,
+			  const vk::ImageUsageFlags & vk_image_usage_flags,
+			  const bool use_srgb = false,
+			  const bool can_copied_to_host = false):
+		m_resolution(resolution),
 		m_vk_image_layout(vk::ImageLayout::eUndefined)
 	{
 		// choose m_vk_format based on ScalarType
@@ -227,8 +226,8 @@ struct RgbaImage2d
 		// create an image
 		vk::ImageCreateInfo image_ci = {};
 		{
-			image_ci.setImageType(vk::ImageType::e2D);
-			image_ci.setExtent(vk::Extent3D(width, height, 1u));
+			image_ci.setImageType(get_image_type());
+			image_ci.setExtent(vk::Extent3D(resolution.x, resolution.y, resolution.z));
 			image_ci.setMipLevels(1);
 			image_ci.setArrayLayers(1);
 			image_ci.setFormat(m_vk_format);
@@ -262,8 +261,7 @@ struct RgbaImage2d
 		if (data != nullptr)
 		{
 			copy_from(data,
-					  width,
-					  height,
+					  resolution,
 					  vk::ImageLayout::eShaderReadOnlyOptimal);
 		}
 		else if (vk_image_usage_flags & vk::ImageUsageFlagBits::eStorage)
@@ -277,29 +275,26 @@ struct RgbaImage2d
 		init_image_view();
 	}
 
-	RgbaImage2d(const uint32_t width,
-				const uint32_t height,
+	RgbaImage(const uvec3 & resolution,
 				const vk::ImageUsageFlags & vk_image_usage_flags,
 				const bool can_copied_to_host = false):
-		RgbaImage2d(nullptr,
-					width,
-					height,
-					vk::ImageTiling::eOptimal,
-					vk_image_usage_flags,
-					false,
-					can_copied_to_host)
+		RgbaImage(nullptr,
+				  resolution,
+				  vk::ImageTiling::eOptimal,
+				  vk_image_usage_flags,
+				  false,
+				  can_copied_to_host)
 	{
 	}
 
-	RgbaImage2d(const StbiUint8Result & stbi_result,
+	RgbaImage(const StbiUint8Result & stbi_result,
 				const bool can_copied_to_host = false):
-		RgbaImage2d(stbi_result.m_stbi_data,
-					stbi_result.m_width,
-					stbi_result.m_height,
-					vk::ImageTiling::eOptimal,
-					RgbaUsageFlagBits,
-					true,
-					can_copied_to_host)
+		RgbaImage(stbi_result.m_stbi_data,
+				  uvec3(stbi_result.m_width, stbi_result.m_height, 1u),
+				  vk::ImageTiling::eOptimal,
+				  RgbaUsageFlagBits,
+				  true,
+				  can_copied_to_host)
 	{
 		if constexpr (!std::is_same<uint8_t, ScalarType>::value)
 		{
@@ -308,15 +303,14 @@ struct RgbaImage2d
 		init_sampler();
 	}
 
-	RgbaImage2d(const StbiFloat32Result & stbi_result,
+	RgbaImage(const StbiFloat32Result & stbi_result,
 				const bool can_copied_to_host = false):
-		RgbaImage2d(stbi_result.m_stbi_data,
-					stbi_result.m_width,
-					stbi_result.m_height,
-					vk::ImageTiling::eOptimal,
-					RgbaUsageFlagBits,
-					false,
-					can_copied_to_host)
+		RgbaImage(stbi_result.m_stbi_data,
+				  uvec3(stbi_result.m_width, stbi_result.m_height, 1u),
+				  vk::ImageTiling::eOptimal,
+				  RgbaUsageFlagBits,
+				  false,
+				  can_copied_to_host)
 	{
 		if constexpr (!std::is_same<float, ScalarType>::value)
 		{
@@ -325,29 +319,27 @@ struct RgbaImage2d
 		init_sampler();
 	}
 
-	RgbaImage2d(const std::filesystem::path & filepath,
+	RgbaImage(const std::filesystem::path & filepath,
 				const bool can_copied_to_host = false)
 	{
 		if (filepath.extension() == ".hdr")
 		{
-			*this = std::move(RgbaImage2d(StbiFloat32Result(filepath),
-										  can_copied_to_host));
+			*this = std::move(RgbaImage(StbiFloat32Result(filepath),
+										can_copied_to_host));
 		}
 		else
 		{
-			*this = std::move(RgbaImage2d(StbiUint8Result(filepath),
-										  can_copied_to_host));
+			*this = std::move(RgbaImage(StbiUint8Result(filepath),
+										can_copied_to_host));
 		}
 	}
 
 	void
 	copy_from(const void * data,
-			  const size_t width,
-			  const size_t height,
+			  const uvec3 resolution,
 			  const vk::ImageLayout & vk_image_layout)
 	{
-		THROW_ASSERT(width == m_width, "width mismatches");
-		THROW_ASSERT(height == m_height, "height mismatches");
+		THROW_ASSERT(resolution == m_resolution, "resolution mismatches");
 
 		// make image layout optimal for data being transferred to image (TransferDstOptimal)
 		transition_image_layout(*m_vk_image,
@@ -356,7 +348,7 @@ struct RgbaImage2d
 
 		// upload data from host's stbi_data to device's staging buffer
 		Buffer stage(data,
-					 width * height * NumChannels * sizeof(ScalarType),
+					 resolution.x * resolution.y * resolution.z * NumChannels * static_cast<uint32_t>(sizeof(ScalarType)),
 					 1,
 					 vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
 					 vk::BufferUsageFlagBits::eTransferSrc);
@@ -365,8 +357,7 @@ struct RgbaImage2d
 		copy_vk_buffer_to_vk_image(*m_vk_image,
 								   vk::ImageLayout::eTransferDstOptimal,
 								   *stage.m_vk_buffer,
-								   static_cast<uint32_t>(width),
-								   static_cast<uint32_t>(height));
+								   m_resolution);
 
 		// make image layout optimal for shader reading
 		transition_image_layout(*m_vk_image,
@@ -374,10 +365,11 @@ struct RgbaImage2d
 								vk_image_layout);
 	}
 
-	std::vector<ScalarType>
-	download()
+	std::vector<VectorType>
+	download4()
 	{
-		const uint32_t size_in_bytes = NumChannels * m_width * m_height * sizeof(ScalarType);
+		const uint32_t num_elements = m_resolution.x * m_resolution.y * m_resolution.z;
+		const uint32_t size_in_bytes = num_elements * static_cast<uint32_t>(sizeof(VectorType));
 		vk::ImageLayout prev_vk_image_layout = m_vk_image_layout;
 
 		// transit to make image readable as src
@@ -387,7 +379,7 @@ struct RgbaImage2d
 
 		// upload data from host's stbi_data to device's staging buffer
 		Buffer stage(nullptr,
-					 m_width * m_height * NumChannels * sizeof(ScalarType),
+					 size_in_bytes,
 					 1,
 					 vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
 					 vk::BufferUsageFlagBits::eTransferDst);
@@ -395,8 +387,7 @@ struct RgbaImage2d
 		copy_vk_image_to_vk_buffer(*stage.m_vk_buffer,
 								   *m_vk_image,
 								   m_vk_image_layout,
-								   m_width,
-								   m_height);
+								   m_resolution);
 
 		const vk::Device & device = *Core::Inst().m_vk_device;
 		void * mapped_vertex_mem = device.mapMemory(*stage.m_vk_memory,
@@ -404,7 +395,51 @@ struct RgbaImage2d
 													vk::DeviceSize(size_in_bytes),
 													vk::MemoryMapFlagBits());
 
-		std::vector<ScalarType> result(NumChannels * m_width * m_height);
+		std::vector<VectorType> result(num_elements);
+		std::memcpy(result.data(),
+					mapped_vertex_mem,
+					size_in_bytes);
+
+		// transit back to original image layout
+		transition_image_layout(*m_vk_image,
+								vk::ImageLayout::eTransferSrcOptimal,
+								prev_vk_image_layout);
+
+		return result;
+	}
+
+
+	std::vector<ScalarType>
+	download()
+	{
+		const uint32_t num_elements = NumChannels * m_resolution.x * m_resolution.y * m_resolution.z;
+		const uint32_t size_in_bytes = num_elements * static_cast<uint32_t>(sizeof(ScalarType));
+		vk::ImageLayout prev_vk_image_layout = m_vk_image_layout;
+
+		// transit to make image readable as src
+		transition_image_layout(*m_vk_image,
+								m_vk_image_layout,
+								vk::ImageLayout::eTransferSrcOptimal);
+
+		// upload data from host's stbi_data to device's staging buffer
+		Buffer stage(nullptr,
+					 size_in_bytes,
+					 1,
+					 vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+					 vk::BufferUsageFlagBits::eTransferDst);
+
+		copy_vk_image_to_vk_buffer(*stage.m_vk_buffer,
+								   *m_vk_image,
+								   m_vk_image_layout,
+								   m_resolution);
+
+		const vk::Device & device = *Core::Inst().m_vk_device;
+		void * mapped_vertex_mem = device.mapMemory(*stage.m_vk_memory,
+													vk::DeviceSize(0),
+													vk::DeviceSize(size_in_bytes),
+													vk::MemoryMapFlagBits());
+
+		std::vector<ScalarType> result(num_elements);
 		std::memcpy(result.data(),
 					mapped_vertex_mem,
 					size_in_bytes);
@@ -426,17 +461,21 @@ struct RgbaImage2d
 		std::ofstream os(filepath, std::ios::binary);
 		THROW_ASSERT(os.is_open(), "cannot open the filepath : " + filepath.string());
 		os << "PF" << std::endl;
-		os << m_width << " " << m_height << std::endl;
+		os << m_resolution.x << " " << m_resolution.y << std::endl;
 		os << "-1" << std::endl;
 
 		// else start writing the image
-		const int height = static_cast<int>(m_height);
-		const int width = static_cast<int>(m_width);
+		const int height = static_cast<int>(m_resolution.x);
+		const int width = static_cast<int>(m_resolution.y);
 		for (int y = height - 1; y >= 0; y--)
 			for (int x = 0; x < width; x++)
 				for (int c = 0; c < 3; c++)
 				{
-					float v = static_cast<float>(read_result[(y * m_width + x) * 4 + c]);
+					float v = static_cast<float>(read_result[(y * m_resolution.x + x) * 4 + c]);
+					if constexpr (std::is_same<ScalarType, uint8_t>::value)
+					{
+						v /= 255.0f;
+					}
 					os.write((char *)(&v), sizeof(float));
 				}
 
@@ -450,7 +489,7 @@ struct RgbaImage2d
 		vk::ImageViewCreateInfo image_view_ci = {};
 		{
 			image_view_ci.setImage(*m_vk_image);
-			image_view_ci.setViewType(vk::ImageViewType::e2D);
+			image_view_ci.setViewType(get_image_view_type());
 			image_view_ci.setFormat(m_vk_format);
 			image_view_ci.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
 			image_view_ci.subresourceRange.setBaseMipLevel(0);
@@ -550,7 +589,34 @@ struct RgbaImage2d
 
 private:
 
-	vk::PipelineStageFlags pipeline_stage_flags(const vk::ImageLayout vk_image_layout)
+	vk::ImageType
+	get_image_type()
+	{
+		if (m_resolution.z > 1)
+		{
+			return vk::ImageType::e3D;
+		}
+		else
+		{
+			return vk::ImageType::e2D;
+		}
+	}
+
+	vk::ImageViewType
+	get_image_view_type()
+	{
+		if (m_resolution.z > 1)
+		{
+			return vk::ImageViewType::e3D;
+		}
+		else
+		{
+			return vk::ImageViewType::e2D;
+		}
+	}
+
+	vk::PipelineStageFlags
+	pipeline_stage_flags(const vk::ImageLayout vk_image_layout)
 	{
 		switch (vk_image_layout)
 		{
@@ -572,7 +638,8 @@ private:
 		}
 	}
 
-	vk::AccessFlags access_flags_for_layout(vk::ImageLayout layout)
+	vk::AccessFlags
+	access_flags_for_layout(vk::ImageLayout layout)
 	{
 		switch (layout)
 		{
@@ -597,8 +664,7 @@ private:
 	copy_vk_buffer_to_vk_image(const vk::Image & vk_image,
 							   const vk::ImageLayout & vk_image_layout,
 							   const vk::Buffer & src_vk_buffer,
-							   const uint32_t width,
-							   const uint32_t height)
+							   const uvec3 & resolution)
 	{
 		Core::Inst().one_time_command_submit(
 			[&](vk::CommandBuffer& command_buffer)
@@ -613,7 +679,7 @@ private:
 					buffer_image_copy.imageSubresource.setBaseArrayLayer(0);
 					buffer_image_copy.imageSubresource.setLayerCount(1);
 					buffer_image_copy.setImageOffset({ 0, 0, 0 });
-					buffer_image_copy.setImageExtent({ width, height, 1u });
+					buffer_image_copy.setImageExtent({ resolution.x, resolution.y, resolution.z });
 				}
 				command_buffer.copyBufferToImage(src_vk_buffer,
 												 vk_image,
@@ -626,8 +692,7 @@ private:
 	copy_vk_image_to_vk_buffer(const vk::Buffer & dst_vk_buffer,
 							   const vk::Image & src_vk_image,
 							   const vk::ImageLayout & src_vk_image_layout,
-							   const uint32_t width,
-							   const uint32_t height)
+							   const uvec3 & resolution)
 	{
 		Core::Inst().one_time_command_submit(
 			[&](vk::CommandBuffer& command_buffer)
@@ -642,7 +707,7 @@ private:
 					buffer_image_copy.imageSubresource.setBaseArrayLayer(0);
 					buffer_image_copy.imageSubresource.setLayerCount(1);
 					buffer_image_copy.setImageOffset({ 0, 0, 0 });
-					buffer_image_copy.setImageExtent({ width, height, 1u });
+					buffer_image_copy.setImageExtent({ resolution.x, resolution.y, resolution.z });
 				}
 
 				command_buffer.copyImageToBuffer(src_vk_image,

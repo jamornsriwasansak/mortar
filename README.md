@@ -13,16 +13,13 @@ Roughness values are mapped from specular exponents (Ns values) using Blinn-Phon
 As I do not have much time at this moment, changing the scene requires you to modify the code by yourself.
 An example is in "src/main.cpp"
 
-There are two pathtracers in the system.
-PathTracer class is quite slow but I am certain that it definitely produces correct result.
-FastPathTracer class is much faster but only takes care of BRDF (not BSDF) and handled edge cases through several assumptions.
-
 ### Features
 In its current early stage, it supports:
-* Environment map importance sampling
-* Alpha-testing
 * Ambient occlusion Integrator
 * Path tracer with next event estimation utilizing MIS [Veach's thesis](https://graphics.stanford.edu/papers/veach_thesis) \[1997]
+* Voxelizer
+* Environment map importance sampling
+* Alpha-testing
 * Low discreprancy sampler with blue-noise property from [Heitz et al.](https://eheitzresearch.wordpress.com/762-2/) \[2019]
 * PCG random number generator ported from [pcg-random.org](https://www.pcg-random.org/)
 * Lambert diffuse BRDF
@@ -37,11 +34,7 @@ In its current early stage, it supports:
 * stb (included as a submodule)
 * glm (included as a submodule)
 
-### Plan
-* Implement ASVGF
-
 ### Issues
-1. Rough dielectric (frosty glass), especially PDF evaluation, was not tested properly. It might not produce correct result if such material is used.
-2. The application will crash while exitting due to an unhandled GLFW surface destructor. I believe there is a way to handle this properly with newer vulkan versions. I will thus revisit this issue in the future.
+1. The application will crash while exitting due to an unhandled GLFW surface destructor. I believe there is a way to handle this properly with newer vulkan versions. I will thus revisit this issue in the future.
 
 <sup>I started this project around early of March since I was curious of the vulkan raytracing performance. On the first day of this project, I spent an entire day building a new PC to house RTX2060. This is probably the most costly project I ever invested with my own money. :(

@@ -3,9 +3,9 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "common/ray.glsl"
-#include "renderer/fastpathtracer/fastpathtracerpayload.glsl"
+#include "rtcommon/raypayload.glsl"
 
-layout(location = RAY_PRD_LOCATION) rayPayloadInNV FastPathTracerRayPayload prd;
+layout(location = RAY_PRD_LOCATION) rayPayloadInNV CommonRayPayload prd;
 hitAttributeNV vec3 attribs;
 
 void main()

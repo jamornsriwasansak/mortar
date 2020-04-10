@@ -39,10 +39,13 @@ struct Core
 	vk::UniqueSurfaceKHR						m_vk_surface;
 	uint32_t									m_vk_graphics_queue_family_index;
 	uint32_t									m_vk_present_queue_family_index;
+	uint32_t									m_vk_compute_queue_family_index;
 	vk::Queue									m_vk_graphics_queue;
 	vk::Queue									m_vk_present_queue;
+	vk::Queue									m_vk_compute_queue;
 	vk::UniqueSwapchainKHR						m_vk_swapchain;
-	vk::UniqueCommandPool						m_vk_command_pool;
+	vk::UniqueCommandPool						m_vk_graphics_command_pool;
+	vk::UniqueCommandPool						m_vk_compute_command_pool;
 	vk::Format									m_vk_swapchain_surface_format;
 	std::vector<vk::Image>						m_vk_swapchain_images;
 	std::vector<vk::UniqueImageView>			m_vk_swapchain_image_views;
@@ -64,7 +67,7 @@ struct Core
 		vk::CommandBufferAllocateInfo alloc_info = {};
 		{
 			alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
-			alloc_info.setCommandPool(*m_vk_command_pool);
+			alloc_info.setCommandPool(*m_vk_graphics_command_pool);
 			alloc_info.setCommandBufferCount(1);
 		}
 		std::vector<vk::UniqueCommandBuffer> command_buffers = m_vk_device->allocateCommandBuffersUnique(alloc_info);
@@ -178,12 +181,38 @@ struct Core
 		m_vk_device->waitIdle();
 	}
 
-	std::vector<vk::UniqueCommandBuffer>
-	create_command_buffers()
+	vk::UniqueCommandBuffer
+	create_command_buffer(const vk::QueueFlagBits & flagbit)
 	{
 		vk::CommandBufferAllocateInfo command_ai = {};
 		{
-			command_ai.setCommandPool(*m_vk_command_pool);
+			if (flagbit == vk::QueueFlagBits::eCompute)
+			{
+				command_ai.setCommandPool(*m_vk_compute_command_pool);
+			}
+			else if (flagbit == vk::QueueFlagBits::eGraphics)
+			{
+				command_ai.setCommandPool(*m_vk_graphics_command_pool);
+			}
+			command_ai.setLevel(vk::CommandBufferLevel::ePrimary);
+			command_ai.setCommandBufferCount(1);
+		}
+		return std::move(m_vk_device->allocateCommandBuffersUnique(command_ai)[0]);
+	}
+
+	std::vector<vk::UniqueCommandBuffer>
+	create_swapchain_command_buffers(const vk::QueueFlagBits & flagbit)
+	{
+		vk::CommandBufferAllocateInfo command_ai = {};
+		{
+			if (flagbit == vk::QueueFlagBits::eCompute)
+			{
+				command_ai.setCommandPool(*m_vk_compute_command_pool);
+			}
+			else if (flagbit == vk::QueueFlagBits::eGraphics)
+			{
+				command_ai.setCommandPool(*m_vk_graphics_command_pool);
+			}
 			command_ai.setLevel(vk::CommandBufferLevel::ePrimary);
 			command_ai.setCommandBufferCount(static_cast<uint32_t>(m_vk_swapchain_images.size()));
 		}
@@ -292,12 +321,15 @@ private:
 																		*m_vk_surface);
 		THROW_ASSERT(families_result.m_graphics_queue_family_index.has_value(), "no graphics queue");
 		THROW_ASSERT(families_result.m_present_queue_family_index.has_value(), "no present queue");
+		THROW_ASSERT(families_result.m_compute_queue_family_index.has_value(), "no compute queue");
 		m_vk_graphics_queue_family_index = families_result.m_graphics_queue_family_index.value();
 		m_vk_present_queue_family_index = families_result.m_present_queue_family_index.value();
+		m_vk_compute_queue_family_index = families_result.m_compute_queue_family_index.value();
 
 		// create logical device from physical device
 		const auto queue_family_indices = { m_vk_graphics_queue_family_index,
-											m_vk_present_queue_family_index };
+											m_vk_present_queue_family_index,
+											m_vk_compute_queue_family_index };
 		m_vk_device = create_device(m_vk_physical_device,
 									device_layers,
 									device_extensions,
@@ -309,6 +341,9 @@ private:
 
 		// get present queue from the logical device
 		m_vk_present_queue = m_vk_device->getQueue(m_vk_present_queue_family_index, 0);
+
+		// get compute queue from the logical device
+		m_vk_compute_queue = m_vk_device->getQueue(m_vk_compute_queue_family_index, 0);
 
 		// create swapchain
 		auto swapchain_result = create_swapchain(m_vk_physical_device,
@@ -329,8 +364,10 @@ private:
 													  m_vk_swapchain_images.size());
 
 		// create command pool and buffers
-		m_vk_command_pool = create_command_pool(*m_vk_device,
-												m_vk_graphics_queue_family_index);
+		m_vk_graphics_command_pool = create_command_pool(*m_vk_device,
+														 m_vk_graphics_queue_family_index);
+		m_vk_compute_command_pool = create_command_pool(*m_vk_device,
+														m_vk_compute_queue_family_index);
 	}
 
 	GLFWwindow *
@@ -559,6 +596,7 @@ private:
 	{
 		std::optional<uint32_t> m_graphics_queue_family_index;
 		std::optional<uint32_t> m_present_queue_family_index;
+		std::optional<uint32_t> m_compute_queue_family_index;
 	};
 	QueueFamiliesReturnType
 	find_graphics_and_present_queue_families(const vk::PhysicalDevice & physical_device,
@@ -566,21 +604,42 @@ private:
 	{
 		std::optional<uint32_t> graphics_queue_family_index;
 		std::optional<uint32_t> present_queue_family_index;
+		std::optional<uint32_t> compute_queue_family_index;
 
 		const auto queue_family_properties = physical_device.getQueueFamilyProperties();
+
+		// find dedicated compute queue
+		for (size_t iq = 0; iq < queue_family_properties.size(); iq++)
+		{
+			if (queue_family_properties[iq].queueFlags & vk::QueueFlagBits::eCompute)
+			{
+				compute_queue_family_index = static_cast<uint32_t>(iq);
+			}
+		}
+
 		for (size_t iq = 0; iq < queue_family_properties.size(); iq++)
 		{
 			if (queue_family_properties[iq].queueFlags & vk::QueueFlagBits::eGraphics)
 			{
 				graphics_queue_family_index = static_cast<uint32_t>(iq);
 			}
-			if (physical_device.getSurfaceSupportKHR(static_cast<uint32_t>(iq),
-													 surface))
+			if (physical_device.getSurfaceSupportKHR(static_cast<uint32_t>(iq), surface))
 			{
 				present_queue_family_index = static_cast<uint32_t>(iq);
 			}
+
+			// if dedicated compute queue is not found, we find any queue that also has compute capability
+			if (!compute_queue_family_index.has_value())
+			{
+				if (queue_family_properties[iq].queueFlags & vk::QueueFlagBits::eCompute)
+				{
+					compute_queue_family_index = static_cast<uint32_t>(iq);
+				}
+			}
 		}
-		return { graphics_queue_family_index, present_queue_family_index };
+		return { graphics_queue_family_index,
+				 present_queue_family_index,
+				 compute_queue_family_index };
 	}
 
 	struct SwapchainReturnType

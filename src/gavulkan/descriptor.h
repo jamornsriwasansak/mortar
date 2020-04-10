@@ -205,7 +205,7 @@ struct DescriptorSetsBuilder
 	template <typename T>
 	DescriptorSetsBuilder &
 	set_sampler(const size_t i_binding,
-				const RgbaImage2d<T> & image)
+				const RgbaImage<T> & image)
 	{
 		/*
 		// grab uniform info for this binding
@@ -250,7 +250,7 @@ struct DescriptorSetsBuilder
 	template <typename T>
 	DescriptorSetsBuilder &
 	set_samplers(const size_t i_binding,
-				 const std::vector<const RgbaImage2d<T> *> & images)
+				 const std::vector<const RgbaImage<T> *> & images)
 	{
 		THROW_ASSERT(images.size() > 0,
 					 "number of sampler must be greater zero");
@@ -291,7 +291,7 @@ struct DescriptorSetsBuilder
 	DescriptorSetsBuilder &
 	set_storage_image(const size_t i_frame,
 					  const size_t i_binding,
-					  const RgbaImage2d<T> & image)
+					  const RgbaImage<T> & image)
 	{
 		// describe what the image is like
 		std::unique_ptr<vk::DescriptorImageInfo> descriptor_image_info = std::make_unique<vk::DescriptorImageInfo>();
@@ -320,7 +320,7 @@ struct DescriptorSetsBuilder
 	template <typename T>
 	DescriptorSetsBuilder &
 	set_storage_image(const size_t i_binding,
-					  const RgbaImage2d<T> & image)
+					  const RgbaImage<T> & image)
 	{
 		for (size_t i_frame = 0; i_frame < m_num_swapchain_frames; i_frame++)
 		{
@@ -511,10 +511,9 @@ struct DescriptorManager
 	}
 
 	DescriptorSetsBuilder
-	make_descriptor_sets_builder(const size_t i_set) const
+	make_descriptor_sets_builder(const size_t i_set,
+								 const size_t num_swapchain_images = 1) const
 	{
-		const size_t num_swapchain_images = Core::Inst().m_vk_swapchain_images.size();
-
 		// create descriptor set for the length of swapchain
 		std::vector<vk::DescriptorSetLayout> descriptor_set_layouts(num_swapchain_images,
 																	*m_descriptor_set_layout_infos[i_set].m_vk_descriptor_set_layout);

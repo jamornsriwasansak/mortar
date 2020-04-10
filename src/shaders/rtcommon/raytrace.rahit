@@ -4,12 +4,12 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
 #include "common/math.glsl"
-#include "common/ray.glsl"
 #include "shared.glsl.h"
-#include "shared_rt_stage/hitpayload.glsl"
-#include "shared_rt_stage/trimeshlayout.glsl"
+#include "common/ray.glsl"
+#include "rtcommon/raypayload.glsl"
+#include "rtcommon/trimeshlayout.glsl"
 
-layout(location = RAY_PRD_LOCATION) rayPayloadInNV HitPayload prd;
+layout(location = RAY_PRD_LOCATION) rayPayloadInNV CommonRayPayload prd;
 hitAttributeNV vec3 attribs;
 
 DECLARE_TRIMESH_LAYOUT(1)
@@ -40,7 +40,7 @@ void main()
     vec2 texcoord = mix_barycoord(attribs.xy, vec2(u0, v0), vec2(u1, v1), vec2(u2, v2));
 
     // organize the values
-	float alpha = texture(textures[-int(material.m_diffuse_refl.r + 1)], texcoord).a;
+	float alpha = texture(material_textures[-int(material.m_diffuse_refl.r + 1)], texcoord).a;
     if (alpha <= 0.5)
     {
         ignoreIntersectionNV();

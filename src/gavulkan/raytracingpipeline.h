@@ -132,7 +132,9 @@ struct RayTracingPipeline
 	DescriptorSetsBuilder
 	build_descriptor_sets(const size_t i_set) const
 	{
-		return m_descriptor_manager.make_descriptor_sets_builder(i_set);
+		const size_t num_swapchain_images = Core::Inst().m_vk_swapchain_images.size();
+		return m_descriptor_manager.make_descriptor_sets_builder(i_set,
+																 num_swapchain_images);
 	}
 
 	vk::Buffer

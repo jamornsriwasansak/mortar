@@ -4,6 +4,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#include "app_shader_shared/material.glsl.h"
+
 #include "common/mortar.h"
 
 #include "gavulkan/image.h"
@@ -12,13 +14,13 @@
 
 struct ImageStorage
 {
-	std::vector<std::pair<RgbaImage2d<uint8_t>, bool>>							m_images; // image and is_opaque flag
+	std::vector<std::pair<RgbaImage<uint8_t>, bool>>							m_images; // image and is_opaque flag
 	std::map<std::pair<std::filesystem::path, std::filesystem::path>, size_t>	m_image_index_from_path;
 
-	std::vector<const RgbaImage2d<uint8_t> *>
+	std::vector<const RgbaImage<uint8_t> *>
 	get_images()
 	{
-		std::vector<const RgbaImage2d<uint8_t> *> images;
+		std::vector<const RgbaImage<uint8_t> *> images;
 		for (size_t i = 0; i < m_images.size(); i++)
 		{
 			images.push_back(&m_images[i].first);
@@ -72,7 +74,7 @@ struct ImageStorage
 
 		// else load the image
 		m_image_index_from_path[{ path, alpha_path }] = m_images.size();
-		m_images.emplace_back(std::move(RgbaImage2d<uint8_t>(raw_image)),
+		m_images.emplace_back(std::move(RgbaImage<uint8_t>(raw_image)),
 							  is_opaque);
 
 		// and return the index
@@ -86,11 +88,10 @@ struct ImageStorage
 		if (m_images.size() > 0) return;
 
 		std::vector<uint8_t> blank_image(4, 0);
-		m_images.emplace_back(std::move(RgbaImage2d<uint8_t>(blank_image.data(),
-															 1,
-															 1,
-															 vk::ImageTiling::eOptimal,
-															 RgbaImage2d<uint8_t>::RgbaUsageFlagBits)),
+		m_images.emplace_back(std::move(RgbaImage<uint8_t>(blank_image.data(),
+														   uvec3(1u),
+														   vk::ImageTiling::eOptimal,
+														   RgbaImage<uint8_t>::RgbaUsageFlagBits)),
 							  false);
 		m_images[0].first.init_sampler();
 	}
@@ -105,6 +106,7 @@ struct TriangleMesh
 	std::shared_ptr<Buffer>	m_cdf_buffer;
 	RtBlas					m_rt_blas;
 	float					m_emission_weight = 0.0f;
+	size_t					m_num_triangles;
 };
 
 struct TriangleMeshStorage
@@ -294,7 +296,7 @@ struct TriangleMeshStorage
 			material.m_emission = emission.first;
 			if (tmat.illum == 7)
 			{
-				material.m_spec_trans = vec3(1.0f) - vec3_from_float3(tmat.transmittance);
+				material.m_spec_trans = vec3_from_float3(tmat.transmittance);
 				material.m_ior = tmat.ior;
 			}
 			const bool is_opaque = diffuse_refl.second;
@@ -561,6 +563,8 @@ struct TriangleMeshStorage
 			triangle_mesh->m_material_id_buffer = std::make_shared<Buffer>(material_ids,
 																		   vk::MemoryPropertyFlagBits::eDeviceLocal,
 																		   vk::BufferUsageFlagBits::eStorageBuffer);
+			triangle_mesh->m_num_triangles = indices.size() / 3;
+
 			if (do_ray_tracing)
 			{
 				triangle_mesh->m_rt_blas = RtBlas(*position_and_u_buffer,
@@ -843,6 +847,7 @@ struct TriangleMeshStorage
 				triangle_mesh->m_normal_and_v_buffer = normal_and_v_buffer;
 				triangle_mesh->m_index_buffer = index_buffer;
 				triangle_mesh->m_material_id_buffer = material_id_buffer;
+				triangle_mesh->m_num_triangles = shape_indices_arays[i_shape].size() / 3;
 				if (do_ray_tracing)
 				{
 					triangle_mesh->m_rt_blas = RtBlas(*position_and_u_buffer,

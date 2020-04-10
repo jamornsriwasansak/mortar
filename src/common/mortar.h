@@ -35,6 +35,28 @@ const vk::ColorSpaceKHR ColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
 const vk::PresentModeKHR PresentMode = vk::PresentModeKHR::eMailbox;
 const vk::Extent2D Extent = vk::Extent2D(Width, Height);
 
+float
+distance2(const vec3 a,
+		  const vec3 b)
+{
+	const vec3 diff = a - b;
+	return dot(diff, diff);
+}
+
+float
+probe_placement_kernel(const float distance,
+					   const float r)
+{
+	const float t = distance / r;
+	if (0 <= t && t <= 1)
+	{
+		float t2 = t * t;
+		float t3 = t2 * t;
+		return 2.0f * t3 - 3.0f * t2 + 1.0f;
+	}
+	return 0.0f;
+}
+
 void
 THROW(const std::string & message)
 {

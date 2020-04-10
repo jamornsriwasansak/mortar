@@ -8,7 +8,7 @@
 
 struct Envmap
 {
-	RgbaImage2d<float>	m_image;
+	RgbaImage<float>	m_image;
 	uvec2				m_resolution;
 	float				m_emissive_weight = 0.0f;
 	Buffer				m_cdf_table;
@@ -20,11 +20,10 @@ struct Envmap
 
 		// init envmap with a blank image
 		std::vector<vec4> blank_image(1, vec4(0.0f));
-		m_image = RgbaImage2d<float>(blank_image.data(),
-									 1, // width = 1
-									 1, // height = 1
-									 vk::ImageTiling::eOptimal,
-									 RgbaImage2d<float>::RgbaUsageFlagBits);
+		m_image = RgbaImage<float>(blank_image.data(),
+								   uvec3(1u),
+								   vk::ImageTiling::eOptimal,
+								   RgbaImage<float>::RgbaUsageFlagBits);
 		m_image.init_sampler(true);
 		m_resolution = uvec2(1, 1);
 
@@ -66,7 +65,7 @@ struct Envmap
 		const vec3 average = sum / static_cast<float>(width * height);
 
 		m_emissive_weight = length(average);
-		m_image = RgbaImage2d<float>(stbi_float_result);
+		m_image = RgbaImage<float>(stbi_float_result);
 		m_image.init_sampler(true);
 		m_resolution = uvec2(width,
 							 height);

@@ -38,6 +38,9 @@ struct ShaderUniformInfo
 	{
 		if (m_type == "sampler2D") return vk::DescriptorType::eCombinedImageSampler;
 		if (m_type == "image2D") return vk::DescriptorType::eStorageImage;
+		if (m_type == "image3D") return vk::DescriptorType::eStorageImage;
+		if (m_type == "uimage2D") return vk::DescriptorType::eStorageImage;
+		if (m_type == "uimage3D") return vk::DescriptorType::eStorageImage;
 		if (m_type == "accelerationStructureNV") return vk::DescriptorType::eAccelerationStructureNV;
 		if (m_mem_type == "buffer") return vk::DescriptorType::eStorageBuffer;
 		if (m_mem_type == "uniform") return vk::DescriptorType::eUniformBuffer;
@@ -302,6 +305,10 @@ private:
 					else if (auto parsed_format_qualifier = parse_format_qualifier(tokens[i_token]))
 					{
 						pfq = *parsed_format_qualifier;
+						i_token += 1;
+					}
+					else if (tokens[i_token] == "std430")
+					{
 						i_token += 1;
 					}
 					else

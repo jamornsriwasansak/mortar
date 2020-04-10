@@ -6,21 +6,19 @@
 
 #include "common/bluenoise.h"
 
-#include "renderer/rtao.h"
-#include "renderer/pathtracer.h"
-#include "renderer/fastpathtracer.h"
+#include "renderer_app/rtao.h"
+#include "renderer_app/pathtracer.h"
+#include "misc_app/probeplacer_silvennoinen17.h"
 
 int
 main()
 {
 	// setup the scene
 	Scene scene;
-	//scene.add_mesh("bistro/exterior/exterior.obj", true);
 	scene.set_envmap("envmap/palermo_sidewalk_1k.hdr", true);
-	//scene.add_mesh("test/mitsuba-sphere.obj", true);
-	//scene.add_mesh("sponza/sponza.obj", true);
-	scene.add_mesh("fireplace_room/fireplace_room.obj", true);
-	//scene.add_mesh("bunny_box/bunny_box.obj", true);
+	//scene.add_mesh("scenes/bistro/exterior/exterior.obj", true);
+	scene.add_mesh("scenes/fireplace_room/fireplace_room.obj", true);
+	//scene.add_mesh("scenes/cbox/CornellBox-Original.obj", true);
 	scene.build_rt();
 
 	// setup the camera
@@ -36,15 +34,12 @@ main()
 	camera.m_up_speed = length(scene.m_bbox_max - scene.m_bbox_min) * 0.1f;
 
 	// run renderer
-#if 0
+#if 1
 	Rtao rtao;
 	rtao.run(&scene, &camera);
-#elif 0
+#else
 	PathTracer path_tracer;
 	path_tracer.run(&scene, &camera);
-#else
-	FastPathTracer fast_path_tracer;
-	fast_path_tracer.run(&scene, &camera);
 #endif
 
 	return 0;

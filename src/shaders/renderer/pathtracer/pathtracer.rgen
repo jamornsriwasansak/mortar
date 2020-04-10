@@ -2,24 +2,21 @@
 #extension GL_NV_ray_tracing : require
 #extension GL_GOOGLE_include_directive : require
 
-// switch between Heitz's blue-noise and PCG here
-//#define USE_PCG
-#define USE_BLUE_RAND
+#define USE_PCG
+//#define USE_BLUE_RAND
+#include "rng/pcg.glsl"
+#include "rng/bluesobol.glsl"
 
-#include "common/bluenoise.glsl"
 #include "common/bsdf.glsl"
 #include "common/math.glsl"
 #include "common/onb.glsl"
-#include "common/pcg.glsl"
-#include "common/traceray.glsl"
-#include "shared_rt_stage/hitpayload.glsl"
-#include "shared_rt_stage/trimeshlayout.glsl"
+#include "rtcommon/traceray.glsl"
+#include "rtcommon/raypayload.glsl"
+#include "rtcommon/trimeshlayout.glsl"
+#include "rtcommon/emitterlayout.glsl"
 
-#define USE_MIS
-//#define USE_NEE_ONLY
-
-layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;
-layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
+layout(location = RAY_PRD_LOCATION) rayPayloadNV CommonRayPayload prd;
+layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV CommonShadowRayPayload shadow_prd;
 
 layout(set = 0, binding = 0) uniform accelerationStructureNV tlas;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
@@ -30,18 +27,57 @@ layout(set = 0, binding = 2) uniform CameraProperties
     mat4 m_inv_view;
     mat4 m_inv_proj;
     int m_is_moved;
-	float _padding[3];
+    int m_frame_count;
 } cam;
 layout(set = 0, binding = 3) uniform sampler2D envmap;
 
+// set 1: triangle attributes
 DECLARE_TRIMESH_LAYOUT(1)
-DECLARE_EMITTER_LAYOUT(2)
+
+// set 2: emitter sampling information
+DECLARE_EMITTER_LAYOUT(2, envmap)
+
+// set 3: bluenoise sampler
 DECLARE_BLUENOISE_LAYOUT(3)
 
-Ray
-generate_primary_ray(const vec2 samples)
+#define FAST_PT_PRIMITIVE 0
+#define FAST_PT_NEE_ONLY 1
+#define FAST_PT_MIS 2
+
+#define STAGE_NEE 0
+#define STAGE_BRDF_SAMPLING 1
+
+float
+compute_mi_weight(const float brdf_pdf,
+                  const float emitter_pdf,
+                  const int mode,
+                  const int stage)
 {
-    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + samples;
+    if (mode == FAST_PT_PRIMITIVE)
+    {
+		return stage == STAGE_NEE ? 0.0f : 1.0f;
+    }
+    else if (mode == FAST_PT_NEE_ONLY)
+    {
+        return stage == STAGE_NEE ? 1.0f : 0.0f;
+    }
+    else // mode == MIS
+    {
+        if (stage == STAGE_NEE)
+        {
+            return emitter_pdf / (emitter_pdf + brdf_pdf);
+        }
+        else
+        {
+            return brdf_pdf / (emitter_pdf + brdf_pdf);
+        }
+    }
+}
+
+Ray
+generate_primary_ray()
+{
+    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + vec2(0.5f);
     const vec2 ndc = pixel_center / vec2(gl_LaunchSizeNV.xy);
     const vec2 d = ndc * 2 - 1;
 
@@ -49,205 +85,8 @@ generate_primary_ray(const vec2 samples)
     const vec3 lookat = (cam.m_inv_proj * vec4(d.x, d.y, 1, 1)).xyz;
     const vec3 direction = (cam.m_inv_view * vec4(normalize(lookat), 0)).xyz;
 
-    Ray result;
-    result.m_origin = origin;
-    result.m_tmin = DEFAULT_TMIN;
-    result.m_direction = normalize(direction);
-    result.m_tmax = DEFAULT_TMAX;
-
+    Ray result = Ray_create(origin, normalize(direction));
     return result;
-}
-
-float
-mi_weight(const float pdf1,
-          const float pdf2)
-{
-    return pdf1 / (pdf1 + pdf2);
-}
-
-bool
-connect_emitter_sample(out vec3 weighted_contrib,
-                       const vec3 position,
-                       const vec3 snormal,
-                       const vec3 gnormal,
-                       const vec3 incoming,
-                       const Material material,
-                       const EmitterSample emitter_sample)
-{
-    #if defined(USE_MIS) || defined(USE_NEE_ONLY)
-    if (emitter_sample.m_flag == EMITTER_GEOMETRY)
-    {
-        const vec3 s_to_e = emitter_sample.m_position - position; // surface to emitter
-        const float sqr_length = dot(s_to_e, s_to_e);
-        const float len = sqrt(sqr_length);
-        const vec3 norm_s_to_e = s_to_e / len;
-
-        // check cosine(s_to_e) * cosine(e_to_s)
-        const float cos_s2e = dot(norm_s_to_e, snormal);
-        const float cos_e2s = dot(norm_s_to_e, emitter_sample.m_gnormal);
-        const float cos_cos = abs(cos_s2e * cos_e2s);
-        if (cos_cos <= SMALL_VALUE) { return false; }
-
-        // make sure that incoming and outgoing are not being "sampled" under the surface
-        if (cos_s2e * dot(norm_s_to_e, prd.m_gnormal) < 0.0f)
-        {
-            return false;
-        }
-
-        // test shadow ray
-        Ray shadow_ray = Ray_create(position, s_to_e, DEFAULT_TMIN, 1.0f - DEFAULT_TMIN);
-        is_intersect = true;
-        trace_shadow_ray(shadow_ray, tlas, 1);
-        if (is_intersect) { return false; }
-
-        // prepare to evaluate material
-        Onb onb = Onb_create(snormal);
-        const vec3 bsdf_local_incoming = Onb_to_local(onb, incoming);
-        const vec3 bsdf_local_outgoing = Onb_to_local(onb, norm_s_to_e);
-
-        // if evaluation is unsuccessful, let's return
-        vec3 bsdf_val;
-        float bsdf_pdf_w; // pdf in solid angle domain
-        if (!Material_eval(bsdf_val, bsdf_pdf_w, material, bsdf_local_incoming, bsdf_local_outgoing))
-        {
-            return false;
-        }
-
-        // compute mis weight
-        #ifdef USE_MIS
-        // compute bsdf pdf in area domain from solid angle domain
-        const float bsdf_pdf_a = bsdf_pdf_w * abs(cos_e2s) / sqr_length;
-        const float mis_weight = mi_weight(emitter_sample.m_pdf, bsdf_pdf_a);
-        #elif defined(USE_NEE_ONLY)
-        const float mis_weight = 1.0f;
-        #endif
-
-        const float geometry_term = cos_cos / sqr_length;
-
-        // compute result
-        weighted_contrib = mis_weight * bsdf_val * geometry_term * emitter_sample.m_emission / emitter_sample.m_pdf;
-        return true;
-    }
-    #endif
-
-    return false;
-}
-
-vec3
-li(Ray ray,
-   const int sample_index)
-{
-    EmitterSample emitter_sample = sample_emitter(rand2());
-
-    vec3 radiance = vec3(0.0f);
-    vec3 importance = vec3(1.0f);
-
-    vec2 samples = rand2();
-    float next_sample = rand();
-
-    // trace ray
-    trace_ray(ray, tlas, 0);
-
-    int path_length = 3;
-    float prev_bsdf_pdf_w = 0.0f;
-    for (int i = 0; i < path_length; i++)
-    {
-        // note m_direction is either from Material_cos_sample or generate_primary_ray
-        // therefore, it is always normalized
-        const vec3 incoming = -ray.m_direction;
-
-        // add radiance from envmap
-        if (prd.m_t < 0)
-        {
-            // fetch emissive value from envmap
-            const vec2 latlong_texcoord = panorama_from_world(ray.m_direction);
-            const vec3 emission = texture(envmap, latlong_texcoord).xyz;
-            radiance += importance * emission;
-            break;
-        }
-        else if (length(prd.m_material.m_emission) > 0.0f)
-        {
-            // we would not weight directly seen emitters
-            if (i > 0)
-            {            
-                // hit shape with emissive value
-                const float light_sampling_pdf_a = geometry_emitter_pdf(prd.m_instance_id, prd.m_face_id, prd.m_face_area);
-                const float bsdf_sampling_pdf_a = prev_bsdf_pdf_w * abs(dot(prd.m_gnormal, incoming)) / sqr(prd.m_t);
-                #ifdef USE_MIS
-                const float mis_weight = mi_weight(bsdf_sampling_pdf_a, light_sampling_pdf_a);
-                #elif defined(USE_NEE_ONLY)
-                const float mis_weight = 0.0f;
-                #else
-                const float mis_weight = 1.0f;
-                #endif
-                radiance += mis_weight * importance * prd.m_material.m_emission;
-            }
-            else
-            {
-                radiance += importance * prd.m_material.m_emission;
-            }
-        }
-
-        // compute position
-        const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
-
-        if (i <= path_length - 2)
-        {
-			// compute contribution from next event estimation weighted by mis weight
-			vec3 nee_contrib;
-            if (connect_emitter_sample(nee_contrib, position, prd.m_snormal, prd.m_gnormal, incoming, prd.m_material, emitter_sample))
-            {
-				radiance += importance * nee_contrib;
-            }
-		}
-
-        // since the code after this will sample the next direction and trace for next bounce
-        // we stop here
-        if (i == path_length - 1)
-        {
-            break;
-        }
-
-        // generate outgoing direction
-        Onb onb = Onb_create(prd.m_snormal);
-        const vec3 local_incoming = Onb_to_local(onb, incoming);
-        vec3 local_outgoing;
-        vec3 bsdf_cos_contrib;
-        float bsdf_pdf_w;
-        const bool sample_success = Material_cos_sample(local_outgoing, // out
-                                                        bsdf_cos_contrib, // out
-                                                        bsdf_pdf_w, // out
-                                                        prd.m_material,
-                                                        local_incoming,
-                                                        samples,
-                                                        next_sample);
-        const vec3 outgoing = Onb_to_world(onb, local_outgoing);
-
-        // break if could not sample
-        if (!sample_success) { break; }
-
-        // prevent light leak but introduce black fringe
-        if (local_outgoing.y * dot(outgoing, prd.m_gnormal) < 0.0f || local_incoming.y * dot(incoming, prd.m_gnormal) < 0.0f)
-        {
-            break;
-        }
-
-        // update importance for the next bounce (veach thesis page 158, figure 5.6)
-        importance *= bsdf_cos_contrib;
-
-        // update next_samples
-        samples = vec2(next_sample, rand());
-        next_sample = rand();
-        prev_bsdf_pdf_w = bsdf_pdf_w;
-
-        // update ray
-        ray.m_origin = position;
-        ray.m_direction = outgoing;
-
-        // and trace
-        trace_ray(ray, tlas, 0);
-    }
-    return radiance;
 }
 
 void
@@ -264,19 +103,156 @@ main()
         num_spp = accumulated_radiance_and_num_spp.w;
     }
 
-    // init rng
-    srand(uvec2(gl_LaunchIDNV), uvec2(gl_LaunchSizeNV), uint(num_spp));
+    int num_path_vertices = 3;
 
-    float sum = 0.0f;
+    // mode
+    int mode = FAST_PT_MIS;
+	//int mode = FAST_PT_PRIMITIVE;
 
-    // trace ray based on camera properties
-    Ray initial_ray = generate_primary_ray(rand2());
+	// init rng
+	RngState rng_state = srand(uvec2(gl_LaunchIDNV),
+							   uvec2(gl_LaunchSizeNV),
+							   uint(cam.m_frame_count));
 
-    // estimate the radiance and accumulate it.
-    vec3 estimated_radiance = li(initial_ray, int(num_spp));
+	// result
+    vec3 direct_light_estimate = vec3(0.0f);
+    vec3 indirect_light_estimate = vec3(0.0f);
+    vec3 importance = vec3(1.0f);
+
+    //  attributes from prev vertices
+    Ray ray;
+    vec3 position;
+    vec3 gnormal;
+    vec3 snormal;
+    vec2 texcoord;
+    float triangle_area;
+    Material material;
+    Onb onb;
+
+    for (int i_bounce = 0; i_bounce < num_path_vertices; i_bounce++)
+    {
+		const vec3 local_incoming = Onb_to_local(onb, -ray.m_direction);
+
+        // do next event estimation
+        if (i_bounce != 0 && (mode == FAST_PT_MIS || mode == FAST_PT_NEE_ONLY)) // we do not do nee with camera vertex
+        {
+			// sample emitter
+			const vec2 samples = rand2(rng_state);
+            float emitter_pdf;
+            float emitter_jacobian;
+            int emitter_type;
+            Ray shadow_ray;
+            const vec3 emitter_contrib = sample_emitter(emitter_pdf, shadow_ray, emitter_type, emitter_jacobian, position, snormal, samples);
+            const vec3 to_emitter = shadow_ray.m_direction;
+
+            // do visibility test
+			shadow_prd.m_visibility = 0.0f;
+			trace_shadow_ray(shadow_ray, tlas, 1);
+			const float visibility = shadow_prd.m_visibility;
+
+            // compute brdf term
+            float brdf_pdf;
+			const vec3 local_to_emitter = Onb_to_local(onb, to_emitter);
+			const vec3 brdf_term = Material_eval(brdf_pdf, material, local_incoming, local_to_emitter);
+            const float cosine_term = abs(local_to_emitter.y);
+
+            // update pdf
+            brdf_pdf = emitter_jacobian * brdf_pdf;
+
+            // estimate nee
+            vec3 nee_estimate = importance * brdf_term * cosine_term * emitter_contrib * visibility;
+
+            // compute weight
+            const float weight = compute_mi_weight(brdf_pdf, emitter_pdf, mode, STAGE_NEE);
+
+            // accumulate weighted estimate
+            const vec3 weighted_estimate = importance * nee_estimate * weight;
+            const bool weighted_estimate_nan = any(isnan(weighted_estimate));
+            if (i_bounce == 1) direct_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+            if (i_bounce > 1) indirect_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+        }
+
+        // generate ray to next bounce
+        float brdf_sampling_pdf_w;
+        if (i_bounce == 0)
+        {
+        	// from camera generate primary ray
+		    ray = generate_primary_ray();
+        }
+        else
+        {
+            // sample next direction
+			const vec2 samples = rand2(rng_state);
+            vec3 local_outgoing;
+            importance *= Material_cos_sample(local_outgoing, brdf_sampling_pdf_w, material, local_incoming, samples);
+
+            // compute next position and direction
+	        const vec3 next_position = ray.m_origin + ray.m_direction * prd.m_t; 
+        	const vec3 next_direction = Onb_to_world(onb, local_outgoing);
+
+            // discard sample if sampled direction goes under the surface
+            if (dot(next_direction, gnormal) * local_outgoing.y <= 0.0f) break;
+
+        	ray = Ray_create(next_position, next_direction);
+        }
+
+        // trace ray and extract hit information
+		trace_ray(ray, tlas, 0);
+        const bool is_intersect_surface = prd.m_t > 0.0f;
+        if (is_intersect_surface) // intersect surface
+        {
+        	// extract hit information
+    		extract_hit_info(position, snormal, gnormal, texcoord, triangle_area, 
+    						 prd.m_instance_id, prd.m_primitive_id, prd.m_barycoord);
+
+			// decode material
+			const uint material_id = material_ids_arrays[prd.m_instance_id].material_ids[prd.m_primitive_id];
+			material = mat.materials[material_id];
+			decode_material(material, texcoord);
+
+			// correct normals
+			gnormal = gnormal * sign(dot(gnormal, -ray.m_direction));
+			snormal = snormal * sign(dot(gnormal, snormal));
+
+			// create onb
+			onb = Onb_create(snormal);
+        }
+
+        // evaluate mis if we hit emissive objects emission
+        if (is_intersect_surface)
+        {
+            const vec3 emission = material.m_emission;
+            if (i_bounce == 0) { direct_light_estimate += material.m_emission; continue; }
+
+			const float emitter_pdf_a = geometry_emitter_pdf(prd.m_instance_id, prd.m_primitive_id, triangle_area);
+			const float brdf_pdf_a = brdf_sampling_pdf_w * dot(gnormal, -ray.m_direction) / sqr(prd.m_t);
+            const float weight = compute_mi_weight(brdf_pdf_a, emitter_pdf_a, mode, STAGE_BRDF_SAMPLING);
+            const vec3 weighted_estimate = importance * weight * emission;
+            const bool weighted_estimate_nan = any(isnan(weighted_estimate));
+            if (i_bounce == 1) direct_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+            if (i_bounce > 1) indirect_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+        }
+        else // intersect envmap
+        {
+            // fetch emissive value from envmap
+            const vec2 latlong_texcoord = panorama_from_world(ray.m_direction);
+            const vec3 emission = texture(envmap, latlong_texcoord).xyz;
+            if (i_bounce == 0) { break; }
+
+            const float brdf_pdf = brdf_sampling_pdf_w;
+            const float emitter_pdf = envmap_emitter_pdf(latlong_texcoord);
+            const float weight = compute_mi_weight(brdf_pdf, emitter_pdf, mode, STAGE_BRDF_SAMPLING);
+            const vec3 weighted_estimate = importance * weight * emission;
+            const bool weighted_estimate_nan = any(isnan(weighted_estimate));
+            if (i_bounce == 1) direct_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+            if (i_bounce > 1) indirect_light_estimate += weighted_estimate_nan ? vec3(0.0f) : weighted_estimate;
+            break;
+        }
+    }
 
     // accumulate the sample
-    accumulated_radiance = ((accumulated_radiance * num_spp) + estimated_radiance) / (num_spp + 1.0f);
+    vec3 radiance = direct_light_estimate + indirect_light_estimate;
+    accumulated_radiance = ((accumulated_radiance * num_spp) + radiance) / (num_spp + 1.0f);
 
     // determine whether we should temrinate or not
     imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulated_radiance, num_spp + 1.0f));

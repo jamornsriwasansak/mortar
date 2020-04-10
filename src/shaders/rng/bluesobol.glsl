@@ -1,5 +1,17 @@
 #extension GL_EXT_shader_8bit_storage : require
 
+/*
+A slight modification from
+
+A sampler code from
+https://eheitzresearch.wordpress.com/762-2/
+
+A Low-Discrepancy Sampler that Distributes Monte Carlo Errors as a Blue Noise in Screen Space
+Eric Heitz, Laurent Belcour, Victor Ostromoukhov, David Coeurjolly and Jean-Claude Iehl
+
+ACM SIGGRAPH Talk 2019
+*/
+
 float blue_rand(uvec2 pixel_index, int sampleIndex, int sampleDimension);
 vec2 blue_rand2(uvec2 pixel_index, int sampleIndex, ivec2 sampleDimension);
 

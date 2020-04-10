@@ -4,13 +4,14 @@
 
 //#define USE_PCG
 #define USE_BLUE_RAND
-#include "common/pcg.glsl"
-#include "common/bluenoise.glsl"
+#include "rng/pcg.glsl"
+#include "rng/bluesobol.glsl"
 
-#include "renderer/rtao/hitpayload.glsl"
 #include "common/mapping.glsl"
-#include "common/traceray.glsl"
 #include "common/onb.glsl"
+#include "rtcommon/raypayload.glsl"
+#include "rtcommon/trimeshlayout.glsl"
+#include "rtcommon/traceray.glsl"
 
 layout(set = 0, binding = 0) uniform accelerationStructureNV tlas;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
@@ -21,19 +22,21 @@ layout(set = 0, binding = 2) uniform CameraProperties
     mat4 m_inv_view;
     mat4 m_inv_proj;
     int m_is_moved;
-	float _padding[3];
+    int m_frame_count;
 }
 cam;
 
-DECLARE_BLUENOISE_LAYOUT(3)
+DECLARE_TRIMESH_LAYOUT(1)
 
-layout(location = RAY_PRD_LOCATION) rayPayloadNV HitPayload prd;
-layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV bool is_intersect;
+DECLARE_BLUENOISE_LAYOUT(2)
+
+layout(location = RAY_PRD_LOCATION) rayPayloadNV CommonRayPayload prd;
+layout(location = SHADOW_RAY_PRD_LOCATION) rayPayloadNV CommonShadowRayPayload shadow_prd;
 
 Ray
 generate_primary_ray()
 {
-    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + rand2();
+    const vec2 pixel_center = vec2(gl_LaunchIDNV.xy) + vec2(0.5f);
     const vec2 ndc = pixel_center / vec2(gl_LaunchSizeNV.xy);
     const vec2 d = ndc * 2 - 1;
 
@@ -48,50 +51,57 @@ void
 main() 
 {
     // if camera is not moved reuse accumulated radiance
-    float accumulated_value = 0.0f;
+    vec3 accumulated_value = vec3(0.0f);
     float num_spp = 0.0f;
 
     if (cam.m_is_moved == 0)
     {
         vec4 accumulated_value_and_num_spp = imageLoad(image, ivec2(gl_LaunchIDNV.xy));
-        accumulated_value = accumulated_value_and_num_spp.x;
+        accumulated_value = accumulated_value_and_num_spp.xyz;
         num_spp = accumulated_value_and_num_spp.w;
     }
 
     // init rng
-    srand(uvec2(gl_LaunchIDNV), uvec2(gl_LaunchSizeNV), uint(num_spp));
+    RngState rng_state = srand(uvec2(gl_LaunchIDNV),
+                               uvec2(gl_LaunchSizeNV),
+                               uint(cam.m_frame_count));
 
 	// trace ray based on camera properties
 	Ray ray = generate_primary_ray();
 	trace_ray(ray, tlas, 0);
 
 	// hit envmap
+    vec3 value = vec3(0.0f);
 	if (prd.m_t < 0)
 	{
         // accumulate zero value
-		accumulated_value = ((accumulated_value * num_spp) + 0.0f) / (num_spp + 1.0f);
 	}
     else
     {
 		// compute position
-		const vec3 position = ray.m_direction * prd.m_t + ray.m_origin;
+		vec3 position, snormal, gnormal;
+        vec2 texcoord;
+        float triangle_area;
+
+		// extract hit information
+		extract_hit_info(position, snormal, gnormal, texcoord, triangle_area, 
+						 prd.m_instance_id, prd.m_primitive_id, prd.m_barycoord);
 
 		// generate orthonormal basis and get local incoming direction
-		const Onb onb = Onb_create(prd.m_normal);
+		const Onb onb = Onb_create(snormal * sign(dot(snormal, -ray.m_direction)));
 
 		// sample next direction
-		const vec3 local_outgoing = cosine_hemisphere_from_square(rand2());
+		const vec3 local_outgoing = cosine_hemisphere_from_square(rand2(rng_state));
 		const vec3 outgoing = Onb_to_world(onb, local_outgoing); 
 
 		// check shadow ray
 		Ray shadow_ray = Ray_create(position, outgoing);
-		is_intersect = true;
+        shadow_prd.m_visibility = 0.0f;
 		trace_shadow_ray(shadow_ray, tlas, 1);
 		
-		float visible = 1.0f - float(is_intersect);
-
-		// accumulate the sample
-		accumulated_value = ((accumulated_value * num_spp) + visible) / (num_spp + 1.0f);
+		value = vec3(shadow_prd.m_visibility);
     }
-	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(vec3(accumulated_value), num_spp + 1.0f));
+	accumulated_value = ((accumulated_value * num_spp) + value) / (num_spp + 1.0f);
+
+	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulated_value, num_spp + 1.0f));
 }
