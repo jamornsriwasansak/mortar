@@ -27,7 +27,7 @@ In its current early stage, it supports:
 * FPS-style camera for traversing the scene
 
 ### Dependencies
-* vulkan sdk
+* vulkan sdk >= 1.1.126 (Note: don't use vulkan 1.2. Wait for the official driver first.)
 * glslang (included as a submodule)
 * tinyobjloader (included as a submodule)
 * glfw (included as a submodule)
