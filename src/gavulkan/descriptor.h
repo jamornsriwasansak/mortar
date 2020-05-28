@@ -14,17 +14,17 @@ struct DescriptorSetLayoutInfo
 
 struct DescriptorSetsBuilder
 {
-	size_t																		m_set = -1;
+	size_t																			m_set = -1;
 
-	std::vector<vk::DescriptorSet>												m_vk_descriptor_sets;
-	size_t																		m_num_swapchain_frames;
+	std::vector<vk::DescriptorSet>													m_vk_descriptor_sets;
+	size_t																			m_num_swapchain_frames;
 
-	std::vector<std::unique_ptr<vk::DescriptorBufferInfo>>						m_descriptor_buffer_infos;
-	std::vector<std::unique_ptr<vk::DescriptorBufferInfo[]>>					m_descriptor_buffer_info_arrays;
-	std::vector<std::unique_ptr<vk::DescriptorImageInfo>>						m_descriptor_image_infos;
-	std::vector<std::unique_ptr<vk::DescriptorImageInfo[]>>						m_descriptor_image_info_arrays;
-	std::vector<std::unique_ptr<vk::WriteDescriptorSetAccelerationStructureNV>>	m_write_descriptor_set_accel_struct;
-	std::vector<vk::WriteDescriptorSet>											m_write_descriptor_sets;
+	std::vector<std::unique_ptr<vk::DescriptorBufferInfo>>							m_descriptor_buffer_infos;
+	std::vector<std::unique_ptr<vk::DescriptorBufferInfo[]>>						m_descriptor_buffer_info_arrays;
+	std::vector<std::unique_ptr<vk::DescriptorImageInfo>>							m_descriptor_image_infos;
+	std::vector<std::unique_ptr<vk::DescriptorImageInfo[]>>							m_descriptor_image_info_arrays;
+	std::vector<std::unique_ptr<vk::WriteDescriptorSetAccelerationStructureKHR>>	m_write_descriptor_set_accel_struct;
+	std::vector<vk::WriteDescriptorSet>												m_write_descriptor_sets;
 
 	DescriptorSetsBuilder(const size_t set,
 						  const DescriptorSetLayoutInfo * descriptor_set_layout_info,
@@ -333,12 +333,12 @@ struct DescriptorSetsBuilder
 
 	DescriptorSetsBuilder &
 	set_accel_struct(const size_t i_binding,
-					 const vk::AccelerationStructureNV & accel_nv)
+					 const vk::AccelerationStructureKHR & accel)
 	{
-		auto write_descriptor_set_accel = std::make_unique<vk::WriteDescriptorSetAccelerationStructureNV>();
+		auto write_descriptor_set_accel = std::make_unique<vk::WriteDescriptorSetAccelerationStructureKHR>();
 		{
 			write_descriptor_set_accel->setAccelerationStructureCount(1);
-			write_descriptor_set_accel->setPAccelerationStructures(&accel_nv);
+			write_descriptor_set_accel->setPAccelerationStructures(&accel);
 		}
 
 		for (size_t i_frame = 0; i_frame < m_num_swapchain_frames; i_frame++)
@@ -349,7 +349,7 @@ struct DescriptorSetsBuilder
 				write_descriptor_set.setDstBinding(static_cast<uint32_t>(i_binding));
 				write_descriptor_set.setDstArrayElement(0);
 				write_descriptor_set.setDescriptorCount(1);
-				write_descriptor_set.setDescriptorType(vk::DescriptorType::eAccelerationStructureNV);
+				write_descriptor_set.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR);
 				write_descriptor_set.setPBufferInfo(nullptr);
 				write_descriptor_set.setPImageInfo(nullptr);
 				write_descriptor_set.setPNext(write_descriptor_set_accel.get());

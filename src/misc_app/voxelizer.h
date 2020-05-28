@@ -338,6 +338,6 @@ struct Voxelizer
 		result.m_data = std::move(voxels);
 		result.m_resolution = voxel_resolution;
 
-		return std::move(result);
+		return result;
 	}
 };

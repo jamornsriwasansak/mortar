@@ -37,7 +37,7 @@ struct BlueNoiseRng
 
 		Buffer result(sequence,
 					  vk::MemoryPropertyFlagBits::eDeviceLocal,
-					  vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eRayTracingNV);
-		return std::move(result);
+					  vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eRayTracingKHR);
+		return result;
 	}
 };

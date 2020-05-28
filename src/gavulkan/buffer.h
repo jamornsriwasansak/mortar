@@ -52,16 +52,24 @@ struct Buffer
 		m_vk_buffer = Core::Inst().m_vk_device->createBufferUnique(vertex_buffer_ci);
 
 		// get requirement
-		vk::MemoryRequirements vertex_mem_requirements = Core::Inst().m_vk_device->getBufferMemoryRequirements(*m_vk_buffer);
+		vk::MemoryRequirements mem_req = Core::Inst().m_vk_device->getBufferMemoryRequirements(*m_vk_buffer);
 		const uint32_t mem_type = find_mem_type(Core::Inst().m_vk_physical_device,
-												vertex_mem_requirements.memoryTypeBits,
+												mem_req.memoryTypeBits,
 												mem_prop_flags);
+
+		// just in case, device address is requested in buffer usage flags
+		vk::MemoryAllocateFlagsInfo mem_alloc_flags_info;
+		mem_alloc_flags_info.setFlags(vk::MemoryAllocateFlagBits::eDeviceAddress);
 
 		// alloc mem
 		vk::MemoryAllocateInfo mem_ai = {};
 		{
-			mem_ai.setAllocationSize(vertex_mem_requirements.size);
+			mem_ai.setAllocationSize(mem_req.size);
 			mem_ai.setMemoryTypeIndex(mem_type);
+			if (buffer_usage_flags & vk::BufferUsageFlagBits::eShaderDeviceAddress)
+			{
+				mem_ai.setPNext(&mem_alloc_flags_info);
+			}
 		}
 		m_vk_memory = Core::Inst().m_vk_device->allocateMemoryUnique(mem_ai);
 
@@ -200,7 +208,7 @@ struct Buffer
 
 		THROW_ASSERT(false,
 					 "get_index_type could not interpret a buffer with an unknown element size");
-		return vk::IndexType::eNoneNV;
+		return vk::IndexType::eNoneKHR;
 	}
 
 	size_t

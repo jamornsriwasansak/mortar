@@ -36,12 +36,15 @@ struct ShaderUniformInfo
 	vk::DescriptorType
 	get_descriptor_type() const
 	{
+		// first we determine with type
 		if (m_type == "sampler2D") return vk::DescriptorType::eCombinedImageSampler;
 		if (m_type == "image2D") return vk::DescriptorType::eStorageImage;
 		if (m_type == "image3D") return vk::DescriptorType::eStorageImage;
 		if (m_type == "uimage2D") return vk::DescriptorType::eStorageImage;
 		if (m_type == "uimage3D") return vk::DescriptorType::eStorageImage;
-		if (m_type == "accelerationStructureNV") return vk::DescriptorType::eAccelerationStructureNV;
+		if (start_with(m_type, "accelerationStructure")) return vk::DescriptorType::eAccelerationStructureKHR;
+
+		// else we guess with mem_type
 		if (m_mem_type == "buffer") return vk::DescriptorType::eStorageBuffer;
 		if (m_mem_type == "uniform") return vk::DescriptorType::eUniformBuffer;
 		THROW("unknown descriptor type type : " + m_type + ", mem_type : " + m_mem_type);
@@ -112,33 +115,33 @@ struct Shader
 		return stage_ci;
 	}
 
-	vk::RayTracingShaderGroupCreateInfoNV
+	vk::RayTracingShaderGroupCreateInfoKHR
 	get_raytracing_shader_group_ci(const uint32_t i_shader) const
 	{
-		vk::RayTracingShaderGroupCreateInfoNV rsg_ci;
-		rsg_ci.setAnyHitShader(VK_SHADER_UNUSED_NV);
-		rsg_ci.setClosestHitShader(VK_SHADER_UNUSED_NV);
-		rsg_ci.setGeneralShader(VK_SHADER_UNUSED_NV);
-		rsg_ci.setIntersectionShader(VK_SHADER_UNUSED_NV);
+		vk::RayTracingShaderGroupCreateInfoKHR rsg_ci;
+		rsg_ci.setAnyHitShader(VK_SHADER_UNUSED_KHR);
+		rsg_ci.setClosestHitShader(VK_SHADER_UNUSED_KHR);
+		rsg_ci.setGeneralShader(VK_SHADER_UNUSED_KHR);
+		rsg_ci.setIntersectionShader(VK_SHADER_UNUSED_KHR);
 
-		if (m_vk_shader_stage == vk::ShaderStageFlagBits::eClosestHitNV)
+		if (m_vk_shader_stage == vk::ShaderStageFlagBits::eClosestHitKHR)
 		{
-			rsg_ci.setType(vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup);
+			rsg_ci.setType(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup);
 			rsg_ci.setClosestHitShader(i_shader);
 		}
-		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eAnyHitNV)
+		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eAnyHitKHR)
 		{
-			rsg_ci.setType(vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup);
+			rsg_ci.setType(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup);
 			rsg_ci.setAnyHitShader(i_shader);
 		}
-		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eRaygenNV)
+		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eRaygenKHR)
 		{
-			rsg_ci.setType(vk::RayTracingShaderGroupTypeNV::eGeneral);
+			rsg_ci.setType(vk::RayTracingShaderGroupTypeKHR::eGeneral);
 			rsg_ci.setGeneralShader(i_shader);
 		}
-		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eMissNV)
+		else if (m_vk_shader_stage == vk::ShaderStageFlagBits::eMissKHR)
 		{
-			rsg_ci.setType(vk::RayTracingShaderGroupTypeNV::eGeneral);
+			rsg_ci.setType(vk::RayTracingShaderGroupTypeKHR::eGeneral);
 			rsg_ci.setGeneralShader(i_shader);
 		}
 		else
@@ -530,10 +533,10 @@ private:
 			{vk::ShaderStageFlagBits::eFragment, EShLanguage::EShLangFragment},
 			{vk::ShaderStageFlagBits::eGeometry, EShLanguage::EShLangGeometry},
 			{vk::ShaderStageFlagBits::eCompute, EShLanguage::EShLangCompute},
-			{vk::ShaderStageFlagBits::eRaygenNV, EShLanguage::EShLangRayGenNV},
-			{vk::ShaderStageFlagBits::eAnyHitNV, EShLanguage::EShLangAnyHitNV},
-			{vk::ShaderStageFlagBits::eClosestHitNV, EShLanguage::EShLangClosestHitNV},
-			{vk::ShaderStageFlagBits::eMissNV, EShLanguage::EShLangMissNV},
+			{vk::ShaderStageFlagBits::eRaygenKHR, EShLanguage::EShLangRayGen},
+			{vk::ShaderStageFlagBits::eAnyHitKHR, EShLanguage::EShLangAnyHit},
+			{vk::ShaderStageFlagBits::eClosestHitKHR, EShLanguage::EShLangClosestHit},
+			{vk::ShaderStageFlagBits::eMissKHR, EShLanguage::EShLangMiss},
 		};
 
 		const EShLanguage esh_stage = map_from_vk_stage.at(vk_shader_stage);
@@ -543,7 +546,6 @@ private:
 													 EShMessages::EShMsgDebugInfo);
 		const std::string source = load_file(path);
 		const char * source_c_str = source.c_str();
-		const char * source_name_c_str = source_name.c_str();
 
 		glslang::TShader shader(esh_stage);
 		DirStackFileIncluder includer;

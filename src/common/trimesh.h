@@ -74,7 +74,7 @@ struct ImageStorage
 
 		// else load the image
 		m_image_index_from_path[{ path, alpha_path }] = m_images.size();
-		m_images.emplace_back(std::move(RgbaImage<uint8_t>(raw_image)),
+		m_images.emplace_back(RgbaImage<uint8_t>(raw_image),
 							  is_opaque);
 
 		// and return the index
@@ -88,10 +88,10 @@ struct ImageStorage
 		if (m_images.size() > 0) return;
 
 		std::vector<uint8_t> blank_image(4, 0);
-		m_images.emplace_back(std::move(RgbaImage<uint8_t>(blank_image.data(),
-														   uvec3(1u),
-														   vk::ImageTiling::eOptimal,
-														   RgbaImage<uint8_t>::RgbaUsageFlagBits)),
+		m_images.emplace_back(RgbaImage<uint8_t>(blank_image.data(),
+												 uvec3(1u),
+												 vk::ImageTiling::eOptimal,
+												 RgbaImage<uint8_t>::RgbaUsageFlagBits),
 							  false);
 		m_images[0].first.init_sampler();
 	}
@@ -539,7 +539,7 @@ struct TriangleMeshStorage
 		// create all basic buffers
 		std::shared_ptr<Buffer> position_and_u_buffer = std::make_shared<Buffer>(position_and_us,
 																				 vk::MemoryPropertyFlagBits::eDeviceLocal,
-																				 vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
+																				 vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress);
 		std::shared_ptr<Buffer> normal_and_v_buffer = std::make_shared<Buffer>(normal_and_vs,
 																			   vk::MemoryPropertyFlagBits::eDeviceLocal,
 																			   vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
@@ -559,7 +559,7 @@ struct TriangleMeshStorage
 			triangle_mesh->m_normal_and_v_buffer = normal_and_v_buffer;
 			triangle_mesh->m_index_buffer = std::make_shared<Buffer>(indices,
 																	 vk::MemoryPropertyFlagBits::eDeviceLocal,
-																	 vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
+																	 vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress);
 			triangle_mesh->m_material_id_buffer = std::make_shared<Buffer>(material_ids,
 																		   vk::MemoryPropertyFlagBits::eDeviceLocal,
 																		   vk::BufferUsageFlagBits::eStorageBuffer);

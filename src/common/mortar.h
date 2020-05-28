@@ -1,5 +1,7 @@
 #pragma once
 
+#define VK_ENABLE_BETA_EXTENSIONS
+
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
@@ -181,7 +183,6 @@ remove_line_comments(const std::string & str,
 	while (true)
 	{
 		size_t comment_pos = std::string::npos;
-		size_t comment_index = 0;
 		for (size_t i_comment = 0; i_comment < comment_strs.size(); i_comment++)
 		{
 			const size_t comment_i_pos = str.find(comment_strs[i_comment], prev_endline_pos);
@@ -284,6 +285,12 @@ tokenize(const std::string & str,
 	return result;
 }
 
+bool
+start_with(const std::string & str, const std::string & prefix)
+{
+	return str.rfind(prefix, 0) == 0;
+}
+
 template <typename T>
 constexpr
 const T
@@ -291,9 +298,6 @@ digit(const T num, const uint32_t i_digit)
 {
 	T p0 = 1;
 	for (size_t i = 0; i < i_digit; i++) p0 *= T(10);
-	const T p1 = p0 * T(10);
-	const T front_value_back = num;
-	const T value_back = num % p1;
 	const T value = num % p0;
 	return value;
 }
@@ -327,21 +331,3 @@ raw_ptrs(const std::vector<vk::UniqueHandle<T, U>> & ptrs,
 	}
 	return result;
 }
-
-
-// See https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/chap33.html#acceleration-structure
-struct VkGeometryInstanceNV
-{
-	/// Transform matrix, containing only the top 3 rows
-	float transform[12];
-	/// Instance index
-	uint32_t instanceId : 24;
-	/// Visibility mask
-	uint32_t mask : 8;
-	/// Index of the hit group which will be invoked when a ray hits the instance
-	uint32_t hitGroupId : 24;
-	/// Instance flags, such as culling
-	uint32_t flags : 8;
-	/// Opaque handle of the bottom-level acceleration structure
-	uint64_t accelerationStructureHandle;
-};

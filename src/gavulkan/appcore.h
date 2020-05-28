@@ -19,7 +19,9 @@ const std::vector<const char *> DeviceExtensions =
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 
 	// required by raytracing
-	VK_NV_RAY_TRACING_EXTENSION_NAME,
+	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+	VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+	VK_KHR_RAY_TRACING_EXTENSION_NAME,
 	VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
 	VK_KHR_MAINTENANCE3_EXTENSION_NAME,
 
@@ -50,7 +52,7 @@ struct Core
 	std::vector<vk::Image>						m_vk_swapchain_images;
 	std::vector<vk::UniqueImageView>			m_vk_swapchain_image_views;
 	vk::UniqueDescriptorPool					m_vk_descriptor_pool;
-	vk::PhysicalDeviceRayTracingPropertiesNV	m_vk_rt_properties;
+	vk::PhysicalDeviceRayTracingPropertiesKHR	m_vk_rt_properties;
 
 	static
 	Core &
@@ -276,9 +278,9 @@ private:
 	{
 		// vk version
 		m_vk_api_version = VkVersion;
-		m_vk_api_made_version = VK_MAKE_VERSION(digit(m_vk_api_version, 2),
-												digit(m_vk_api_version, 1),
-												digit(m_vk_api_version, 0));
+		m_vk_api_made_version = VK_MAKE_VERSION(digit<uint32_t>(m_vk_api_version, 2),
+												digit<uint32_t>(m_vk_api_version, 1),
+												digit<uint32_t>(m_vk_api_version, 0));
 
 		// init glfw3 and its windows
 		m_glfw_window = init_glfw3(resolution);
@@ -313,8 +315,8 @@ private:
 
 		// get properties for rt
 		auto properties = m_vk_physical_device.getProperties2<vk::PhysicalDeviceProperties2,
-															  vk::PhysicalDeviceRayTracingPropertiesNV>();
-		m_vk_rt_properties = properties.get<vk::PhysicalDeviceRayTracingPropertiesNV>();
+															  vk::PhysicalDeviceRayTracingPropertiesKHR>();
+		m_vk_rt_properties = properties.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
 
 		// find graphics queue
 		auto families_result = find_graphics_and_present_queue_families(m_vk_physical_device,
@@ -561,20 +563,18 @@ private:
 
 		// specify device features
 		vk::PhysicalDeviceFeatures device_features = {};
-		device_features.setSamplerAnisotropy(true);
-		device_features.setShaderInt64(true);
+		device_features.setSamplerAnisotropy(VK_TRUE);
+		device_features.setShaderInt64(VK_TRUE);
 
-		vk::PhysicalDeviceDescriptorIndexingFeatures device_indexing_features = {};
-		device_indexing_features.setShaderStorageBufferArrayNonUniformIndexing(true);
-		device_indexing_features.setRuntimeDescriptorArray(true);
-
-		vk::PhysicalDevice8BitStorageFeatures features8 = {};
-		features8.setStorageBuffer8BitAccess(true);
-		features8.setPNext(&device_indexing_features);
+		vk::PhysicalDeviceVulkan12Features device_vulkan12_features = {};
+		device_vulkan12_features.setBufferDeviceAddress(VK_TRUE);
+		device_vulkan12_features.setStorageBuffer8BitAccess(VK_TRUE);
+		device_vulkan12_features.setShaderStorageBufferArrayNonUniformIndexing(VK_TRUE);
+		device_vulkan12_features.setRuntimeDescriptorArray(VK_TRUE);
 
 		vk::PhysicalDeviceFeatures2 device_features2 = {};
 		device_features2.setFeatures(device_features);
-		device_features2.setPNext(&features8);
+		device_features2.setPNext(&device_vulkan12_features);
 
 		// setup create info for logical device
 		vk::DeviceCreateInfo device_ci = {};
@@ -589,7 +589,7 @@ private:
 		}
 		vk::UniqueDevice device = physical_device.createDeviceUnique(device_ci);
 
-		return std::move(device);
+		return device;
 	}
 
 	struct QueueFamiliesReturnType

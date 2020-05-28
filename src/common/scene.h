@@ -22,11 +22,11 @@ struct Scene
 	vec3								m_bbox_max;
 
 	Scene():
-		m_bbox_max(vec3(std::numeric_limits<float>::lowest())),
-		m_bbox_min(vec3(std::numeric_limits<float>::max())),
 		m_images_cache(std::make_shared<ImageStorage>()),
 		m_triangle_meshes_storage(),
-		m_envmap(true)
+		m_envmap(true),
+		m_bbox_min(vec3(std::numeric_limits<float>::max())),
+		m_bbox_max(vec3(std::numeric_limits<float>::lowest()))
 	{
 		m_triangle_meshes_storage.m_image_storage = m_images_cache;
 	}
@@ -68,7 +68,6 @@ struct Scene
 		// all shapes are emitters but shapes without emissive values will have sampling probability of zero
 		float sum = 0.0f;
 		const size_t num_shapes = m_triangle_instances.size();
-		const size_t num_envmap = 1;
 		const size_t num_emitters = get_num_emitters();
 		std::vector<float> top_level_pdf(num_emitters);
 		std::vector<float> top_level_cdf(num_emitters + 1);

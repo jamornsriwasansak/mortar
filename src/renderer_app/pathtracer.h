@@ -28,7 +28,7 @@ struct PathTracer
 		* ray gen
 		*/
 		Shader raygen_shader("shaders/renderer/pathtracer/pathtracer.rgen",
-							 vk::ShaderStageFlagBits::eRaygenNV);
+							 vk::ShaderStageFlagBits::eRaygenKHR);
 		raygen_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
 		raygen_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
 		raygen_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
@@ -45,13 +45,13 @@ struct PathTracer
 		* ray closest hit
 		*/
 		Shader raychit_shader("shaders/rtcommon/raytrace.rchit",
-							  vk::ShaderStageFlagBits::eClosestHitNV);
+							  vk::ShaderStageFlagBits::eClosestHitKHR);
 
 		/*
 		* ray anyhit
 		*/
 		Shader rayahit_shader("shaders/rtcommon/raytrace.rahit",
-							  vk::ShaderStageFlagBits::eAnyHitNV);
+							  vk::ShaderStageFlagBits::eAnyHitKHR);
 		rayahit_shader.m_uniforms_set.at({ 1, 0 })->m_num_descriptors = num_triangle_instances;
 		rayahit_shader.m_uniforms_set.at({ 1, 1 })->m_num_descriptors = num_triangle_instances;
 		rayahit_shader.m_uniforms_set.at({ 1, 2 })->m_num_descriptors = num_triangle_instances;
@@ -64,9 +64,9 @@ struct PathTracer
 		*/
 
 		Shader raymiss_shader("shaders/rtcommon/raytrace.rmiss",
-							  vk::ShaderStageFlagBits::eMissNV);
+							  vk::ShaderStageFlagBits::eMissKHR);
 		Shader shadow_raymiss_shader("shaders/rtcommon/rayshadow.rmiss",
-									 vk::ShaderStageFlagBits::eMissNV);
+									 vk::ShaderStageFlagBits::eMissKHR);
 
 		RayTracingPipeline rt_pipeline({ &raygen_shader,
 										 &raychit_shader,
@@ -74,7 +74,7 @@ struct PathTracer
 										 &raymiss_shader,
 										 &shadow_raymiss_shader });
 
-		return std::move(rt_pipeline);
+		return rt_pipeline;
 	}
 
 	GraphicsPipeline
@@ -89,7 +89,7 @@ struct PathTracer
 										  &final_frag_shader },
 										color_attachments,
 										depth_attachment);
-		return std::move(final_pipeline);
+		return final_pipeline;
 	}
 
 	void
@@ -190,7 +190,7 @@ struct PathTracer
 		*	command buffers
 		*/
 
-		auto & cmd_buffers = Core::Inst().create_swapchain_command_buffers(vk::QueueFlagBits::eGraphics);
+		auto cmd_buffers = Core::Inst().create_swapchain_command_buffers(vk::QueueFlagBits::eGraphics);
 		// loop over all different swapchain image views
 		for (size_t i = 0; i < Core::Inst().m_vk_swapchain_images.size(); i++)
 		{
@@ -206,9 +206,9 @@ struct PathTracer
 			cmd_buffer.begin(command_buffer_begin_info);
 
 			// ray tracing pipeline
-			cmd_buffer.bindPipeline(vk::PipelineBindPoint::eRayTracingNV,
-									*rt_pipeline.m_vk_pipeline);
-			cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingNV,
+			cmd_buffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,
+									rt_pipeline.m_vk_pipeline);
+			cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR,
 										  *rt_pipeline.m_vk_pipeline_layout,
 										  0,
 										  {
@@ -218,11 +218,12 @@ struct PathTracer
 											rt_descriptor_sets_3[i],
 										  },
 										  { });
-			cmd_buffer.traceRaysNV(rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_raygen_offset,
-								   rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_miss_offset, rt_pipeline.m_stride,
-								   rt_pipeline.sbt_vk_buffer(), rt_pipeline.m_hit_offset, rt_pipeline.m_stride,
-								   rt_pipeline.sbt_vk_buffer(), 0, 0,
-								   Extent.width, Extent.height, 1);
+
+			cmd_buffer.traceRaysKHR(rt_pipeline.m_sbt_raygen,
+									rt_pipeline.m_sbt_miss,
+									rt_pipeline.m_sbt_hit,
+									rt_pipeline.m_sbt_callable,
+									Extent.width, Extent.height, 1);
 
 			// draw ray tracing result
 			cmd_buffer.beginRenderPass(final_pipeline.get_render_pass_begin_info(i), vk::SubpassContents::eInline);

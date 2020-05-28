@@ -193,8 +193,8 @@ struct RgbaImage
 			  const vk::ImageUsageFlags & vk_image_usage_flags,
 			  const bool use_srgb = false,
 			  const bool can_copied_to_host = false):
-		m_resolution(resolution),
-		m_vk_image_layout(vk::ImageLayout::eUndefined)
+		m_vk_image_layout(vk::ImageLayout::eUndefined),
+		m_resolution(resolution)
 	{
 		// choose m_vk_format based on ScalarType
 		if constexpr (std::is_same<ScalarType, float>::value)
@@ -465,8 +465,8 @@ struct RgbaImage
 		os << "-1" << std::endl;
 
 		// else start writing the image
-		const int height = static_cast<int>(m_resolution.x);
-		const int width = static_cast<int>(m_resolution.y);
+		const int height = static_cast<int>(m_resolution.y);
+		const int width = static_cast<int>(m_resolution.x);
 		for (int y = height - 1; y >= 0; y--)
 			for (int x = 0; x < width; x++)
 				for (int c = 0; c < 3; c++)

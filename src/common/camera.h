@@ -38,10 +38,10 @@ struct FpsCamera
 			  const float fov_y,
 			  const float aspect_ratio):
 		m_origin(origin),
-		m_direction(normalize(lookat - origin)),
-		m_up(up),
 		m_fov_y(fov_y),
+		m_direction(normalize(lookat - origin)),
 		m_aspect_ratio(aspect_ratio),
+		m_up(up),
 		m_prev_cursor_pos(dvec2(0, 0)),
 		m_is_moved(false)
 	{

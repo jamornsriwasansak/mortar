@@ -10,13 +10,13 @@
 struct RayTracingPipeline
 {
 	vk::UniquePipelineLayout	m_vk_pipeline_layout;
-	vk::UniquePipeline			m_vk_pipeline;
+	vk::Pipeline				m_vk_pipeline;
 	DescriptorManager			m_descriptor_manager;
 	Buffer						m_sbt_buffer;
-	uint32_t					m_raygen_offset;
-	uint32_t					m_miss_offset;
-	uint32_t					m_hit_offset;
-	uint32_t					m_stride;
+	vk::StridedBufferRegionKHR	m_sbt_raygen;
+	vk::StridedBufferRegionKHR	m_sbt_miss;
+	vk::StridedBufferRegionKHR	m_sbt_hit;
+	vk::StridedBufferRegionKHR	m_sbt_callable;
 
 	RayTracingPipeline(const std::vector<const Shader *> & unsorted_shaders,
 					   const uint32_t recursion_depth = 1):
@@ -31,24 +31,49 @@ struct RayTracingPipeline
 																	   rt_shaders.m_closest_hit_shader,
 																	   rt_shaders.m_any_hit_shader,
 																	   recursion_depth);
-		m_sbt_buffer = create_sbt_buffer(*m_vk_pipeline, num_shader_groups);
 
 		// count hit shaders
 		uint32_t num_hit_shaders = 0;
 		num_hit_shaders += rt_shaders.m_any_hit_shader == nullptr ? 1 : 0;
 		num_hit_shaders += rt_shaders.m_closest_hit_shader == nullptr ? 1 : 0;
 
-		// compute all stride
+		// compute all size
 		const uint32_t shader_group_handle_size = Core::Inst().m_vk_rt_properties.shaderGroupHandleSize;
 		const uint32_t raygen_size = shader_group_handle_size;
 		const uint32_t miss_size = shader_group_handle_size * static_cast<uint32_t>(rt_shaders.m_miss_shaders.size());
 		const uint32_t hit_size = shader_group_handle_size * num_hit_shaders;
 
 		// set all offset
-		m_raygen_offset = 0;
-		m_miss_offset = m_raygen_offset + raygen_size;
-		m_hit_offset = m_miss_offset + miss_size;
-		m_stride = shader_group_handle_size;
+		vk::DeviceSize raygen_offset = 0;
+		vk::DeviceSize miss_offset = raygen_offset + raygen_size;
+		vk::DeviceSize hit_offset = miss_offset + miss_size;
+		vk::DeviceSize callable_offset = hit_offset + hit_size;
+
+		m_sbt_buffer = create_sbt_buffer(m_vk_pipeline, num_shader_groups);
+
+		m_sbt_raygen = vk::StridedBufferRegionKHR()
+			.setBuffer(*m_sbt_buffer.m_vk_buffer)
+			.setOffset(raygen_offset)
+			.setStride(m_sbt_buffer.m_element_size_in_bytes)
+			.setSize(m_sbt_buffer.size_in_bytes());
+
+		m_sbt_miss = vk::StridedBufferRegionKHR()
+			.setBuffer(*m_sbt_buffer.m_vk_buffer)
+			.setOffset(miss_offset)
+			.setStride(m_sbt_buffer.m_element_size_in_bytes)
+			.setSize(m_sbt_buffer.size_in_bytes());
+
+		m_sbt_hit = vk::StridedBufferRegionKHR()
+			.setBuffer(*m_sbt_buffer.m_vk_buffer)
+			.setOffset(hit_offset)
+			.setStride(m_sbt_buffer.m_element_size_in_bytes)
+			.setSize(m_sbt_buffer.size_in_bytes());
+
+		m_sbt_callable = vk::StridedBufferRegionKHR()
+			.setBuffer(*m_sbt_buffer.m_vk_buffer)
+			.setOffset(callable_offset)
+			.setStride(0)
+			.setSize(m_sbt_buffer.size_in_bytes());
 	}
 
 	uint32_t
@@ -76,10 +101,10 @@ struct RayTracingPipeline
 		m_vk_pipeline_layout = device->createPipelineLayoutUnique(pipelineLayoutCreateInfo);
 
 		std::vector<vk::PipelineShaderStageCreateInfo> shader_stages;
-		std::vector<vk::RayTracingShaderGroupCreateInfoNV> shader_groups;
+		std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_groups;
 
 		// raygen
-		vk::RayTracingShaderGroupCreateInfoNV raygen_shader_group = raygen_shader->get_raytracing_shader_group_ci(static_cast<uint32_t>(shader_stages.size()));
+		vk::RayTracingShaderGroupCreateInfoKHR raygen_shader_group = raygen_shader->get_raytracing_shader_group_ci(static_cast<uint32_t>(shader_stages.size()));
 		vk::PipelineShaderStageCreateInfo raygen_shader_stage = raygen_shader->get_pipeline_shader_stage_ci();
 		shader_stages.push_back(raygen_shader_stage);
 		shader_groups.push_back(raygen_shader_group);
@@ -87,19 +112,19 @@ struct RayTracingPipeline
 		// miss shaders
 		for (const Shader * miss_shader : miss_shaders)
 		{
-			vk::RayTracingShaderGroupCreateInfoNV miss_shader_group = miss_shader->get_raytracing_shader_group_ci(static_cast<uint32_t>(shader_stages.size()));
+			vk::RayTracingShaderGroupCreateInfoKHR miss_shader_group = miss_shader->get_raytracing_shader_group_ci(static_cast<uint32_t>(shader_stages.size()));
 			vk::PipelineShaderStageCreateInfo miss_shader_stage = miss_shader->get_pipeline_shader_stage_ci();
 			shader_stages.push_back(miss_shader_stage);
 			shader_groups.push_back(miss_shader_group);
 		}
 
 		// hit shader
-		vk::RayTracingShaderGroupCreateInfoNV hit_shader_group;
-		hit_shader_group.setType(vk::RayTracingShaderGroupTypeNV::eTrianglesHitGroup);
-		hit_shader_group.setAnyHitShader(VK_SHADER_UNUSED_NV);
-		hit_shader_group.setClosestHitShader(VK_SHADER_UNUSED_NV);
-		hit_shader_group.setGeneralShader(VK_SHADER_UNUSED_NV);
-		hit_shader_group.setIntersectionShader(VK_SHADER_UNUSED_NV);
+		vk::RayTracingShaderGroupCreateInfoKHR hit_shader_group;
+		hit_shader_group.setType(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup);
+		hit_shader_group.setAnyHitShader(VK_SHADER_UNUSED_KHR);
+		hit_shader_group.setClosestHitShader(VK_SHADER_UNUSED_KHR);
+		hit_shader_group.setGeneralShader(VK_SHADER_UNUSED_KHR);
+		hit_shader_group.setIntersectionShader(VK_SHADER_UNUSED_KHR);
 		if (closest_hit_shader)
 		{
 			vk::PipelineShaderStageCreateInfo closest_hit_shader_stage = closest_hit_shader->get_pipeline_shader_stage_ci();
@@ -115,7 +140,7 @@ struct RayTracingPipeline
 		shader_groups.push_back(hit_shader_group);
 
 		// create ray tracing pipeline
-		vk::RayTracingPipelineCreateInfoNV ray_pipeline_ci = {};
+		vk::RayTracingPipelineCreateInfoKHR ray_pipeline_ci = {};
 		{
 			ray_pipeline_ci.setStageCount(static_cast<uint32_t>(shader_stages.size()));
 			ray_pipeline_ci.setPStages(shader_stages.data());
@@ -124,7 +149,7 @@ struct RayTracingPipeline
 			ray_pipeline_ci.setMaxRecursionDepth(recursion_depth);
 			ray_pipeline_ci.setLayout(*m_vk_pipeline_layout);
 		}
-		m_vk_pipeline = device->createRayTracingPipelineNVUnique(nullptr, ray_pipeline_ci);
+		m_vk_pipeline = device->createRayTracingPipelineKHR(nullptr, ray_pipeline_ci).value;
 
 		return static_cast<uint32_t>(shader_groups.size());
 	}
@@ -162,24 +187,25 @@ private:
 		ReturnType_sort_by_shader_type result;
 		for (const Shader * shader : shaders)
 		{
-			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eRaygenNV)
+			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eRaygenKHR)
 			{
 				num_raygen_shaders++;
 				result.m_raygen_shader = shader;
 			}
 
-			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eMissNV)
+			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eMissKHR)
 			{
+				num_miss_shaders++;
 				result.m_miss_shaders.push_back(shader);
 			}
 
-			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eAnyHitNV)
+			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eAnyHitKHR)
 			{
 				num_any_hit_shader++;
 				result.m_any_hit_shader = shader;
 			}
 
-			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eClosestHitNV)
+			if (shader->m_vk_shader_stage & vk::ShaderStageFlagBits::eClosestHitKHR)
 			{
 				num_closest_hit_shader++;
 				result.m_closest_hit_shader = shader;
@@ -201,16 +227,18 @@ private:
 
 		// create shader binding table
 		std::vector<uint8_t> shader_handle_storage(sbt_size);
-		Core::Inst().m_vk_device->getRayTracingShaderGroupHandlesNV(rt_pipeline,
-																	0,
-																	num_shader_groups,
-																	sbt_size,
-																	shader_handle_storage.data());
+		Core::Inst().m_vk_device->getRayTracingShaderGroupHandlesKHR(rt_pipeline,
+																	 0,
+																	 num_shader_groups,
+																	 sbt_size,
+																	 shader_handle_storage.data());
 
 		// create buffer
-		Buffer sbt_buffer(shader_handle_storage,
+		Buffer sbt_buffer(shader_handle_storage.data(),
+						  Core::Inst().m_vk_rt_properties.shaderGroupHandleSize,
+						  num_shader_groups,
 						  vk::MemoryPropertyFlagBits::eDeviceLocal,
-						  vk::BufferUsageFlagBits::eRayTracingNV);
+						  vk::BufferUsageFlagBits::eRayTracingKHR);
 
 		return sbt_buffer;
 	}
