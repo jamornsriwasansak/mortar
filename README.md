@@ -27,14 +27,13 @@ In its current early stage, it supports:
 * FPS-style camera for traversing the scene
 
 ### Dependencies
-* vulkan sdk >= 1.2 (Note: don't use vulkan 1.2. Wait for the official driver first.)
+* vulkan sdk >= 1.2
 * glslang (included as a submodule)
 * tinyobjloader (included as a submodule)
 * glfw (included as a submodule)
 * stb (included as a submodule)
 * glm (included as a submodule)
 
-### Issues
-1. The application will crash while exitting due to an unhandled GLFW surface destructor. I believe there is a way to handle this properly with newer vulkan versions. I will thus revisit this issue in the future.
-
-<sup>I started this project around early of March since I was curious of the vulkan raytracing performance. On the first day of this project, I spent an entire day building a new PC to house RTX2060. This is probably the most costly project I ever invested with my own money. :(
+### Note
+1. If you want to use vulkan sdk 1.1, please look for commits before May 29th.
+2. The application will crash while exitting due to an unhandled GLFW surface destructor. I believe there is a way to handle this properly with newer vulkan versions. I will thus revisit this issue in the future.
