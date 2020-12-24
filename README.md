@@ -1,6 +1,6 @@
-# vulkan-mortar
+Note: I stopped maintaining this repository due to recent Vulkan updates. It breaks things. I will come back to this repository after Vulkan stops adding/removing/renaming raytracing functions.
 
-Note: I stopped maintaining this repository due to Vulkan updates. It breaks compilation once in a while...
+# vulkan-mortar
 
 A physically-based renderer utilizing vulkan raytracing api.
 
