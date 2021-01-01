@@ -1,8 +1,8 @@
-Note: I stopped maintaining this repository due to recent Vulkan updates. It breaks things. I will come back to this repository after Vulkan stops adding/removing/renaming raytracing functions.
+Note: I stopped maintaining this repository due to recent Vulkan updates. It broke the pipeline. I might come back to this repository again.
 
 # vulkan-mortar
 
-A physically-based renderer utilizing vulkan raytracing api.
+A small physically-based renderer utilizing vulkan raytracing api.
 
 ![The Toilet Scene](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/toilet.jpg)
 ![Fireplace Room](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/fireplace.jpg)
