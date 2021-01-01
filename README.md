@@ -19,7 +19,6 @@ An example is in "src/main.cpp"
 In its current early stage, it supports:
 * Ambient occlusion Integrator
 * Path tracer with next event estimation utilizing MIS [Veach's thesis](https://graphics.stanford.edu/papers/veach_thesis) \[1997]
-* Voxelizer
 * Environment map importance sampling
 * Alpha-testing
 * Low discreprancy sampler with blue-noise property from [Heitz et al.](https://eheitzresearch.wordpress.com/762-2/) \[2019]
@@ -27,6 +26,7 @@ In its current early stage, it supports:
 * Lambert diffuse BRDF
 * GGX Microfacet BSDF (rough conductor and rough dielectric)
 * FPS-style camera for traversing the scene
+
 
 ### Dependencies
 * vulkan sdk >= 1.2
