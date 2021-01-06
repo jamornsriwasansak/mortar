@@ -2,7 +2,7 @@ Note: I stopped maintaining this repository due to recent Vulkan updates. It bro
 
 # vulkan-mortar
 
-A small physically-based renderer utilizing vulkan raytracing api.
+A small physically-based renderer utilizing vulkan raytracing api. It focuses on flexibility rather than performance. For instance, hit shader and any-hit shader are simplistic. Therefore, you might lose performance due to cache coherency. This however allow me to share most of the code between ambient occlusion integrator and pt-nee integrator.
 
 ![The Toilet Scene](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/toilet.jpg)
 ![Fireplace Room](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/fireplace.jpg)
@@ -29,7 +29,7 @@ In its current early stage, it supports:
 
 
 ### Dependencies
-* vulkan sdk >= 1.2
+* vulkan sdk >= 1.2 (before October 2020)
 * glslang (included as a submodule)
 * tinyobjloader (included as a submodule)
 * glfw (included as a submodule)
