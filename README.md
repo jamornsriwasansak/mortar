@@ -1,6 +1,6 @@
 Note: I stopped maintaining this repository due to recent Vulkan updates. It broke the pipeline. I might come back to this repository again.
 
-# vulkan-mortar
+# vulkan-path-tracing
 
 A small physically-based renderer utilizing vulkan raytracing api. It focuses on flexibility rather than performance. For instance, hit shader and any-hit shader are simplistic. Therefore, you might lose performance due to cache coherency. This however allow me to share most of the code between ambient occlusion integrator and pt-nee integrator.
 
