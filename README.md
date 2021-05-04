@@ -36,6 +36,6 @@ In its current early stage, it supports:
 * stb (included as a submodule)
 * glm (included as a submodule)
 
-### Note
-1. If you want to use vulkan sdk 1.1, please look for commits before May 29th.
-2. The application will crash while exitting due to an unhandled GLFW surface destructor. I believe there is a way to handle this properly with newer vulkan versions. I will thus revisit this issue in the future.
+### Known issues
+1. If you want to use vulkan sdk 1.1, please look for commits before May 29th 2020. Current implementation is using KHR extensions but all commits before May 29th use NV extension.
+2. The application will crash while exitting due to an unhandled GLFW surface destructor.
