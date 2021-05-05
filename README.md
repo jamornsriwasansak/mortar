@@ -21,8 +21,8 @@ In its current early stage, it supports:
 * Path tracer with next event estimation utilizing MIS [Veach's thesis](https://graphics.stanford.edu/papers/veach_thesis) \[1997]
 * Environment map importance sampling
 * Alpha-testing
-* Low discreprancy sampler with blue-noise property from [Heitz et al.](https://eheitzresearch.wordpress.com/762-2/) \[2019]
-* PCG random number generator ported from [pcg-random.org](https://www.pcg-random.org/)
+* GPU-based Low discreprancy sampler with blue-noise property ported from [Heitz et al.](https://eheitzresearch.wordpress.com/762-2/) \[2019]
+* GPU-based PCG random number generator ported from [pcg-random.org](https://www.pcg-random.org/)
 * Lambert diffuse BRDF
 * GGX Microfacet BSDF (rough conductor and rough dielectric)
 * FPS-style camera for traversing the scene
