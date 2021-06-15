@@ -1,4 +1,4 @@
-# Mortar - A fast physically based renderer
+# Mortar - A fast (enough) physically based renderer
 
 Mortar is a small physically based renderer with agnostic api. It can use either Vulkan or DX12 as a backend. One of it abilities is to utilizes ray-tracing api to generate the following images:
 ![The Toilet Scene](https://raw.githubusercontent.com/jamornsriwasansak/vulkan-mortar/master/readme/toilet.jpg)
