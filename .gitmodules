@@ -1,0 +1,27 @@
+[submodule "dep/assimp"]
+	path = dep/assimp
+	url = https://github.com/assimp/assimp
+[submodule "dep/D3D12MemoryAllocator"]
+	path = dep/D3D12MemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
+[submodule "dep/DirectX-Headers"]
+	path = dep/DirectX-Headers
+	url = https://github.com/microsoft/DirectX-Headers.git
+[submodule "dep/DirectXShaderCompiler"]
+	path = dep/DirectXShaderCompiler
+	url = https://github.com/microsoft/DirectXShaderCompiler.git
+[submodule "dep/glfw"]
+	path = dep/glfw
+	url = https://github.com/glfw/glfw
+[submodule "dep/glm"]
+	path = dep/glm
+	url = https://github.com/g-truc/glm
+[submodule "dep/spdlog"]
+	path = dep/spdlog
+	url = https://github.com/gabime/spdlog
+[submodule "dep/SPIRV-Reflect"]
+	path = dep/SPIRV-Reflect
+	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
+[submodule "dep/stb"]
+	path = dep/stb
+	url = https://github.com/nothings/stb
