@@ -7,12 +7,12 @@ project(grata)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(BUILD_TEST OFF CACHE BOOL "" FORCE)
 
-set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/deps/ CACHE PATH "" FORCE)
+set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/dep/ CACHE PATH "" FORCE)
 
 # output directory
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../sandbox/lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../sandbox/lib")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../sandbox")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/lib")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
 
 # GLFW 3
     set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -35,16 +35,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../sandbox")
     find_package(Vulkan REQUIRED)
     include_directories(${Vulkan_INCLUDE_DIR})
     set(DEPS_LIBRARIES ${DEPS_LIBRARIES} ${Vulkan_LIBRARY})
-
-# glslang
-# for compiling glsl to SPIR-V
-    set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "" FORCE)
-    set(ENABLE_SPVREMAPPER OFF CACHE BOOL "" FORCE)
-    set(ENABLE_CTEST OFF CACHE BOOL "" FORCE)
-    set(ENABLE_HLSL OFF CACHE BOOL "" FORCE)
-    set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
-    add_subdirectory(${DEPS_PATH}/glslang glslang_build)
-    set(DEPS_LIBRARIES ${DEPS_LIBRARIES} glslang SPIRV)
 
 # DirectXCompiler
 # for compiling hlsl to SPIR-V
@@ -90,13 +80,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../sandbox")
     include_directories(SYSTEM ${DEPS_PATH}/spdlog/include)
 
 # vma
-    include_directories(SYSTEM ${DEPS_PATH}/VulkanMemoryAllocator/src)
-
-# entt - Entity Component System
-    include_directories(SYSTEM ${DEPS_PATH}/entt/src)
-
-# magicenum
-    include_directories(SYSTEM ${DEPS_PATH}/magic_enum/include)
+    include_directories(SYSTEM ${DEPS_PATH}/VulkanMemoryAllocator/include)
 
 # NVIDIA aftermath
 # TODO:: make an option to toggle this on or off
@@ -108,16 +92,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../sandbox")
     #set(DEPS_LIBRARIES ${DEPS_LIBRARIES} ${NVIDIA_AFTERMATH_LIB})
 
 # aftercrash
-    include_directories(SYSTEM "${DEPS_PATH}/aftercrash/include")
-    file(GLOB aftercrash_src "${DEPS_PATH}/aftercrash/src/D3d12AfterCrash.cpp" "${DEPS_PATH}/aftercrash/src/vulkanaftercrash.cpp")
+    #include_directories(SYSTEM "${DEPS_PATH}/aftercrash/include")
+    #file(GLOB aftercrash_src "${DEPS_PATH}/aftercrash/src/D3d12AfterCrash.cpp" "${DEPS_PATH}/aftercrash/src/vulkanaftercrash.cpp")
 
 # grata
     # find all sources
+    include_directories(src)
     file(GLOB_RECURSE grata_src
-         "engine/*.h"
-         "engine/*.hpp"
-         "engine/*.cpp"
-         "engine/*.cc")
+         "src/*.h"
+         "src/*.hpp"
+         "src/*.cpp"
+         "src/*.cc")
 
     # C++ stuffs
     set(CMAKE_CXX_STANDARD 20)
@@ -139,7 +124,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../sandbox")
                                 COMPILER_FLAGS "-w")
 
     # generating executable
-    include_directories(engine)
     add_executable(grata ${grata_src} ${spirv_reflect_src} ${d3d12ma} ${aftercrash_src} ${GFSDK_Aftermath_src})
     target_link_libraries(grata PUBLIC ${DEPS_LIBRARIES})
 
