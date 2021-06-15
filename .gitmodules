@@ -25,3 +25,6 @@
 [submodule "dep/stb"]
 	path = dep/stb
 	url = https://github.com/nothings/stb
+[submodule "dep/VulkanMemoryAllocator"]
+	path = dep/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
