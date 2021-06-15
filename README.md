@@ -1,6 +1,3 @@
-Note: I stopped maintaining this repository due to recent Vulkan updates. It broke the pipeline. I might come back to this repository again.
-Note2: While I am quite certain that the result is accurate to some degree, I did not verify this renderer against another reference renderers (e.g. mitsuba, pbrt). Please use at your own risk.
-
 # Mortar - A fast physically based renderer
 
 Mortar is a small physically based renderer with agnostic api. It can use either Vulkan or DX12 as a backend. It utilizes ray-tracing api to generate the following image
