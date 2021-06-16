@@ -25,7 +25,7 @@ struct FramebufferBindings
         std::vector<vk::AttachmentReference>   color_refs(colors.size());
         std::optional<vk::AttachmentReference> depth_ref;
 
-        int2 resolution;
+        int2 resolution(0, 0);
 
         for (size_t i = 0; i < colors.size(); i++)
         {
@@ -89,6 +89,7 @@ struct FramebufferBindings
 
             i_attachment++;
         }
+        assert(resolution.x > 0 && resolution.y > 0);
         assert(i_attachment == num_attachments);
 
         vk::AccessFlags dst_access_flag;

@@ -38,7 +38,7 @@ struct Fence
     void
     reset()
     {
-        m_vk_ldevice.resetFences(1, &m_vk_fence.get());
+        VKCK(m_vk_ldevice.resetFences(1, &m_vk_fence.get()));
     }
 };
 } // namespace Vka

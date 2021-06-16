@@ -50,10 +50,12 @@ struct StagingBufferManager
     std::list<UniqueVarHandle<ScratchBuffer, ScratchBufferDeleter>> m_scratch_buffers;
     vk::UniqueCommandPool                                           m_vk_command_pool;
     vk::UniqueCommandBuffer                                         m_vk_command_buffer;
+    std::string                                                     m_name;
     const Device *                                                  m_device;
     static constexpr size_t DefaultStagingBufferSize = 100 * 1024 * 1024; // 100 MB
 
-    StagingBufferManager(const Device * device, const std::string & name = "") : m_device(device)
+    StagingBufferManager(const Device * device, const std::string & name = "")
+    : m_device(device), m_name(name)
     {
         vk::CommandPoolCreateInfo cmd_pool_ci;
         cmd_pool_ci.setQueueFamilyIndex(device->m_family_indices.m_graphics);
@@ -85,6 +87,7 @@ struct StagingBufferManager
         fence_ci.setFlags(vk::FenceCreateFlagBits::eSignaled);
         vk::UniqueFence fence = m_device->m_vk_ldevice->createFenceUnique(fence_ci);
         m_device->m_vk_ldevice->resetFences({ fence.get() });
+        m_device->name_vkhpp_object<vk::Fence, vk::Fence::CType>(fence.get(), m_name + "_fence");
 
         // execute command list
         vk::SubmitInfo submit_info;
@@ -119,7 +122,7 @@ struct StagingBufferManager
         // find available staging buffer inthe list and return
         for (auto & staging_buffer : m_staging_buffers)
         {
-            if (staging_buffer->m_is_available)
+            if (staging_buffer->m_is_available && required_size_in_bytes < DefaultStagingBufferSize)
             {
                 staging_buffer->m_is_available = false;
                 return &staging_buffer.get();
@@ -141,14 +144,16 @@ struct StagingBufferManager
         VmaAllocation     vma_allocation;
         VmaAllocationInfo vma_alloc_info;
         VKCK(vmaCreateBuffer(*m_device->m_vma_allocator, &buffer_ci, &vma_alloc_ci, &vma_vk_buffer, &vma_allocation, &vma_alloc_info));
+        m_device->name_vkhpp_object<vk::Buffer, vk::Buffer::CType>(vk::Buffer(vma_vk_buffer),
+                                                                   m_name + "_staging_buffer");
 
         // staging buffer
         StagingBuffer staging_buffer;
-        staging_buffer.m_vma_allocator       = m_device->m_vma_allocator.get();
-        staging_buffer.m_vma_allocation      = vma_allocation;
+        staging_buffer.m_vma_allocator  = m_device->m_vma_allocator.get();
+        staging_buffer.m_vma_allocation = vma_allocation;
         staging_buffer.m_vma_alloc_info = vma_alloc_info;
-        staging_buffer.m_is_available        = false;
-        staging_buffer.m_vk_buffer           = vma_vk_buffer;
+        staging_buffer.m_is_available   = false;
+        staging_buffer.m_vk_buffer      = vma_vk_buffer;
 
         m_staging_buffers.emplace_back(staging_buffer);
 
@@ -163,12 +168,15 @@ struct StagingBufferManager
         // find available scratch buffer inthe list and reutrn
         for (auto & scratch_buffer : m_scratch_buffers)
         {
-            if (scratch_buffer->m_is_available)
+            if (scratch_buffer->m_is_available && required_size_in_bytes < DefaultStagingBufferSize)
             {
                 scratch_buffer->m_is_available = false;
                 return &scratch_buffer.get();
             }
         }
+
+        assert(required_size_in_bytes < DefaultStagingBufferSize);
+
 
         // buffer create info
         vk::BufferCreateInfo buffer_ci_tmp;
@@ -183,6 +191,8 @@ struct StagingBufferManager
         VmaAllocation     vma_allocation;
         VmaAllocationInfo vma_alloc_info;
         VKCK(vmaCreateBuffer(*m_device->m_vma_allocator, &buffer_ci, &vma_alloc_ci, &vma_vk_buffer, &vma_allocation, &vma_alloc_info));
+        m_device->name_vkhpp_object<vk::Buffer, vk::Buffer::CType>(vk::Buffer(vma_vk_buffer),
+                                                                   m_name + "_staging_buffer");
 
         // get device address
         vk::BufferDeviceAddressInfo device_address_info;
@@ -191,12 +201,12 @@ struct StagingBufferManager
 
         // staging buffer
         ScratchBuffer scratch_buffer;
-        scratch_buffer.m_vma_allocator       = m_device->m_vma_allocator.get();
-        scratch_buffer.m_vma_allocation      = vma_allocation;
-        scratch_buffer.m_vma_alloc_info = vma_alloc_info;
-        scratch_buffer.m_is_available        = false;
-        scratch_buffer.m_vk_buffer           = vma_vk_buffer;
-        scratch_buffer.m_vk_device_address   = device_address;
+        scratch_buffer.m_vma_allocator     = m_device->m_vma_allocator.get();
+        scratch_buffer.m_vma_allocation    = vma_allocation;
+        scratch_buffer.m_vma_alloc_info    = vma_alloc_info;
+        scratch_buffer.m_is_available      = false;
+        scratch_buffer.m_vk_buffer         = vma_vk_buffer;
+        scratch_buffer.m_vk_device_address = device_address;
 
         m_scratch_buffers.emplace_back(scratch_buffer);
 

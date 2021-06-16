@@ -349,7 +349,7 @@ mainnn()
         i_flight = (i_flight + 1) % num_flights;
     }
 
-    for (int i = 0; i < swapchain.m_num_images; i++)
+    for (int i = 0; i < num_flights; i++)
     {
         fences[i].wait();
     }

@@ -190,7 +190,9 @@ struct RasterPipeline
         pipelineInfo.setBasePipelineIndex(-1);
 
         Logger::Info(__FUNCTION__ " creating graphics pipeline");
-        m_vk_pipeline = device->m_vk_ldevice->createGraphicsPipelineUnique(nullptr, pipelineInfo);
+        auto result = device->m_vk_ldevice->createGraphicsPipelineUnique(nullptr, pipelineInfo);
+        VKCK(result.result);
+        m_vk_pipeline = std::move(result.value);
 
         device->name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
     }

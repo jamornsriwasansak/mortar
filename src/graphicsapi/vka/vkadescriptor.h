@@ -79,8 +79,8 @@ struct DescriptorSet
 
         vk::WriteDescriptorSet write_descriptor_set = {};
         write_descriptor_set.setDstSet(m_vk_descriptor_set);
-        write_descriptor_set.setDstBinding(binding + HlslDxcCompiler::TShift);
-        write_descriptor_set.setDstArrayElement(i_element);
+        write_descriptor_set.setDstBinding(static_cast<uint32_t>(binding + HlslDxcCompiler::TShift));
+        write_descriptor_set.setDstArrayElement(static_cast<uint32_t>(i_element));
         write_descriptor_set.setDescriptorCount(1);
         write_descriptor_set.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR);
         write_descriptor_set.setPBufferInfo(nullptr);
@@ -102,8 +102,8 @@ struct DescriptorSet
 
         vk::WriteDescriptorSet write_descriptor = {};
         write_descriptor.setDstSet(m_vk_descriptor_set);
-        write_descriptor.setDstBinding(binding + HlslDxcCompiler::BShift);
-        write_descriptor.setDstArrayElement(i_element);
+        write_descriptor.setDstBinding(static_cast<uint32_t>(binding + HlslDxcCompiler::BShift));
+        write_descriptor.setDstArrayElement(static_cast<uint32_t>(i_element));
         write_descriptor.setDescriptorCount(1);
         write_descriptor.setDescriptorType(vk::DescriptorType::eUniformBuffer);
         write_descriptor.setPBufferInfo(&m_descriptor_buffer_infos.back());
@@ -127,8 +127,8 @@ struct DescriptorSet
 
         vk::WriteDescriptorSet write_descriptor = {};
         write_descriptor.setDstSet(m_vk_descriptor_set);
-        write_descriptor.setDstBinding(binding + HlslDxcCompiler::TShift);
-        write_descriptor.setDstArrayElement(i_element);
+        write_descriptor.setDstBinding(static_cast<uint32_t>(binding + HlslDxcCompiler::TShift));
+        write_descriptor.setDstArrayElement(static_cast<uint32_t>(i_element));
         write_descriptor.setDescriptorCount(1);
         write_descriptor.setDescriptorType(vk::DescriptorType::eStorageBuffer);
         write_descriptor.setPBufferInfo(&m_descriptor_buffer_infos.back());
@@ -147,13 +147,13 @@ struct DescriptorSet
         vk::DescriptorBufferInfo buf_info = {};
         buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
         buf_info.setOffset(stride * first_element);
-        buf_info.setRange(buffer.m_size_in_bytes);
+        buf_info.setRange(stride * num_elements);
         m_descriptor_buffer_infos.push_back(buf_info);
 
         vk::WriteDescriptorSet write_descriptor = {};
         write_descriptor.setDstSet(m_vk_descriptor_set);
-        write_descriptor.setDstBinding(binding + HlslDxcCompiler::TShift);
-        write_descriptor.setDstArrayElement(i_element);
+        write_descriptor.setDstBinding(static_cast<uint32_t>(binding + HlslDxcCompiler::TShift));
+        write_descriptor.setDstArrayElement(static_cast<uint32_t>(i_element));
         write_descriptor.setDescriptorCount(1);
         write_descriptor.setDescriptorType(vk::DescriptorType::eStorageBuffer);
         write_descriptor.setPBufferInfo(&m_descriptor_buffer_infos.back());
@@ -171,8 +171,8 @@ struct DescriptorSet
 
         vk::WriteDescriptorSet write_descriptor = {};
         write_descriptor.setDstSet(m_vk_descriptor_set);
-        write_descriptor.setDstBinding(binding + HlslDxcCompiler::TShift);
-        write_descriptor.setDstArrayElement(i_texture);
+        write_descriptor.setDstBinding(static_cast<uint32_t>(binding + HlslDxcCompiler::TShift));
+        write_descriptor.setDstArrayElement(static_cast<uint32_t>(i_texture));
         write_descriptor.setDescriptorCount(1);
         write_descriptor.setDescriptorType(vk::DescriptorType::eSampledImage);
         write_descriptor.setPBufferInfo(nullptr);
@@ -191,8 +191,8 @@ struct DescriptorSet
 
         vk::WriteDescriptorSet write_descriptor = {};
         write_descriptor.setDstSet(m_vk_descriptor_set);
-        write_descriptor.setDstBinding(binding + HlslDxcCompiler::UShift);
-        write_descriptor.setDstArrayElement(i_element);
+        write_descriptor.setDstBinding(static_cast<uint32_t>(binding + HlslDxcCompiler::UShift));
+        write_descriptor.setDstArrayElement(static_cast<uint32_t>(i_element));
         write_descriptor.setDescriptorCount(1);
         write_descriptor.setDescriptorType(vk::DescriptorType::eStorageImage);
         write_descriptor.setPBufferInfo(nullptr);
@@ -210,7 +210,7 @@ struct DescriptorSet
 
         vk::WriteDescriptorSet write_descriptor = {};
         write_descriptor.setDstSet(m_vk_descriptor_set);
-        write_descriptor.setDstBinding(binding + HlslDxcCompiler::SShift);
+        write_descriptor.setDstBinding(static_cast<uint32_t>(binding + HlslDxcCompiler::SShift));
         write_descriptor.setDstArrayElement(0);
         write_descriptor.setDescriptorCount(1);
         write_descriptor.setDescriptorType(vk::DescriptorType::eSampler);

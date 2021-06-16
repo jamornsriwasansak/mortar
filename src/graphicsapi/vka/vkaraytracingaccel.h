@@ -40,7 +40,7 @@ struct RayTracingGeometryDesc
 
         m_build_range.setFirstVertex(0);
         m_build_range.setPrimitiveOffset(0);
-        m_build_range.setPrimitiveCount(num_indices / 3);
+        m_build_range.setPrimitiveCount(static_cast<uint32_t>(num_indices / 3));
         m_build_range.setTransformOffset(0);
         return *this;
     }
@@ -86,7 +86,7 @@ struct RayTracingBlas
         build_info.setMode(vk::BuildAccelerationStructureModeKHR::eBuild);
         build_info.setFlags(vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace);
         build_info.setPGeometries(geometries.data());
-        build_info.setGeometryCount(geometries.size());
+        build_info.setGeometryCount(static_cast<uint32_t>(geometries.size()));
         build_info.setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
 
         // get size requirement
@@ -142,7 +142,7 @@ struct RayTracingInstance
         m_vk_instance.setAccelerationStructureReference(blas->m_accel_buffer.m_device_address);
         m_vk_instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
         m_vk_instance.setMask(1);
-        m_vk_instance.setInstanceShaderBindingTableRecordOffset(hit_group_index);
+        m_vk_instance.setInstanceShaderBindingTableRecordOffset(static_cast<uint32_t>(hit_group_index));
     }
 };
 

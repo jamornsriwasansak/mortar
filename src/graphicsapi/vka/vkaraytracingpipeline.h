@@ -13,9 +13,9 @@ struct RayTracingPipelineConfig
 {
     struct HitGroup
     {
-        size_t m_closest_hit_id = -1;
-        size_t m_any_hit_id     = -1;
-        size_t m_intersect_id   = -1;
+        std::optional<size_t> m_closest_hit_id;
+        std::optional<size_t> m_any_hit_id;
+        std::optional<size_t> m_intersect_id;
     };
 
     RayTracingPipelineConfig() {}
@@ -111,7 +111,7 @@ struct RayTracingPipeline
         std::vector<vk::DescriptorSetLayout> descriptor_layouts = vk::uniqueToRaw(m_vk_descriptor_set_layouts);
         vk::PipelineLayoutCreateInfo pipeline_layout_ci = {};
         pipeline_layout_ci.setPSetLayouts(descriptor_layouts.data());
-        pipeline_layout_ci.setSetLayoutCount(descriptor_layouts.size());
+        pipeline_layout_ci.setSetLayoutCount(static_cast<uint32_t>(descriptor_layouts.size()));
         pipeline_layout_ci.setPushConstantRangeCount(0);
         pipeline_layout_ci.setPPushConstantRanges(nullptr);
         m_vk_pipeline_layout = device->m_vk_ldevice->createPipelineLayoutUnique(pipeline_layout_ci);
@@ -156,19 +156,19 @@ struct RayTracingPipeline
             shader_group_ci.setClosestHitShader(VK_SHADER_UNUSED_KHR);
             shader_group_ci.setIntersectionShader(VK_SHADER_UNUSED_KHR);
 
-            if (hit_group.m_any_hit_id != -1)
+            if (hit_group.m_any_hit_id.has_value())
             {
-                shader_group_ci.setAnyHitShader(static_cast<uint32_t>(hit_group.m_any_hit_id));
+                shader_group_ci.setAnyHitShader(static_cast<uint32_t>(hit_group.m_any_hit_id.value()));
             }
 
-            if (hit_group.m_closest_hit_id != -1)
+            if (hit_group.m_closest_hit_id.has_value())
             {
-                shader_group_ci.setClosestHitShader(static_cast<uint32_t>(hit_group.m_closest_hit_id));
+                shader_group_ci.setClosestHitShader(static_cast<uint32_t>(hit_group.m_closest_hit_id.value()));
             }
 
-            if (hit_group.m_intersect_id != -1)
+            if (hit_group.m_intersect_id.has_value())
             {
-                shader_group_ci.setIntersectionShader(static_cast<uint32_t>(hit_group.m_intersect_id));
+                shader_group_ci.setIntersectionShader(static_cast<uint32_t>(hit_group.m_intersect_id.value()));
             }
             i_group++;
         }
@@ -180,7 +180,9 @@ struct RayTracingPipeline
         ray_pipeline_ci.setGroups(shader_group_cis);
         ray_pipeline_ci.setMaxPipelineRayRecursionDepth(static_cast<uint32_t>(recursion_depth));
         ray_pipeline_ci.setLayout(m_vk_pipeline_layout.get());
-        m_vk_pipeline = device->m_vk_ldevice->createRayTracingPipelineKHRUnique(nullptr, nullptr, ray_pipeline_ci);
+        auto result = device->m_vk_ldevice->createRayTracingPipelineKHRUnique(nullptr, nullptr, ray_pipeline_ci);
+        VKCK(result.result);
+        m_vk_pipeline = std::move(result.value);
         device->name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
     }
 };
@@ -217,15 +219,16 @@ struct RayTracingShaderTable
         // compute shader handle size
         const auto full_properties2 =
             device->m_vk_pdevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesNV>();
-        const auto rt_properties = full_properties2.get<vk::PhysicalDeviceRayTracingPropertiesNV>();
+        const auto & rt_properties = full_properties2.get<vk::PhysicalDeviceRayTracingPropertiesNV>();
         const uint32_t handle_size      = rt_properties.shaderGroupHandleSize;
         const uint32_t handle_alignment = rt_properties.shaderGroupBaseAlignment;
 
         // get raytracing shader group handle
-        const uint32_t num_groups = pipeline.m_num_raygens + pipeline.m_num_misses + pipeline.m_num_hit_groups;
-        const uint32_t raygen_size           = handle_size * pipeline.m_num_raygens;
-        const uint32_t miss_size             = handle_size * pipeline.m_num_misses;
-        const uint32_t hit_group_size        = handle_size * pipeline.m_num_hit_groups;
+        const uint32_t num_groups =
+            static_cast<uint32_t>(pipeline.m_num_raygens + pipeline.m_num_misses + pipeline.m_num_hit_groups);
+        const uint32_t raygen_size    = static_cast<uint32_t>(handle_size * pipeline.m_num_raygens);
+        const uint32_t miss_size      = static_cast<uint32_t>(handle_size * pipeline.m_num_misses);
+        const uint32_t hit_group_size = static_cast<uint32_t>(handle_size * pipeline.m_num_hit_groups);
         const uint32_t aligned_raygen_size   = round_up(raygen_size, handle_alignment);
         const uint32_t aligned_miss_size     = round_up(miss_size, handle_alignment);
         const uint32_t aligned_hitgroup_size = round_up(hit_group_size, handle_alignment);

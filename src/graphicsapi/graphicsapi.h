@@ -3,4 +3,4 @@
 #include "graphicsapi/dxa/dxa.h"
 #include "graphicsapi/vka/vka.h"
 
-namespace Gp = Dxa;
+namespace Gp = Vka;

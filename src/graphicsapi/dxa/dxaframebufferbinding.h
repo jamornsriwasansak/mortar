@@ -13,9 +13,9 @@ struct FramebufferBindings
 
     FramebufferBindings() {}
 
-    FramebufferBindings(const Device *                 device,
-                        const std::vector<Texture *> & colors,
-                        const std::optional<Texture *> depth = std::nullopt)
+    FramebufferBindings([[maybe_unused]] const Device * device,
+                        const std::vector<Texture *> &  colors,
+                        const std::optional<Texture *>  depth = std::nullopt)
     : m_color_attachments(colors)
     {
         if (depth.has_value())

@@ -42,22 +42,22 @@ struct SpirvReflector
         // we iterate through reflected results and src_infos
         // then create vertex_input info, push_constant_blocks
         // and a map from (set, location) to descriptor_set
-        for (size_t i = 0; i < spirv_codes.size(); i++)
+        for (size_t i_spirv_code = 0; i_spirv_code < spirv_codes.size(); i_spirv_code++)
         {
-            Logger::Info(__FUNCTION__ " reflecting shader " + shader_srcs[i].m_file_path.string() + " from stage ",
-                         static_cast<int>(shader_srcs[i].m_shader_stage));
+            Logger::Info(__FUNCTION__ " reflecting shader " + shader_srcs[i_spirv_code].m_file_path.string() + " from stage ",
+                         static_cast<int>(shader_srcs[i_spirv_code].m_shader_stage));
 
             vk::ShaderStageFlagBits shader_stage =
-                static_cast<vk::ShaderStageFlagBits>(shader_srcs[i].m_shader_stage);
-            result.m_shader_stage_flags[i] = shader_stage;
+                static_cast<vk::ShaderStageFlagBits>(shader_srcs[i_spirv_code].m_shader_stage);
+            result.m_shader_stage_flags[i_spirv_code] = shader_stage;
 
-            spv_reflect::ShaderModule shader_module(spirv_codes[i]);
+            spv_reflect::ShaderModule shader_module(spirv_codes[i_spirv_code]);
 
             // reflect push constants
-            reflect_push_constant_blocks(&result, shader_module, shader_srcs[i].m_file_path.string());
+            reflect_push_constant_blocks(&result, shader_module, shader_srcs[i_spirv_code].m_file_path.string());
 
             // reflect in map of descriptor set layout bindings
-            reflect_descriptor_set(&vk_bindings, shader_module, shader_stage, shader_srcs[i].m_file_path.string());
+            reflect_descriptor_set(&vk_bindings, shader_module, shader_stage, shader_srcs[i_spirv_code].m_file_path.string());
 
             // reflect vertex shader
             if (shader_stage == vk::ShaderStageFlagBits::eVertex)
@@ -84,11 +84,11 @@ struct SpirvReflector
                 result.m_attachment_formats.resize(num_color_attachments);
                 result.m_attachment_locations.resize(num_color_attachments);
                 result.m_attachment_names.resize(num_color_attachments);
-                for (uint32_t i = 0; i < num_color_attachments; i++)
+                for (uint32_t i_color_attachment = 0; i_color_attachment < num_color_attachments; i_color_attachment++)
                 {
-                    result.m_attachment_formats[i] = static_cast<vk::Format>(attachments[i]->format);
-                    result.m_attachment_locations[i] = attachments[i]->location;
-                    result.m_attachment_names[i]     = attachments[i]->name;
+                    result.m_attachment_formats[i_color_attachment] = static_cast<vk::Format>(attachments[i_color_attachment]->format);
+                    result.m_attachment_locations[i_color_attachment] = attachments[i_color_attachment]->location;
+                    result.m_attachment_names[i_color_attachment]     = attachments[i_color_attachment]->name;
                 }
             }
         }
