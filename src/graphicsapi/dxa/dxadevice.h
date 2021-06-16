@@ -28,6 +28,8 @@ struct Device
 
     bool m_is_device_support_raytracing = false;
 
+    Device() {}
+
     Device(const PhysicalDevice & physical_device)
     {
         m_dx_device = create_device(physical_device.m_dx_adapter.Get(), physical_device.m_enable_debug);

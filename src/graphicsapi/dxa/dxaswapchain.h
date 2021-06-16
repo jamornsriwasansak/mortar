@@ -16,6 +16,8 @@ struct Swapchain
     size_t                        m_image_index;
     int2                          m_resolution;
 
+    Swapchain() {}
+
     Swapchain(const Device * device, const Window & window, const std::string & name = "")
     {
         init_swapchain(device, window);
@@ -38,7 +40,7 @@ struct Swapchain
         // TODO:: allow use of tearing support
         const bool use_vsync             = false;
         const bool use_tearing_supported = true;
-        UINT sync_interval         = use_vsync ? 1 : 0;
+        UINT       sync_interval         = use_vsync ? 1 : 0;
         UINT present_flags = use_tearing_supported && !use_vsync ? DXGI_PRESENT_ALLOW_TEARING : 0;
         DXCK(m_dx_swapchain->Present(sync_interval, present_flags));
     }

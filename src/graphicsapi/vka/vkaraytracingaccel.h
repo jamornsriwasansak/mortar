@@ -191,9 +191,10 @@ struct RayTracingTlas
 
         // get size requirement
         vk::AccelerationStructureBuildSizesInfoKHR size_info =
-            device->m_vk_ldevice->getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice,
-                                                                        build_info,
-                                                                        instances.size());
+            device->m_vk_ldevice->getAccelerationStructureBuildSizesKHR(
+                vk::AccelerationStructureBuildTypeKHR::eDevice,
+                build_info,
+                { static_cast<uint32_t>(instances.size()) });
 
         const vk::DeviceSize required_scratch_size = size_info.buildScratchSize;
         const vk::DeviceSize required_buffer_size  = size_info.accelerationStructureSize;
@@ -230,7 +231,7 @@ struct RayTracingTlas
         build_info.setScratchData(scratch_buffer->m_vk_device_address);
 
         vk::AccelerationStructureBuildRangeInfoKHR build_range = {};
-        build_range.setPrimitiveCount(instances.size());
+        build_range.setPrimitiveCount(static_cast<uint32_t>(instances.size()));
 
         // make sure that instance_buffer is completely written before we proceed further.
         vk::MemoryBarrier barrier(vk::AccessFlagBits::eTransferWrite,

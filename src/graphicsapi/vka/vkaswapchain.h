@@ -28,6 +28,8 @@ struct Swapchain
     size_t   m_flight      = 0;
     uint32_t m_image_index = 0;
 
+    Swapchain() {}
+
     Swapchain(const Device * device, const Window & window, const std::string & name = "")
     : m_device(device)
     {

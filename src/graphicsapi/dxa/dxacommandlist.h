@@ -6,7 +6,6 @@
 #include "dxaentry.h"
 #include "dxafence.h"
 #include "dxaframebufferbinding.h"
-#include "dxamaterialsystem.h"
 #include "dxarasterpipeline.h"
 #include "dxaraytracingpipeline.h"
 #include "dxasemaphore.h"

@@ -1,10 +1,12 @@
-#include "graphicsapi/example/00ambientocclusion/00triangle.h"
+#include "render/integrators/flat/flat.h"
+#include "render/render.h"
 
 int
 main()
 {
-    std::cout << std::filesystem::current_path() << std::endl;
     mainnn();
+    /*Render renderer;
+    renderer.init();
+    renderer.run();*/
     return 0;
 }
-

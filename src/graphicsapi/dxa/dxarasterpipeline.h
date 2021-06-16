@@ -4,7 +4,7 @@
 #include "dxaframebufferbinding.h"
 #include "dxilreflection.h"
 
-#include "../shaderintrospect/hlsldxccompiler.h"
+#include "../shadercompiler/hlsldxccompiler.h"
 #include "../shadersrc.h"
 
 namespace Dxa

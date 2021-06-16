@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../shaderintrospect/hlsldxccompiler.h"
+#include "../shadercompiler/hlsldxccompiler.h"
 #include "vkabuffer.h"
 #include "vkacommon.h"
 #include "vkadescriptorpool.h"

@@ -10,7 +10,6 @@
 #include "dxafence.h"
 #include "dxaflightcontrol.h"
 #include "dxaframebufferbinding.h"
-#include "dxamaterialsystem.h"
 #include "dxarasterpipeline.h"
 #include "dxaraytracingaccel.h"
 #include "dxaraytracingpipeline.h"

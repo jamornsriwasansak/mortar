@@ -9,6 +9,8 @@ struct Semaphore
 {
     vk::UniqueSemaphore m_vk_semaphore;
 
+    Semaphore() {}
+
     Semaphore(const Device * device)
     {
         vk::SemaphoreCreateInfo semaphore_ci = {};

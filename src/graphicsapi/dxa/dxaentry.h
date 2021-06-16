@@ -8,6 +8,8 @@ struct PhysicalDevice
     ComPtr<IDXGIAdapter4> m_dx_adapter   = nullptr;
     bool                  m_enable_debug = false;
 
+    PhysicalDevice() {}
+
     PhysicalDevice(ComPtr<IDXGIAdapter4> & adapter, bool enable_debug)
     : m_dx_adapter(adapter), m_enable_debug(enable_debug)
     {
@@ -18,6 +20,8 @@ struct Entry
 {
     ComPtr<IDXGIFactory4> m_dx_factory;
     bool                  m_debug;
+
+    Entry() {}
 
     Entry([[maybe_unused]] const Window & window, const bool debug) : m_debug(debug)
     {

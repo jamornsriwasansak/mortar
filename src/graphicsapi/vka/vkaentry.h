@@ -16,6 +16,8 @@ struct PhysicalDevice
     };
     std::vector<const char *> m_device_layers = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
+    PhysicalDevice() {}
+
     PhysicalDevice(const vk::PhysicalDevice & physical_device,
                    const vk::Instance         instance,
                    const vk::SurfaceKHR       surface,
@@ -41,6 +43,8 @@ struct Entry
 
     // TODO:: move this to somewhere else
     static constexpr uint32_t DefaultApiVersion = 120;
+
+    Entry() {}
 
     Entry(const Window & window, const bool debug) : m_debug(debug)
     {

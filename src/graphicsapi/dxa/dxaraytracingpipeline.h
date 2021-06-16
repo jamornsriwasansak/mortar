@@ -3,7 +3,7 @@
 #include "dxacommon.h"
 #include "dxilreflection.h"
 
-#include "../shaderintrospect/hlsldxccompiler.h"
+#include "../shadercompiler/hlsldxccompiler.h"
 #include "../shadersrc.h"
 
 namespace Dxa
@@ -12,9 +12,9 @@ struct RayTracingPipelineConfig
 {
     struct HitGroup
     {
-        size_t m_closest_hit_id = -1;
-        size_t m_any_hit_id     = -1;
-        size_t m_intersect_id   = -1;
+        std::optional<size_t> m_closest_hit_id;
+        std::optional<size_t> m_any_hit_id;
+        std::optional<size_t> m_intersect_id;
     };
 
     std::vector<ShaderSrc> m_shader_srcs;
@@ -31,12 +31,20 @@ struct RayTracingPipelineConfig
     }
 
     size_t
-    add_hit_group(const size_t closest_hit_id, const size_t any_hit_id = -1, const size_t intersect_id = -1)
+    add_hit_group(const size_t closest_hit_id,
+                  const size_t any_hit_id   = std::numeric_limits<size_t>::max(),
+                  const size_t intersect_id = std::numeric_limits<size_t>::max())
     {
         HitGroup hit_group;
         hit_group.m_closest_hit_id = closest_hit_id;
-        hit_group.m_any_hit_id     = any_hit_id;
-        hit_group.m_intersect_id   = intersect_id;
+        if (any_hit_id != std::numeric_limits<size_t>::max())
+        {
+            hit_group.m_any_hit_id = any_hit_id;
+        }
+        if (intersect_id != std::numeric_limits<size_t>::max())
+        {
+            hit_group.m_intersect_id = intersect_id;
+        }
         m_hit_groups.push_back(hit_group);
         return m_hit_groups.size() - 1;
     }
@@ -78,10 +86,10 @@ struct RayTracingPipeline
 
     struct HitGroupRecord
     {
-        size_t       m_closest_hit_id = static_cast<size_t>(-1);
-        size_t       m_any_hit_id     = static_cast<size_t>(-1);
-        size_t       m_intersect_id   = static_cast<size_t>(-1);
-        std::wstring m_symbol         = L"";
+        std::optional<size_t> m_closest_hit_id;
+        std::optional<size_t> m_any_hit_id;
+        std::optional<size_t> m_intersect_id;
+        std::wstring          m_symbol = L"";
     };
 
     RayTracingPipeline(Device *                         device,
@@ -167,22 +175,22 @@ struct RayTracingPipeline
 
             // automatically generate hit_group symbol
             std::wstring symbol = L"hit_group";
-            if (hit_group.m_closest_hit_id != -1)
+            if (hit_group.m_closest_hit_id.has_value())
             {
-                hit_shader_group.m_closest_hit_id = hit_group.m_closest_hit_id;
-                symbol += L"_" + shader_entries[hit_group.m_closest_hit_id].m_renamed_symbol;
+                hit_shader_group.m_closest_hit_id = hit_group.m_closest_hit_id.value();
+                symbol += L"_" + shader_entries[hit_group.m_closest_hit_id.value()].m_renamed_symbol;
             }
 
-            if (hit_group.m_any_hit_id != -1)
+            if (hit_group.m_any_hit_id.has_value())
             {
-                hit_shader_group.m_any_hit_id = hit_group.m_any_hit_id;
-                symbol += L"_" + shader_entries[hit_group.m_any_hit_id].m_renamed_symbol;
+                hit_shader_group.m_any_hit_id = hit_group.m_any_hit_id.value();
+                symbol += L"_" + shader_entries[hit_group.m_any_hit_id.value()].m_renamed_symbol;
             }
 
-            if (hit_group.m_intersect_id != -1)
+            if (hit_group.m_intersect_id.has_value())
             {
-                hit_shader_group.m_intersect_id = hit_group.m_intersect_id;
-                symbol += L"_" + shader_entries[hit_group.m_intersect_id].m_renamed_symbol;
+                hit_shader_group.m_intersect_id = hit_group.m_intersect_id.value();
+                symbol += L"_" + shader_entries[hit_group.m_intersect_id.value()].m_renamed_symbol;
             }
 
             // generate symbol
@@ -346,12 +354,14 @@ struct RayTracingPipeline
         for (const auto & hit_group : hit_group_records)
         {
             // fetch all entries
-            const auto * closest_hit_entry =
-                (hit_group.m_closest_hit_id == -1) ? nullptr : &shader_entries[hit_group.m_closest_hit_id];
+            const auto * closest_hit_entry = hit_group.m_closest_hit_id.has_value()
+                                                 ? &shader_entries[hit_group.m_closest_hit_id.value()]
+                                                 : nullptr;
             const auto * any_hit_entry =
-                (hit_group.m_any_hit_id == -1) ? nullptr : &shader_entries[hit_group.m_any_hit_id];
-            const auto * intersect_entry =
-                (hit_group.m_intersect_id == -1) ? nullptr : &shader_entries[hit_group.m_intersect_id];
+                hit_group.m_any_hit_id.has_value() ? &shader_entries[hit_group.m_any_hit_id.value()] : nullptr;
+            const auto * intersect_entry = hit_group.m_intersect_id.has_value()
+                                               ? &shader_entries[hit_group.m_intersect_id.value()]
+                                               : nullptr;
 
             // hit group
             D3D12_HIT_GROUP_DESC * hit_group_desc    = &hit_group_descs[num_hit_group_descs++];
@@ -359,16 +369,19 @@ struct RayTracingPipeline
             hit_group_desc->AnyHitShaderImport       = nullptr;
             hit_group_desc->IntersectionShaderImport = nullptr;
 
-            assert(rt_lib.m_shader_srcs[hit_group.m_closest_hit_id].m_shader_stage == ShaderStageEnum::ClosestHit);
+            assert(rt_lib.m_shader_srcs[hit_group.m_closest_hit_id.value()].m_shader_stage ==
+                   ShaderStageEnum::ClosestHit);
             if (any_hit_entry)
             {
                 hit_group_desc->AnyHitShaderImport = any_hit_entry->m_renamed_symbol.c_str();
-                assert(rt_lib.m_shader_srcs[hit_group.m_any_hit_id].m_shader_stage == ShaderStageEnum::AnyHit);
+                assert(rt_lib.m_shader_srcs[hit_group.m_any_hit_id.value()].m_shader_stage ==
+                       ShaderStageEnum::AnyHit);
             }
             if (intersect_entry)
             {
                 hit_group_desc->IntersectionShaderImport = intersect_entry->m_renamed_symbol.c_str();
-                assert(rt_lib.m_shader_srcs[hit_group.m_intersect_id].m_shader_stage == ShaderStageEnum::Intersection);
+                assert(rt_lib.m_shader_srcs[hit_group.m_intersect_id.value()].m_shader_stage ==
+                       ShaderStageEnum::Intersection);
             }
             hit_group_desc->Type           = D3D12_HIT_GROUP_TYPE_TRIANGLES;
             hit_group_desc->HitGroupExport = hit_group.m_symbol.c_str();
@@ -407,14 +420,14 @@ struct RayTracingPipeline
             {
                 // hit_group
                 const auto & hit_group = hit_group_records[i - shader_entries.size()];
-                if (shader_entries[hit_group.m_closest_hit_id].m_local_root_signature == nullptr)
+                if (shader_entries[hit_group.m_closest_hit_id.value()].m_local_root_signature == nullptr)
                 {
                     root_signature_ptr = device->m_dx_empty_local_root_signature.GetAddressOf();
                 }
                 else
                 {
                     root_signature_ptr =
-                        shader_entries[hit_group.m_closest_hit_id].m_local_root_signature.GetAddressOf();
+                        shader_entries[hit_group.m_closest_hit_id.value()].m_local_root_signature.GetAddressOf();
                 }
                 symbol = hit_group.m_symbol.c_str();
             }
@@ -581,7 +594,7 @@ struct RayTracingShaderTable
         }();
 
         // write sbt
-        uint8_t * start_address;
+        uint8_t * start_address = nullptr;
         DXCK(m_shader_table_buffer->GetResource()->Map(0, nullptr, (void **)&start_address));
 
         uint8_t * sbtp = nullptr;

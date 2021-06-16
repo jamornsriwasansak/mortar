@@ -76,6 +76,8 @@ struct Device
 #endif
     uint32_t * m_vkac_crash_data = nullptr;
 
+    Device() {}
+
     Device(const PhysicalDevice & physical_device) : m_debug(physical_device.m_enable_debug)
     {
         m_vk_instance = physical_device.m_vk_instance;

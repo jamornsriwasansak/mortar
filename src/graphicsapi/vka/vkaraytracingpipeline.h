@@ -3,9 +3,9 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-#include "../shaderintrospect/hlsldxccompiler.h"
-#include "../shaderintrospect/spirvreflection.h"
+#include "../shadercompiler/hlsldxccompiler.h"
 #include "../shadersrc.h"
+#include "spirvreflection.h"
 
 namespace Vka
 {
