@@ -1,5 +1,5 @@
-#include "../../sharedsignature/sharedvertex.h"
-#include "../../sharedsignature/pbrmaterial.h"
+#include "../../shared/compactvertex.h"
+#include "../../shared/pbrmaterial.h"
 
 struct HitInfo
 {
@@ -23,7 +23,7 @@ StructuredBuffer<PbrMaterial> materials : register(t1, space0);
 StructuredBuffer<uint> material_ids : register(t2, space0);
 ByteAddressBuffer indices[100] : register(t3, space0);
 
-StructuredBuffer<HlslVertexIn> vertices[100] : register(t0, space1);
+StructuredBuffer<CompactVertex> vertices[100] : register(t0, space1);
 
 Texture2D<float4> g_textures[100] : register(t0, space2);
 
@@ -69,7 +69,7 @@ VertexAttributes GetVertexAttributes(uint instanceIndex, uint triangleIndex, flo
 
     for (uint i = 0; i < 3; i++)
     {
-        HlslVertexIn vertex_in = vertices[instanceIndex][indices[i]];
+        CompactVertex vertex_in = vertices[instanceIndex][indices[i]];
         v.position += vertex_in.m_position * barycentrics[i];
         v.normal += vertex_in.m_normal * barycentrics[i];
         v.uv += float2(vertex_in.m_texcoord_x, vertex_in.m_texcoord_y) * barycentrics[i];

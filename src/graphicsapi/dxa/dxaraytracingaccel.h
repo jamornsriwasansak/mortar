@@ -113,6 +113,8 @@ struct RayTracingInstance
 {
     D3D12_RAYTRACING_INSTANCE_DESC m_instance_desc = {};
 
+    RayTracingInstance() {}
+
     RayTracingInstance(RayTracingBlas * blas, size_t hit_group_index)
     {
         // create an instance desc for the bottom-level acceleration structure.
@@ -129,6 +131,8 @@ struct RayTracingTlas
 {
     Buffer m_tlas_buffer;
     Buffer m_instance_desc_buffer;
+
+    RayTracingTlas() {}
 
     RayTracingTlas(Device *                   device,
                    const RayTracingInstance * instance,

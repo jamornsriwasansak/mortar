@@ -87,6 +87,8 @@ struct RasterPipeline
     vk::UniquePipelineLayout                   m_vk_pipeline_layout;
     std::vector<vk::UniqueDescriptorSetLayout> m_vk_descriptor_set_layouts;
 
+    RasterPipeline() {}
+
     RasterPipeline(Device *                       device,
                    const std::vector<ShaderSrc> & shader_srcs,
                    const FramebufferBindings &    framebuffer_bindings,

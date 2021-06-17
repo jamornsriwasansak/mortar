@@ -1,12 +1,14 @@
 #pragma once
 
 #include "graphicsapi/graphicsapi.h"
+#include "render/shared/compactvertex.h"
+#include "render/shared/pbrmaterial.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <stb_image.h>
 
-struct Mesh
+struct MeshBlob
 {
     Gp::Buffer          m_vertex_buffer;
     Gp::Buffer          m_index_buffer;
@@ -34,24 +36,26 @@ struct Mesh
     }
 };
 
-struct PbrObject
+struct PbrMesh
 {
-    size_t m_mesh_id;
-    size_t m_submesh_id;
+    size_t m_blob_id;
+    size_t m_subblob_id;
     size_t m_material_id;
 };
 
 struct AssetManager
 {
-    std::vector<Mesh>                       m_meshes;
+    std::vector<MeshBlob>                       m_mesh_blobs;
     std::map<std::filesystem::path, size_t> m_mesh_id_from_path;
     std::vector<Gp::Texture>                m_textures;
     std::map<std::filesystem::path, size_t> m_texture_id_from_path;
-    Gp::StagingBufferManager *              m_staging_buffer_manager;
-    Gp::Device *                            m_device;
+    Gp::StagingBufferManager *              m_staging_buffer_manager = nullptr;
+    Gp::Device *                            m_device                 = nullptr;
 
     std::vector<PbrMaterial> m_pbr_materials;
-    std::vector<PbrObject>   m_pbr_objects;
+    std::vector<PbrMesh>   m_pbr_objects;
+
+    AssetManager() {}
 
     AssetManager(Gp::Device * device, Gp::StagingBufferManager * staging_buffer_manager)
     : m_device(device), m_staging_buffer_manager(staging_buffer_manager)
@@ -84,7 +88,7 @@ struct AssetManager
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
 
-        Mesh               result;
+        MeshBlob               result;
         const unsigned int num_meshes = scene->mNumMeshes;
         result.m_offset_in_indices.resize(num_meshes + 1);
         result.m_offset_in_vertices.resize(num_meshes + 1);
@@ -111,8 +115,8 @@ struct AssetManager
         result.m_num_indices                    = ii;
         result.m_num_vertices                   = iv;
 
-        std::vector<HlslVertexIn> vertices(iv);
-        std::vector<uint32_t>     indices(ii);
+        std::vector<CompactVertex> vertices(iv);
+        std::vector<uint32_t>      indices(ii);
 
         for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
         {
@@ -122,11 +126,11 @@ struct AssetManager
             const size_t       i_vertex_offset = result.m_offset_in_vertices[i_mesh];
             for (unsigned int i_vertex = 0; i_vertex < num_vertices; i_vertex++)
             {
-                HlslVertexIn & vertex = vertices[i_vertex_offset + i_vertex];
-                vertex.m_position     = to_float3(aimesh->mVertices[i_vertex]);
-                vertex.m_normal       = to_float3(aimesh->mNormals[i_vertex]);
-                vertex.m_texcoord_x   = aimesh->mTextureCoords[0][i_vertex].x;
-                vertex.m_texcoord_y   = aimesh->mTextureCoords[0][i_vertex].y;
+                CompactVertex & vertex = vertices[i_vertex_offset + i_vertex];
+                vertex.m_position      = to_float3(aimesh->mVertices[i_vertex]);
+                vertex.m_normal        = to_float3(aimesh->mNormals[i_vertex]);
+                vertex.m_texcoord_x    = aimesh->mTextureCoords[0][i_vertex].x;
+                vertex.m_texcoord_y    = aimesh->mTextureCoords[0][i_vertex].y;
             }
 
             // set faces
@@ -162,8 +166,8 @@ struct AssetManager
                                            "indexbuffer:" + path.string());
         m_staging_buffer_manager->submit_all_pending_upload();
 
-        const size_t index = m_meshes.size();
-        m_meshes.emplace_back(std::move(result));
+        const size_t index = m_mesh_blobs.size();
+        m_mesh_blobs.emplace_back(std::move(result));
         m_mesh_id_from_path[path] = index;
 
         return index;
@@ -197,7 +201,6 @@ struct AssetManager
             }
         };
 
-
         const size_t        num_materials = scene->mNumMaterials;
         std::vector<size_t> pbr_material_id_from_ai_material(scene->mNumMaterials);
         for (unsigned int i_material = 0; i_material < num_materials; i_material++)
@@ -218,9 +221,9 @@ struct AssetManager
         const size_t begin_index = m_pbr_objects.size();
         for (size_t i_submesh = 0; i_submesh < scene->mNumMeshes; i_submesh++)
         {
-            PbrObject pbr_object;
-            pbr_object.m_mesh_id    = mesh_id;
-            pbr_object.m_submesh_id = i_submesh;
+            PbrMesh pbr_object;
+            pbr_object.m_blob_id    = mesh_id;
+            pbr_object.m_subblob_id = i_submesh;
             pbr_object.m_material_id =
                 pbr_material_id_from_ai_material[scene->mMeshes[i_submesh]->mMaterialIndex];
             m_pbr_objects.push_back(pbr_object);

@@ -3,7 +3,7 @@
 #
 cmake_minimum_required(VERSION 3.18)
 
-project(grata)
+project(mortar)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(BUILD_TEST OFF CACHE BOOL "" FORCE)
 
@@ -95,10 +95,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
     #include_directories(SYSTEM "${DEPS_PATH}/aftercrash/include")
     #file(GLOB aftercrash_src "${DEPS_PATH}/aftercrash/src/D3d12AfterCrash.cpp" "${DEPS_PATH}/aftercrash/src/vulkanaftercrash.cpp")
 
-# grata
+# mortar
     # find all sources
     include_directories(src)
-    file(GLOB_RECURSE grata_src
+    file(GLOB_RECURSE mortar_src
          "src/*.h"
          "src/*.hpp"
          "src/*.cpp"
@@ -124,7 +124,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
                                 COMPILER_FLAGS "-w")
 
     # generating executable
-    add_executable(grata ${grata_src} ${spirv_reflect_src} ${d3d12ma} ${aftercrash_src} ${GFSDK_Aftermath_src})
-    target_link_libraries(grata PUBLIC ${DEPS_LIBRARIES})
+    add_executable(mortar ${mortar_src} ${spirv_reflect_src} ${d3d12ma} ${aftercrash_src} ${GFSDK_Aftermath_src})
+    target_link_libraries(mortar PUBLIC ${DEPS_LIBRARIES})
 
 set(CMAKE_VERBOSE_MAKEFILE ON)

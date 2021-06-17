@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../sharedsignature/pbrmaterial.h"
-#include "../../sharedsignature/sharedvertex.h"
-#include "../../assetmanager.h"
+#include "../../shared/compactvertex.h"
+#include "../../shared/pbrmaterial.h"
+#include "assetmanager.h"
 
 #include "00constantbuffer.h"
 #include "00ssaoparam.h"
@@ -49,7 +49,7 @@ mainnn()
         framebuffer_bindings_ssao[i] =
             Gp::FramebufferBindings(&device, { &swapchain_color_attachments[i] });
     }
-    
+
     std::vector<Gp::CommandPool>    cmd_pools(num_flights);
     std::vector<Gp::DescriptorPool> desc_pools(num_flights);
     for (size_t i = 0; i < num_flights; i++)
@@ -132,20 +132,20 @@ mainnn()
 
     for (size_t i = pbr_mesh_range.x; i < pbr_mesh_range.y; i++)
     {
-        const PbrObject & object = asset_manager.m_pbr_objects[i];
-        const Mesh &      mesh   = asset_manager.m_meshes[object.m_mesh_id];
+        const PbrMesh & object = asset_manager.m_pbr_objects[i];
+        const MeshBlob &      mesh   = asset_manager.m_mesh_blobs[object.m_blob_id];
 
         raytracing_geom_descs[i].set_flag(Gp::RayTracingGeometryFlag::Opaque);
         raytracing_geom_descs[i].set_index_buffer(mesh.m_index_buffer,
-                                                  mesh.get_num_indices(object.m_submesh_id),
+                                                  mesh.get_num_indices(object.m_subblob_id),
                                                   sizeof(uint32_t),
                                                   Gp::IndexType::Uint32,
-                                                  mesh.m_offset_in_indices[object.m_submesh_id]);
+                                                  mesh.m_offset_in_indices[object.m_subblob_id]);
         raytracing_geom_descs[i].set_vertex_buffer(mesh.m_vertex_buffer,
-                                                   mesh.get_num_vertices(object.m_submesh_id),
-                                                   sizeof(HlslVertexIn),
+                                                   mesh.get_num_vertices(object.m_subblob_id),
+                                                   sizeof(CompactVertex),
                                                    Gp::FormatEnum::R32G32B32_SFloat,
-                                                   mesh.m_offset_in_vertices[object.m_submesh_id]);
+                                                   mesh.m_offset_in_vertices[object.m_subblob_id]);
     }
     blases.push_back(Gp::RayTracingBlas(&device,
                                         raytracing_geom_descs.data(),
@@ -175,7 +175,7 @@ mainnn()
 
     // ssao params
     SsaoParams ssao_params = {};
-    ssao_params.m_color = float4(0.0f, 0.0f, 0.1f, 0.0f);
+    ssao_params.m_color    = float4(0.0f, 0.0f, 0.1f, 0.0f);
     std::memcpy(gpu_ssao_params.map(), &ssao_params, sizeof(ssao_params));
     gpu_ssao_params.unmap();
 
@@ -206,7 +206,7 @@ mainnn()
     std::vector<uint32_t> material_ids(pbr_mesh_range.y - pbr_mesh_range.x);
     for (size_t i = pbr_mesh_range.x; i < pbr_mesh_range.y; i++)
     {
-        const PbrObject & object = asset_manager.m_pbr_objects[i];
+        const PbrMesh & object = asset_manager.m_pbr_objects[i];
         material_ids[i]          = static_cast<int>(object.m_material_id);
     }
     Gp::Buffer material_id_buffer(&device,
@@ -274,8 +274,8 @@ mainnn()
             .set_s_sampler(0, sampler);
         for (size_t i = pbr_mesh_range.x; i < pbr_mesh_range.y; i++)
         {
-            const PbrObject & object = asset_manager.m_pbr_objects[i];
-            const Mesh &      mesh   = asset_manager.m_meshes[object.m_mesh_id];
+            const PbrMesh & object = asset_manager.m_pbr_objects[i];
+            const MeshBlob &      mesh   = asset_manager.m_mesh_blobs[object.m_blob_id];
             ray_descriptor_sets[0].set_t_byte_address_buffer(3,
                                                              mesh.m_index_buffer,
                                                              sizeof(uint32_t),
@@ -286,11 +286,11 @@ mainnn()
         ray_descriptor_sets[0].update();
         for (size_t i = pbr_mesh_range.x; i < pbr_mesh_range.y; i++)
         {
-            const PbrObject & object = asset_manager.m_pbr_objects[i];
-            const Mesh &      mesh   = asset_manager.m_meshes[object.m_mesh_id];
+            const PbrMesh & object = asset_manager.m_pbr_objects[i];
+            const MeshBlob &      mesh   = asset_manager.m_mesh_blobs[object.m_blob_id];
             ray_descriptor_sets[1].set_t_structured_buffer(0,
                                                            mesh.m_vertex_buffer,
-                                                           sizeof(HlslVertexIn),
+                                                           sizeof(CompactVertex),
                                                            mesh.get_num_vertices(i),
                                                            i,
                                                            mesh.m_offset_in_vertices[i]);
@@ -325,8 +325,8 @@ mainnn()
 
         // raster
         cmd_list.bind_graphics_descriptor_set(ssao_descriptor_sets);
-        cmd_list.bind_vertex_buffer(asset_manager.m_meshes[0].m_vertex_buffer, sizeof(HlslVertexIn));
-        cmd_list.bind_index_buffer(asset_manager.m_meshes[0].m_index_buffer, Gp::IndexType::Uint32);
+        cmd_list.bind_vertex_buffer(asset_manager.m_mesh_blobs[0].m_vertex_buffer, sizeof(CompactVertex));
+        cmd_list.bind_index_buffer(asset_manager.m_mesh_blobs[0].m_index_buffer, Gp::IndexType::Uint32);
         cmd_list.draw_instanced(3, 1, 0, 0);
         cmd_list.end_render_pass();
 

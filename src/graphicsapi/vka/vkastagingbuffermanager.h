@@ -54,6 +54,8 @@ struct StagingBufferManager
     const Device *                                                  m_device;
     static constexpr size_t DefaultStagingBufferSize = 100 * 1024 * 1024; // 100 MB
 
+    StagingBufferManager() {}
+
     StagingBufferManager(const Device * device, const std::string & name = "")
     : m_device(device), m_name(name)
     {

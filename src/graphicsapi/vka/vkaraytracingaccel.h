@@ -58,6 +58,8 @@ struct RayTracingBlas
     Buffer                             m_accel_buffer;
     vk::UniqueAccelerationStructureKHR m_vk_accel_struct;
 
+    RayTracingBlas() {}
+
     RayTracingBlas(const Device *                 device,
                    const RayTracingGeometryDesc * geometry_descs,
                    const size_t                   num_geometries,
@@ -134,6 +136,8 @@ struct RayTracingInstance
 {
     vk::AccelerationStructureInstanceKHR m_vk_instance = {};
 
+    RayTracingInstance() {}
+
     RayTracingInstance(RayTracingBlas * blas, const size_t hit_group_index)
     {
         m_vk_instance.transform.matrix[0][0] = 1.0f;
@@ -151,6 +155,8 @@ struct RayTracingTlas
     Buffer                             m_instance_buffer;
     Buffer                             m_accel_buffer;
     vk::UniqueAccelerationStructureKHR m_vk_accel_struct;
+
+    RayTracingTlas() {}
 
     RayTracingTlas(const Device *             device,
                    const RayTracingInstance * instance,

@@ -96,6 +96,8 @@ struct Texture
             const std::string &    name                = "")
     : m_clear_value(clear_value)
     {
+        assert(resolution.x > 0 && resolution.y > 0);
+
         vk::ImageUsageFlags usage          = static_cast<vk::ImageUsageFlagBits>(usage_);
         vk::ImageLayout     initial_layout = static_cast<vk::ImageLayout>(initial_state_);
         if (initial_data != nullptr)
@@ -129,7 +131,7 @@ struct Texture
         VkImage           vma_vk_image;
         VmaAllocation     vma_allocation;
         VmaAllocationInfo vma_alloc_info;
-        vmaCreateImage(*device->m_vma_allocator, &image_ci, &vma_alloc_ci, &vma_vk_image, &vma_allocation, &vma_alloc_info);
+        VKCK(vmaCreateImage(*device->m_vma_allocator, &image_ci, &vma_alloc_ci, &vma_vk_image, &vma_allocation, &vma_alloc_info));
 
         // setup image bundle
         VmaImageBundle image_bundle;

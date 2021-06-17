@@ -13,7 +13,7 @@ struct Buffer
         VmaAllocator      m_vma_allocator;
         VmaAllocation     m_vma_allocation;
         VmaAllocationInfo m_vma_alloc_info;
-        VkBuffer          m_vk_buffer;
+        VkBuffer          m_vk_buffer = nullptr;
     };
 
     struct VmaBufferBundleDeleter
@@ -114,6 +114,12 @@ struct Buffer
         }
 
         device->name_vkhpp_object<vk::Buffer, vk::Buffer::CType>(vk::Buffer(vma_vk_buffer), name);
+    }
+
+    bool
+    is_initialized()
+    {
+        return !m_vma_buffer_bundle.empty();
     }
 
     void *

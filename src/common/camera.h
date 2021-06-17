@@ -23,6 +23,8 @@ struct FpsCamera
     double2 m_prev_cursor_pos;
     bool    m_is_moved;
 
+    FpsCamera() {}
+
     FpsCamera(const float3 & origin, const float3 & lookat, const float3 & up, const float fov_y, const float aspect_ratio)
     : m_origin(origin),
       m_fov_y(fov_y),
@@ -129,7 +131,7 @@ struct FpsCamera
             result.m_view = glm::lookAtLH(m_origin, m_origin + m_direction, m_up);
             result.m_proj = glm::perspectiveLH(m_fov_y, m_aspect_ratio, 0.01f, 100.0f);
         }
-        //result.m_proj[1][1] *= -1.0f;
+        // result.m_proj[1][1] *= -1.0f;
         result.m_vp = result.m_proj * result.m_view;
         return result;
     }

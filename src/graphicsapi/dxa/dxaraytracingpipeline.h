@@ -92,6 +92,8 @@ struct RayTracingPipeline
         std::wstring          m_symbol = L"";
     };
 
+    RayTracingPipeline() {}
+
     RayTracingPipeline(Device *                         device,
                        const RayTracingPipelineConfig & rt_lib,
                        const size_t                     attribute_size,

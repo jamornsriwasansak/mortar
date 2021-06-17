@@ -27,6 +27,8 @@ struct RasterPipeline
 
     std::map<std::tuple<D3D_SHADER_INPUT_TYPE, SpaceIndex, BindPoint>, DxilReflection::DescriptorInfo> m_descriptor_set_info;
 
+    RasterPipeline() {}
+
     RasterPipeline(Device *                       device,
                    const std::vector<ShaderSrc> & shader_srcs,
                    const FramebufferBindings &    framebuffer_bindings,

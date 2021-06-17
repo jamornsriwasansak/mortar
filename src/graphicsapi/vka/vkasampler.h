@@ -8,6 +8,8 @@ struct Sampler
 {
     vk::UniqueSampler m_vk_sampler;
 
+    Sampler() {}
+
     Sampler(const Device * device)
     {
         vk::SamplerCreateInfo sampler_ci;

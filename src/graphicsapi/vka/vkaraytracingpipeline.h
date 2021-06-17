@@ -67,6 +67,8 @@ struct RayTracingPipeline
     size_t                                     m_num_misses;
     size_t                                     m_num_hit_groups;
 
+    RayTracingPipeline() {}
+
     RayTracingPipeline(const Device *                   device,
                        const RayTracingPipelineConfig & rt_lib,
                        const size_t                     attribute_size,
@@ -211,6 +213,8 @@ struct RayTracingShaderTable
     vk::StridedDeviceAddressRegionKHR                  m_miss_device_region;
     vk::StridedDeviceAddressRegionKHR                  m_hitgroup_device_region;
     vk::StridedDeviceAddressRegionKHR                  m_callable_device_region;
+
+    RayTracingShaderTable() {}
 
     RayTracingShaderTable(const Device *             device,
                           const RayTracingPipeline & pipeline,
