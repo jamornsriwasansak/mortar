@@ -153,7 +153,7 @@ struct CommandList
         }
 
         // set dsv handle
-        D3D12_CPU_DESCRIPTOR_HANDLE * dsv_handle = nullptr;
+        const D3D12_CPU_DESCRIPTOR_HANDLE * dsv_handle = nullptr;
         if (framebuffer_binding.m_depth_attachment)
         {
             dsv_handle = &framebuffer_binding.m_depth_attachment->m_dx_dsv_rtv_cpu_handle;

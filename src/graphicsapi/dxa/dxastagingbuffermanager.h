@@ -32,6 +32,8 @@ struct StagingBufferManager
     static constexpr size_t            DefaultStagingBufferSize = 100 * 1024 * 1024; // 100 MB
     std::string                        m_name                   = "";
 
+    StagingBufferManager() {}
+
     StagingBufferManager(Device * device, const std::string & name = "")
     {
         // create global copy command allocator

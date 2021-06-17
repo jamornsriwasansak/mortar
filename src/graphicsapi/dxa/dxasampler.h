@@ -8,6 +8,9 @@ namespace Dxa
 struct Sampler
 {
     D3D12_SAMPLER_DESC sampler_desc = {};
+
+    Sampler() {}
+
     Sampler([[maybe_unused]] const Device * device)
     {
         sampler_desc.Filter         = D3D12_FILTER_MIN_MAG_MIP_LINEAR;

@@ -39,12 +39,12 @@ struct Renderer
 
         // create camera params buffer
         m_cb_camera_params =
-            Gp::Buffer(device, Gp::BufferUsageEnum::ConstantBuffer, Gp::MemoryUsageEnum::CpuOnly, sizeof(CameraParams));
+            Gp::Buffer(device, Gp::BufferUsageEnum::ConstantBuffer, Gp::MemoryUsageEnum::CpuToGpu, sizeof(CameraParams));
 
         // create material buffer
         m_cb_materials = Gp::Buffer(device,
-                                    Gp::BufferUsageEnum::StorageBuffer,
-                                    Gp::MemoryUsageEnum::CpuOnly,
+                                    Gp::BufferUsageEnum::ConstantBuffer,
+                                    Gp::MemoryUsageEnum::CpuToGpu,
                                     sizeof(PbrMaterial) * 100,
                                     nullptr,
                                     nullptr,
@@ -52,8 +52,8 @@ struct Renderer
 
         // create material id buffer
         m_cb_material_id = Gp::Buffer(device,
-                                      Gp::BufferUsageEnum::StorageBuffer,
-                                      Gp::MemoryUsageEnum::CpuOnly,
+                                      Gp::BufferUsageEnum::ConstantBuffer,
+                                      Gp::MemoryUsageEnum::CpuToGpu,
                                       sizeof(uint32_t) * 100,
                                       nullptr,
                                       nullptr,
@@ -205,12 +205,29 @@ struct Renderer
         ray_descriptor_sets[2] =
             Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 2, "rt_desc_set2");
 
-        auto transform = params.m_fps_camera->get_camera_props();
+        // set camera uniform
+        auto         transform = params.m_fps_camera->get_camera_props();
         CameraParams cam_params;
         cam_params.m_inv_view = inverse(transform.m_view);
         cam_params.m_inv_proj = inverse(transform.m_proj);
         std::memcpy(m_cb_camera_params.map(), &cam_params, sizeof(CameraParams));
         m_cb_camera_params.unmap();
+
+        // set material info uniform
+        std::memcpy(m_cb_materials.map(),
+                    params.m_materials->data(),
+                    sizeof(PbrMaterial) * params.m_materials->size());
+        m_cb_materials.unmap();
+
+        // set material
+        std::vector<uint32_t> mat_ids;
+        for (size_t i = 0; i < params.m_static_meshes.size(); i++)
+        {
+            const PbrMesh & object = params.m_static_meshes.at(i);
+            mat_ids.push_back(object.m_material_id);
+        }
+        std::memcpy(m_cb_material_id.map(), mat_ids.data(), sizeof(uint32_t) * mat_ids.size());
+        m_cb_material_id.unmap();
 
         ray_descriptor_sets[0]
             .set_b_constant_buffer(0, m_cb_camera_params)

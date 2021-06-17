@@ -31,10 +31,12 @@ struct Buffer
         {
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
             buffer_usage ^= BufferUsageEnum::StorageBuffer;
+            assert(memory_usage == MemoryUsageEnum::GpuOnly);
         }
         if (HasFlag(buffer_usage, BufferUsageEnum::RayTracingAccelStructBuffer))
         {
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+            assert(memory_usage == MemoryUsageEnum::GpuOnly);
         }
 
         // constant buffer needs 256 bytes alignment

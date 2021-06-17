@@ -55,6 +55,8 @@ struct RayTracingBlas
 {
     Buffer m_blas_buffer;
 
+    RayTracingBlas() {}
+
     RayTracingBlas(Device *                       device,
                    const RayTracingGeometryDesc * geometry_descs,
                    const size_t                   num_geometries,

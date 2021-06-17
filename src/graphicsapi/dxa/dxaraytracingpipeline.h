@@ -556,6 +556,8 @@ struct RayTracingShaderTable
     D3D12MAHandle<D3D12MA::Allocation> m_shader_table_buffer   = nullptr;
     D3D12_DISPATCH_RAYS_DESC           m_dx_dispatch_rays_desc = {};
 
+    RayTracingShaderTable() {}
+
     RayTracingShaderTable(Device *                   device,
                           const RayTracingPipeline & pipeline,
                           const std::string &        name,
