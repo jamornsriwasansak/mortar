@@ -143,7 +143,7 @@ struct DescriptorSet
         else
         {
             Logger::Warn(__FUNCTION__,
-                         " cannot set (",
+                         " cannot set_t_byte_address_buffer(",
                          std::to_string(m_set),
                          ", ",
                          std::to_string(binding),
@@ -181,7 +181,7 @@ struct DescriptorSet
         else
         {
             Logger::Warn(__FUNCTION__,
-                         " cannot set (",
+                         " cannot set_t_structured_buffer(",
                          std::to_string(m_set),
                          ", ",
                          std::to_string(binding),
@@ -202,7 +202,7 @@ struct DescriptorSet
         else
         {
             Logger::Warn(__FUNCTION__,
-                         " cannot set (",
+                         " cannot set_s_sampler(",
                          std::to_string(m_set),
                          ", ",
                          std::to_string(binding),
@@ -229,7 +229,7 @@ struct DescriptorSet
         else
         {
             Logger::Warn(__FUNCTION__,
-                         " cannot set (",
+                         " cannot set_t_texture(",
                          std::to_string(m_set),
                          ", ",
                          std::to_string(binding),
@@ -265,7 +265,7 @@ struct DescriptorSet
         else
         {
             Logger::Warn(__FUNCTION__,
-                         " cannot set (",
+                         " cannot set_t_ray_tracing_accel(",
                          std::to_string(m_set),
                          ", ",
                          std::to_string(binding),
@@ -295,7 +295,7 @@ struct DescriptorSet
         else
         {
             Logger::Warn(__FUNCTION__,
-                         " cannot set (",
+                         " cannot set_u_rw_texture(",
                          std::to_string(m_set),
                          ", ",
                          std::to_string(binding),

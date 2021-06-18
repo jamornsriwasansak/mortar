@@ -26,6 +26,10 @@ struct MainLoop
     FpsCamera                m_camera;
     Renderer                 m_renderer;
 
+    Gp::Buffer  m_dummy_buffer;
+    Gp::Buffer  m_dummy_index_buffer;
+    Gp::Texture m_dummy_texture;
+
     MainLoop() {}
 
     MainLoop(Gp::Device * device, Window * window, const size_t num_flights)
@@ -80,6 +84,25 @@ struct MainLoop
                              float3(0, 1, 0),
                              radians(60.0f),
                              float(resolution.x) / float(resolution.y));
+
+        // init dummy buffers and texture
+        m_dummy_buffer  = Gp::Buffer(m_device,
+                                    Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::IndexBuffer |
+                                        Gp::BufferUsageEnum::StorageBuffer,
+                                    Gp::MemoryUsageEnum::GpuOnly,
+                                    sizeof(uint32_t),
+                                    nullptr,
+                                    nullptr,
+                                    "dummy_vertex_buffer");
+        m_dummy_texture = Gp::Texture(m_device,
+                                      Gp::TextureUsageEnum::Sampled,
+                                      Gp::TextureStateEnum::AllShaderVisible,
+                                      Gp::FormatEnum::R8G8B8A8_UNorm,
+                                      int2(1, 1),
+                                      nullptr,
+                                      nullptr,
+                                      float4(0.0f, 0.0f, 0.0f, 0.0f),
+                                      "dummy_texture");
     }
 
     void
@@ -111,6 +134,8 @@ struct MainLoop
         ctx.m_image_index                  = m_swapchain.m_image_index;
         ctx.m_swapchain_texture            = &m_swapchain_textures[m_swapchain.m_image_index];
         ctx.m_staging_buffer_manager       = &m_staging_buffer_manager;
+        ctx.m_dummy_buffer                 = &m_dummy_buffer;
+        ctx.m_dummy_texture                = &m_dummy_texture;
 
         RenderParams render_params;
         render_params.m_materials  = &m_asset_manager.m_pbr_materials;

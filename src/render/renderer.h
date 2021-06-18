@@ -233,8 +233,8 @@ struct Renderer
             .set_b_constant_buffer(0, m_cb_camera_params)
             .set_u_rw_texture(0, m_rt_result)
             .set_t_ray_tracing_accel(0, m_rt_tlas)
-            .set_t_structured_buffer(1, m_cb_materials, sizeof(PbrMaterial), 100)
-            .set_t_structured_buffer(2, m_cb_material_id, sizeof(uint32_t), 100)
+            .set_b_constant_buffer(1, m_cb_materials)
+            .set_b_constant_buffer(2, m_cb_material_id)
             .set_s_sampler(0, m_sampler);
         // set index buffer
         for (size_t i = 0; i < params.m_static_meshes.size(); i++)
@@ -247,6 +247,10 @@ struct Renderer
                                                              mesh.get_num_indices(i),
                                                              i,
                                                              mesh.m_offset_in_indices[i]);
+        }
+        for (size_t i = params.m_static_meshes.size(); i < 100; i++)
+        {
+            ray_descriptor_sets[0].set_t_byte_address_buffer(3, *ctx.m_dummy_buffer, sizeof(uint32_t), 1, i, 0);
         }
         ray_descriptor_sets[0].update();
 
@@ -262,12 +266,20 @@ struct Renderer
                                                            i,
                                                            mesh.m_offset_in_vertices[i]);
         }
+        for (size_t i = params.m_static_meshes.size(); i < 100; i++)
+        {
+            ray_descriptor_sets[1].set_t_structured_buffer(0, *ctx.m_dummy_buffer, sizeof(uint32_t), 1, i, 0);
+        }
         ray_descriptor_sets[1].update();
 
         // set bindless textures
         for (size_t i = 0; i < params.m_textures->size(); i++)
         {
             ray_descriptor_sets[2].set_t_texture(0, params.m_textures->at(i), i);
+        }
+        for (size_t i = params.m_textures->size(); i < 100; i++)
+        {
+            ray_descriptor_sets[2].set_t_texture(0, *ctx.m_dummy_texture, i);
         }
         ray_descriptor_sets[2].update();
 

@@ -12,6 +12,8 @@ struct RenderContext
     Gp::Fence *                m_flight_fence                 = nullptr;
     Gp::Texture *              m_swapchain_texture            = nullptr;
     Gp::StagingBufferManager * m_staging_buffer_manager       = nullptr;
+    Gp::Buffer *               m_dummy_buffer                 = nullptr;
+    Gp::Texture *              m_dummy_texture                = nullptr;
     size_t                     m_flight_index                 = 0;
     size_t                     m_image_index                  = 0;
 };

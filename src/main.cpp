@@ -4,7 +4,7 @@
 int
 main()
 {
-    constexpr bool is_debug = false;
+    constexpr bool is_debug = true;
 
     // default parameters
     const size_t num_flights = 2;

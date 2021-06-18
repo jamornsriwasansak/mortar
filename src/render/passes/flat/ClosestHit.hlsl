@@ -8,8 +8,8 @@ void ClosestHit(inout HitInfo payload, const Attributes attrib)
     VertexAttributes vattrib = GetVertexAttributes(GeometryIndex(), PrimitiveIndex(), barycentrics);
 
     // fetch pbr material info
-    uint material_id = material_ids[GeometryIndex()];
-    PbrMaterial material = materials[material_id];
+    uint material_id = ids[GeometryIndex() / 4][GeometryIndex() % 4];
+    PbrMaterial material = pbr_materials[material_id];
 
     //payload.ShadedColorAndHitT = float4(get_color(PrimitiveIndex()), 0.0f);
 

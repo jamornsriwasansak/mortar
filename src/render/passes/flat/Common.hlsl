@@ -19,8 +19,14 @@ cbuffer cb_camera : register(b0)
 RWTexture2D<float4> RTOutput : register(u0);
 SamplerState g_sampler : register(s0);
 RaytracingAccelerationStructure SceneBVH : register(t0, space0);
-StructuredBuffer<PbrMaterial> materials : register(t1, space0);
-StructuredBuffer<uint> material_ids : register(t2, space0);
+cbuffer materials : register(b1, space0)
+{
+    PbrMaterial pbr_materials[100];
+};
+cbuffer material_ids : register(b2, space0)
+{
+    uint4 ids[25];
+};
 ByteAddressBuffer indices[100] : register(t3, space0);
 
 StructuredBuffer<CompactVertex> vertices[100] : register(t0, space1);
