@@ -130,7 +130,8 @@ struct DxilReflection
     }
 
     ReflectionResult
-    reflect(const std::pair<ComPtr<IDxcBlob>, Dxa::ShaderStageEnum> * blobs, const size_t num_blobs) const
+    reflect(const std::span<std::pair<ComPtr<IDxcBlob>, Dxa::ShaderStageEnum>> & blobs,
+            const std::vector<Dxa::ShaderSrc> &                                  shader_srcs) const
     {
         using Space     = size_t;
         using BindPoint = size_t;
@@ -143,7 +144,7 @@ struct DxilReflection
 
         ReflectionResult result;
 
-        for (size_t i_blob = 0; i_blob < num_blobs; i_blob++)
+        for (size_t i_blob = 0; i_blob < blobs.size(); i_blob++)
         {
             IDxcBlob *           blob  = blobs[i_blob].first.Get();
             Dxa::ShaderStageEnum stage = blobs[i_blob].second;
@@ -168,19 +169,30 @@ struct DxilReflection
                 library_reflection = result.m_library_reflections.back().Get();
                 DXCK(library_reflection->GetDesc(&library_desc));
 
-                // in case of library, make sure that there is only one function that is accessible
-                if (library_desc.FunctionCount != 1)
+                for (UINT i_entry = 0; i_entry < library_desc.FunctionCount; i_entry++)
                 {
-                    Logger::Error<true>(
-                        __FUNCTION__ " reflecting library found more than one function entry (",
-                        std::to_string(library_desc.FunctionCount),
-                        ")");
-                }
+                    // get func desc
+                    function_reflection = library_reflection->GetFunctionByIndex(i_entry);
+                    DXCK(function_reflection->GetDesc(&func_desc));
+                    num_bound_resources = func_desc.BoundResources;
 
-                // get func desc
-                function_reflection = library_reflection->GetFunctionByIndex(0);
-                DXCK(function_reflection->GetDesc(&func_desc));
-                num_bound_resources = func_desc.BoundResources;
+                    std::string func_name(func_desc.Name);
+                    func_name = func_name.substr(0, func_name.find("@"));
+
+                    if (func_name == "\x1?" + shader_srcs[i_blob].m_entry)
+                    {
+                        break;
+                    }
+
+                    if (i_entry + 1 == library_desc.FunctionCount)
+                    {
+                        Logger::Error<true>(__FUNCTION__,
+                                            " cannot not find entry ",
+                                            shader_srcs[i_blob].m_entry,
+                                            " in library created from ",
+                                            shader_srcs[i_blob].m_file_path);
+                    }
+                }
             }
             else
             {

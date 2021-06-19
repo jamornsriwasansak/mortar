@@ -211,7 +211,7 @@ struct AssetManager
             pbr_material.m_diffuse_tex_id =
                 static_cast<int>(load_assimp_texture(material, aiTextureType::aiTextureType_DIFFUSE));
             pbr_material.m_roughness_tex_id =
-                static_cast<int>(load_assimp_texture(material, aiTextureType::aiTextureType_DIFFUSE));
+                static_cast<int>(load_assimp_texture(material, aiTextureType::aiTextureType_SHININESS));
 
             pbr_material_id_from_ai_material[i_material] = m_pbr_materials.size();
             m_pbr_materials.push_back(pbr_material);

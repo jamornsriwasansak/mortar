@@ -146,6 +146,13 @@ struct MainLoop
             m_asset_manager.m_pbr_objects; // TODO:: for now, we render all meshes as static
         render_params.m_is_static_mesh_dirty = false;
         render_params.m_fps_camera           = &m_camera;
+        render_params.m_is_shaders_dirty     = false;
+
+        if (glfwGetKey(m_window->m_glfw_window, GLFW_KEY_R) == GLFW_PRESS)
+        {
+            Logger::Info("marked shaders dirty");
+            render_params.m_is_shaders_dirty = true;
+        }
 
         // run renderer
         m_renderer.loop(ctx, render_params);

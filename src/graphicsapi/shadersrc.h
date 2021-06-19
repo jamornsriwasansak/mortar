@@ -10,10 +10,11 @@
 template <typename ShaderStageEnum>
 struct TShaderSrc
 {
-    std::filesystem::path m_file_path = "";
-    std::string           m_source    = "";
-    std::string           m_entry     = "";
-    ShaderStageEnum       m_shader_stage;
+    std::filesystem::path    m_file_path = "";
+    std::string              m_source    = "";
+    std::string              m_entry     = "";
+    std::vector<std::string> m_defines;
+    ShaderStageEnum          m_shader_stage;
 
     TShaderSrc() {}
 

@@ -148,7 +148,8 @@ struct RayTracingPipeline
             const std::string renamed_symbol = shader_src.m_entry + "_" + std::to_string(unique_id);
 
             // compile shader blob
-            ComPtr<IDxcBlob> dxc_blob = hlsl_dxil_compiler.compile_as_dxil(rt_lib.m_shader_srcs[i]);
+            ComPtr<IDxcBlob> dxc_blob =
+                hlsl_dxil_compiler.compile_as_dxil(rt_lib.m_shader_srcs[i], rt_lib.m_shader_srcs[i].m_defines);
 
             entry.m_compiled_shader_blob = dxc_blob;
             // entry.m_num_root_parameters  = root_signature_desc.NumParameters;
@@ -220,7 +221,7 @@ struct RayTracingPipeline
             }
 
             // reflecting as root parameters
-            const auto reflection_result = dxil_reflector.reflect(shaders.data(), shaders.size());
+            const auto reflection_result = dxil_reflector.reflect(shaders, rt_lib.m_shader_srcs);
 
             // create root signature and check for errors
             CD3DX12_ROOT_SIGNATURE_DESC root_signature_desc = {};
@@ -577,13 +578,13 @@ struct RayTracingShaderTable
             round_up(hitgroup_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
         const size_t shader_table_size = rounded_raygen_size + rounded_miss_size + rounded_hitgroup_size;
 
-        // Create shader table buffer
-        D3D12MA::ALLOCATION_DESC alloc_desc = {};
-        alloc_desc.Flags                    = D3D12MA::ALLOCATION_FLAG_NONE;
-        alloc_desc.HeapType                 = D3D12_HEAP_TYPE_UPLOAD;
-
         // allocate resource
         m_shader_table_buffer = [&]() {
+            // Create shader table buffer
+            D3D12MA::ALLOCATION_DESC alloc_desc = {};
+            alloc_desc.Flags                    = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+            alloc_desc.HeapType                 = D3D12_HEAP_TYPE_UPLOAD;
+
             ID3D12Resource *      resource;
             D3D12MA::Allocation * allocation = nullptr;
             CD3DX12_RESOURCE_DESC buffer_desc =

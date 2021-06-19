@@ -62,15 +62,15 @@ struct RasterPipeline
             HlslDxcCompiler hlsl_dxil_compiler;
             for (size_t i = 0; i < shader_srcs.size(); i++)
             {
-                shader_blobs.at(i).first  = hlsl_dxil_compiler.compile_as_dxil(shader_srcs.at(i));
-                shader_blobs.at(i).second = shader_srcs.at(i).m_shader_stage;
+                shader_blobs[i].first  = hlsl_dxil_compiler.compile_as_dxil(shader_srcs[i], shader_srcs[i].m_defines);
+                shader_blobs[i].second = shader_srcs.at(i).m_shader_stage;
             }
         }
 
         // input layout description from reflection
         DxilReflection                   dxil_reflector;
         DxilReflection::ReflectionResult reflection_result =
-            dxil_reflector.reflect(shader_blobs.data(), shader_blobs.size());
+            dxil_reflector.reflect(shader_blobs, shader_srcs);
 
         // create root signature if we don't have root signature yet
         if (m_dx_root_signature == nullptr)

@@ -13,6 +13,7 @@ struct RenderParams
     FpsCamera *                m_fps_camera = nullptr;
     std::vector<PbrMesh>       m_static_meshes;
     bool                       m_is_static_mesh_dirty = true;
+    bool                       m_is_shaders_dirty     = false;
 };
 
 struct Renderer
@@ -41,7 +42,8 @@ struct Renderer
         m_cb_camera_params =
             Gp::Buffer(device, Gp::BufferUsageEnum::ConstantBuffer, Gp::MemoryUsageEnum::CpuToGpu, sizeof(CameraParams));
 
-        // create material buffer
+        // TODO:: material buffer and material id should be GpuOnly and updated only if the buffer
+        // is dirty create material buffer
         m_cb_materials = Gp::Buffer(device,
                                     Gp::BufferUsageEnum::ConstantBuffer,
                                     Gp::MemoryUsageEnum::CpuToGpu,
@@ -60,7 +62,7 @@ struct Renderer
                                       "material_id");
 
         resize(device, resolution, swapchain_attachment);
-        init_shaders(device);
+        init_shaders(device, true);
     }
 
     void
@@ -85,59 +87,79 @@ struct Renderer
     }
 
     void
-    init_shaders(Gp::Device * device)
+    init_shaders(Gp::Device * device, const bool is_first_time)
     {
-        std::filesystem::path shader_path = "../src/render/passes/flat/";
-
         // raster pipeline
-        m_raster_pipeline = [&]() {
-            Gp::ShaderSrc vertexShaderSrc2(Gp::ShaderStageEnum::Vertex);
-            vertexShaderSrc2.m_entry     = "vs_main";
-            vertexShaderSrc2.m_file_path = shader_path / "00ssao.hlsl";
+        try
+        {
+            m_raster_pipeline = [&]() {
+                std::filesystem::path shader_path = "../src/render/passes/flat/";
+                Gp::ShaderSrc         vertexShaderSrc2(Gp::ShaderStageEnum::Vertex);
+                vertexShaderSrc2.m_entry     = "vs_main";
+                vertexShaderSrc2.m_file_path = shader_path / "00ssao.hlsl";
 
-            Gp::ShaderSrc fragmentShaderSrc2(Gp::ShaderStageEnum::Fragment);
-            fragmentShaderSrc2.m_entry     = "fs_main";
-            fragmentShaderSrc2.m_file_path = shader_path / "00ssao.hlsl";
-            std::vector<Gp::ShaderSrc> ssao_shader_srcs;
-            ssao_shader_srcs.push_back(vertexShaderSrc2);
-            ssao_shader_srcs.push_back(fragmentShaderSrc2);
+                Gp::ShaderSrc fragmentShaderSrc2(Gp::ShaderStageEnum::Fragment);
+                fragmentShaderSrc2.m_entry     = "fs_main";
+                fragmentShaderSrc2.m_file_path = shader_path / "00ssao.hlsl";
+                std::vector<Gp::ShaderSrc> ssao_shader_srcs;
+                ssao_shader_srcs.push_back(vertexShaderSrc2);
+                ssao_shader_srcs.push_back(fragmentShaderSrc2);
 
-            return Gp::RasterPipeline(device, ssao_shader_srcs, m_raster_fbindings[0]);
-        }();
+                return Gp::RasterPipeline(device, ssao_shader_srcs, m_raster_fbindings[0]);
+            }();
 
-        // raytracing pipeline
-        m_rt_pipeline = [&]() {
-            // create pipeline for ssao
-            Gp::ShaderSrc raygen_shader(Gp::ShaderStageEnum::RayGen);
-            raygen_shader.m_entry     = "RayGen";
-            raygen_shader.m_file_path = shader_path / "RayGen.hlsl";
+            // raytracing pipeline
+            m_rt_pipeline = [&]() {
+                std::filesystem::path shader_path = "../src/render/passes/pathtracer/";
 
-            Gp::ShaderSrc hit_shader(Gp::ShaderStageEnum::ClosestHit);
-            hit_shader.m_entry     = "ClosestHit";
-            hit_shader.m_file_path = shader_path / "ClosestHit.hlsl";
+                // create pipeline for ssao
+                Gp::ShaderSrc raygen_shader(Gp::ShaderStageEnum::RayGen);
+                raygen_shader.m_entry = "RayGen";
+                raygen_shader.m_file_path = shader_path / "pathtracer.hlsl";
 
-            Gp::ShaderSrc hit_shader2(Gp::ShaderStageEnum::ClosestHit);
-            hit_shader2.m_entry     = "ClosestHit";
-            hit_shader2.m_file_path = shader_path / "ClosestHit2.hlsl";
+                Gp::ShaderSrc hit_shader(Gp::ShaderStageEnum::ClosestHit);
+                hit_shader.m_entry = "ClosestHit";
+                hit_shader.m_file_path = shader_path / "pathtracer.hlsl";
 
-            Gp::ShaderSrc miss_shader(Gp::ShaderStageEnum::Miss);
-            miss_shader.m_entry     = "Miss";
-            miss_shader.m_file_path = shader_path / "Miss.hlsl";
+                /*
+                Gp::ShaderSrc hit_shader2(Gp::ShaderStageEnum::ClosestHit);
+                hit_shader2.m_entry     = "ClosestHit";
+                hit_shader2.m_file_path = shader_path / "pathtracer.hlsl";
+                */
 
-            Gp::RayTracingPipelineConfig rt_config;
-            [[maybe_unused]] size_t      raygen_id = rt_config.add_shader(raygen_shader);
-            [[maybe_unused]] size_t      miss_id   = rt_config.add_shader(miss_shader);
+                Gp::ShaderSrc miss_shader(Gp::ShaderStageEnum::Miss);
+                miss_shader.m_entry     = "Miss";
+                miss_shader.m_file_path = shader_path / "pathtracer.hlsl";
 
-            [[maybe_unused]] size_t closesthit_id = rt_config.add_shader(hit_shader);
-            [[maybe_unused]] size_t hitgroup_id   = rt_config.add_hit_group(closesthit_id);
+                Gp::RayTracingPipelineConfig rt_config;
+                [[maybe_unused]] size_t      raygen_id = rt_config.add_shader(raygen_shader);
+                [[maybe_unused]] size_t      miss_id   = rt_config.add_shader(miss_shader);
 
-            [[maybe_unused]] size_t closesthit2_id = rt_config.add_shader(hit_shader2);
-            [[maybe_unused]] size_t hitgroup_id2   = rt_config.add_hit_group(closesthit2_id);
+                [[maybe_unused]] size_t closesthit_id = rt_config.add_shader(hit_shader);
+                [[maybe_unused]] size_t hitgroup_id   = rt_config.add_hit_group(closesthit_id);
 
-            return Gp::RayTracingPipeline(device, rt_config, 32, 32, 1, "raytracing_pipeline");
-        }();
+                /*
+                [[maybe_unused]] size_t closesthit2_id = rt_config.add_shader(hit_shader2);
+                [[maybe_unused]] size_t hitgroup_id2   = rt_config.add_hit_group(closesthit2_id);
+                */
 
-        m_rt_sbt = Gp::RayTracingShaderTable(device, m_rt_pipeline, "raytracing_shader_table");
+                return Gp::RayTracingPipeline(device, rt_config, 32, 64, 1, "raytracing_pipeline");
+            }();
+            m_rt_sbt = Gp::RayTracingShaderTable(device, m_rt_pipeline, "raytracing_shader_table");
+        }
+        catch (const std::exception & e)
+        {
+            if (is_first_time)
+            {
+                throw e;
+            }
+            else
+            {
+                Logger::Info(__FUNCTION__, " cannot reload shader due to ", e.what());
+            }
+            
+        }
+
     }
 
     // TODO:: this is a hack. remove this
@@ -189,6 +211,11 @@ struct Renderer
 
 
             notinit = false;
+        }
+
+        if (params.m_is_shaders_dirty)
+        {
+            init_shaders(device, false);
         }
 
         cmds.begin();
