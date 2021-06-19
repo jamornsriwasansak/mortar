@@ -45,7 +45,7 @@ struct PbrMesh
 
 struct AssetManager
 {
-    std::vector<MeshBlob>                       m_mesh_blobs;
+    std::vector<MeshBlob>                   m_mesh_blobs;
     std::map<std::filesystem::path, size_t> m_mesh_id_from_path;
     std::vector<Gp::Texture>                m_textures;
     std::map<std::filesystem::path, size_t> m_texture_id_from_path;
@@ -53,7 +53,7 @@ struct AssetManager
     Gp::Device *                            m_device                 = nullptr;
 
     std::vector<PbrMaterial> m_pbr_materials;
-    std::vector<PbrMesh>   m_pbr_objects;
+    std::vector<PbrMesh>     m_pbr_objects;
 
     AssetManager() {}
 
@@ -88,7 +88,7 @@ struct AssetManager
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
 
-        MeshBlob               result;
+        MeshBlob           result;
         const unsigned int num_meshes = scene->mNumMeshes;
         result.m_offset_in_indices.resize(num_meshes + 1);
         result.m_offset_in_vertices.resize(num_meshes + 1);
@@ -128,7 +128,7 @@ struct AssetManager
             {
                 CompactVertex & vertex = vertices[i_vertex_offset + i_vertex];
                 vertex.m_position      = to_float3(aimesh->mVertices[i_vertex]);
-                vertex.m_normal        = to_float3(aimesh->mNormals[i_vertex]);
+                vertex.m_snormal        = to_float3(aimesh->mNormals[i_vertex]);
                 vertex.m_texcoord_x    = aimesh->mTextureCoords[0][i_vertex].x;
                 vertex.m_texcoord_y    = aimesh->mTextureCoords[0][i_vertex].y;
             }

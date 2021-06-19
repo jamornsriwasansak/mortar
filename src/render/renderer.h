@@ -30,6 +30,7 @@ struct Renderer
     Gp::Buffer m_cb_camera_params;
     Gp::Buffer m_cb_materials;
     Gp::Buffer m_cb_material_id;
+    Gp::Buffer m_cb_num_triangles;
 
     Renderer() {}
 
@@ -42,7 +43,7 @@ struct Renderer
         m_cb_camera_params =
             Gp::Buffer(device, Gp::BufferUsageEnum::ConstantBuffer, Gp::MemoryUsageEnum::CpuToGpu, sizeof(CameraParams));
 
-        // TODO:: material buffer and material id should be GpuOnly and updated only if the buffer
+        // TODO:: the following buffers should be GPU only and updated iff the info is dirty
         // is dirty create material buffer
         m_cb_materials = Gp::Buffer(device,
                                     Gp::BufferUsageEnum::ConstantBuffer,
@@ -60,6 +61,15 @@ struct Renderer
                                       nullptr,
                                       nullptr,
                                       "material_id");
+
+        // create num triangles buffer
+        m_cb_num_triangles = Gp::Buffer(device,
+                                        Gp::BufferUsageEnum::ConstantBuffer,
+                                        Gp::MemoryUsageEnum::CpuToGpu,
+                                        sizeof(uint32_t) * 100,
+                                        nullptr,
+                                        nullptr,
+                                        "num_triangles");
 
         resize(device, resolution, swapchain_attachment);
         init_shaders(device, true);
@@ -143,7 +153,7 @@ struct Renderer
                 [[maybe_unused]] size_t hitgroup_id2   = rt_config.add_hit_group(closesthit2_id);
                 */
 
-                return Gp::RayTracingPipeline(device, rt_config, 32, 64, 1, "raytracing_pipeline");
+                return Gp::RayTracingPipeline(device, rt_config, 16, 64, 2, "raytracing_pipeline");
             }();
             m_rt_sbt = Gp::RayTracingShaderTable(device, m_rt_pipeline, "raytracing_shader_table");
         }
@@ -250,11 +260,21 @@ struct Renderer
         std::vector<uint32_t> mat_ids;
         for (size_t i = 0; i < params.m_static_meshes.size(); i++)
         {
-            const PbrMesh & object = params.m_static_meshes.at(i);
+            const PbrMesh & object = params.m_static_meshes[i];
             mat_ids.push_back(object.m_material_id);
         }
         std::memcpy(m_cb_material_id.map(), mat_ids.data(), sizeof(uint32_t) * mat_ids.size());
         m_cb_material_id.unmap();
+
+        // set num triangles per mesh
+        std::vector<uint32_t> num_triangles;
+        for (size_t i = 0; i < params.m_static_meshes.size(); i++)
+        {
+            const PbrMesh & object = params.m_static_meshes[i];
+            num_triangles.push_back(params.m_mesh_blobs->at(object.m_blob_id).get_num_indices(i) / 3);
+        }
+        std::memcpy(m_cb_num_triangles.map(), num_triangles.data(), sizeof(uint32_t) * num_triangles.size());
+        m_cb_num_triangles.unmap();
 
         ray_descriptor_sets[0]
             .set_b_constant_buffer(0, m_cb_camera_params)
@@ -262,11 +282,12 @@ struct Renderer
             .set_t_ray_tracing_accel(0, m_rt_tlas)
             .set_b_constant_buffer(1, m_cb_materials)
             .set_b_constant_buffer(2, m_cb_material_id)
+            .set_b_constant_buffer(3, m_cb_num_triangles)
             .set_s_sampler(0, m_sampler);
         // set index buffer
         for (size_t i = 0; i < params.m_static_meshes.size(); i++)
         {
-            const PbrMesh &  object = params.m_static_meshes.at(i);
+            const PbrMesh &  object = params.m_static_meshes[i];
             const MeshBlob & mesh   = params.m_mesh_blobs->at(object.m_blob_id);
             ray_descriptor_sets[0].set_t_byte_address_buffer(3,
                                                              mesh.m_index_buffer,

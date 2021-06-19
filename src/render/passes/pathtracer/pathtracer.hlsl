@@ -24,6 +24,7 @@ cbuffer cb_camera : register(b0)
     float4x4 m_inv_proj;
 };
 RWTexture2D<float4> output : register(u0);
+
 SamplerState g_sampler : register(s0);
 RaytracingAccelerationStructure SceneBVH : register(t0, space0);
 cbuffer materials : register(b1, space0)
@@ -34,6 +35,10 @@ cbuffer material_ids : register(b2, space0)
 {
     uint4 ids[25];
 };
+cbuffer num_triangles : register(b3, space0)
+{
+    uint4 num_triangles[25];
+};
 ByteAddressBuffer indices[100] : register(t3, space0);
 StructuredBuffer<CompactVertex> vertices[100] : register(t0, space1);
 Texture2D<float4> g_textures[100] : register(t0, space2);
@@ -41,7 +46,8 @@ Texture2D<float4> g_textures[100] : register(t0, space2);
 struct VertexAttributes
 {
     float3 m_position;
-    float3 m_normal;
+    float3 m_snormal;
+    float3 m_gnormal;
     float2 m_uv;
 };
 
@@ -72,18 +78,35 @@ VertexAttributes get_vertex_attributes(uint instanceIndex, uint triangleIndex, f
     uint3 indices = get_indices(instanceIndex, triangleIndex);
     VertexAttributes v;
     v.m_position = float3(0, 0, 0);
-    v.m_normal = float3(0, 0, 0);
+    v.m_snormal = float3(0, 0, 0);
     v.m_uv = float2(0, 0);
 
-    for (uint i = 0; i < 3; i++)
+    float3 e0;
+    float3 e1;
+    [[unroll]]for (uint i = 0; i < 3; i++)
     {
         CompactVertex vertex_in = vertices[instanceIndex][indices[i]];
         v.m_position += vertex_in.m_position * barycentrics[i];
-        v.m_normal += vertex_in.m_normal * barycentrics[i];
+        v.m_snormal += vertex_in.m_snormal * barycentrics[i];
         v.m_uv += float2(vertex_in.m_texcoord_x, vertex_in.m_texcoord_y) * barycentrics[i];
+
+        if (i == 0)
+        {
+            e0 = vertex_in.m_position;
+            e1 = vertex_in.m_position;
+        }
+        else if (i == 1)
+        {
+            e0 -= vertex_in.m_position;
+        }
+        else if (i == 2)
+        {
+            e1 -= vertex_in.m_position;
+        }
     }
 
-    v.m_normal = normalize(v.m_normal);
+    v.m_snormal = normalize(v.m_snormal);
+    v.m_gnormal = normalize(cross(e0, e1));
     return v;
 }
 
@@ -135,10 +158,10 @@ void RayGen()
     payload.m_seed2 = uv;
 
     float3 result = float3(0.0f, 0.0f, 0.0f);
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 1; i++)
     {
-        payload.m_miss = false;
         payload.m_inout_dir = direction;
+        payload.m_miss = false;
         payload.m_importance = float3(1.0f, 1.0f, 1.0f);
         payload.m_radiance = float3(0.0f, 0.0f, 0.0f);
         payload.m_hit_pos = origin;
@@ -153,13 +176,16 @@ void RayGen()
             ray.TMax = 1000.f;
 
             // Trace the ray
-            TraceRay(SceneBVH, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
+            if (!payload.m_miss)
+            {
+                TraceRay(SceneBVH, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
+            }
         }
 
         result += payload.m_radiance;
     }
 
-    output[LaunchIndex.xy] = float4(result / 10, 1.0f);
+    output[LaunchIndex.xy] = float4(result, 1.0f);
 }
 
 [shader("closesthit")]
@@ -173,22 +199,29 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     const PbrMaterial material = pbr_materials[material_id];
     const float3 diffuse_albedo = g_textures[material.m_diffuse_tex_id].SampleLevel(g_sampler, vattrib.m_uv, 0).rgb;
 
-    const Onb onb = Onb_create(vattrib.m_normal);
+    const Onb onb = Onb_create(vattrib.m_gnormal);
     const float3 incident_dir = onb.to_local(-payload.m_inout_dir);
 
     // sample next direction
-    const float2 rand = rand2(payload.m_seed2);
-    const float3 outgoing_dir = cosine_hemisphere_from_square(rand);
+    const float2 rand0 = rand2(payload.m_seed2);
+    const float3 outgoing_dir = cosine_hemisphere_from_square(rand0);
+
+    // sample triangle index
+    const float2 rand1 = rand2(rand0);
+    const uint emissive_mesh_blob_id = 0;
+    const uint num_triangles_in_mesh_blob = num_triangles[emissive_mesh_blob_id / 4][emissive_mesh_blob_id % 4];
 
     payload.m_importance *= diffuse_albedo / M_PI;
     payload.m_inout_dir = onb.to_global(outgoing_dir);
-    payload.m_seed2 = rand;
+    payload.m_seed2 = rand1;
     payload.m_hit_pos = vattrib.m_position;
+    payload.m_radiance += float3(0.00000001f, 0.0f, 0.0f) * num_triangles_in_mesh_blob + /*vattrib.m_gnormal*/float3(barycentrics);
 }
 
 [shader("miss")]
 void Miss(inout PtPayload payload)
 {
-    payload.m_radiance += payload.m_importance * float3(1.0f, 1.0f, 1.0f) * 10.0f;
+    //payload.m_radiance += payload.m_importance;// * float3(1.0f, 1.0f, 1.0f) * 2.0f;
+    //payload.m_radiance += float3(1.0f, 1.0f, 1.0f);
     payload.m_miss = true;
 }
