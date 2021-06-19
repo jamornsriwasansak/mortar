@@ -1,5 +1,6 @@
 #include "../../shared/compactvertex.h"
 #include "../../shared/pbrmaterial.h"
+#include "weightedreservior.h"
 #include "mapping.h"
 #include "onb.h"
 
@@ -131,7 +132,7 @@ float3 get_color(const int primitive_index)
 
 float rand(const float2 co)
 {
-    return frac(sin(dot(co, float2(12.9898f, 78.233f))) * 43758.5453f);
+    return min(frac(sin(dot(co, float2(12.9898f, 78.233f))) * 43758.5453f) + 0.0000000001f, 1.0f);
 }
 
 float2 rand2(const float2 co)
@@ -139,6 +140,21 @@ float2 rand2(const float2 co)
     float x = rand(co);
     float y = rand(float2(co.x, x));
     return float2(x, y);
+}
+
+float sqr(float x)
+{
+    return x * x;
+}
+
+float length2(const float3 x)
+{
+    return dot(x, x);
+}
+
+float connect(const float3 diff, const float3 normal1, const float3 normal2)
+{
+    return max(dot(diff, normal1), 0.0f) * max(dot(diff, normal2), 0.0f) / sqr(length2(diff));
 }
 
 [shader("raygeneration")]
@@ -158,7 +174,7 @@ void RayGen()
     payload.m_seed2 = uv;
 
     float3 result = float3(0.0f, 0.0f, 0.0f);
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < 4; i++)
     {
         payload.m_inout_dir = direction;
         payload.m_miss = false;
@@ -166,7 +182,7 @@ void RayGen()
         payload.m_radiance = float3(0.0f, 0.0f, 0.0f);
         payload.m_hit_pos = origin;
 
-        for (int i_bounce = 0; i_bounce < 2; i_bounce++)
+        for (int i_bounce = 0; i_bounce < 1; i_bounce++)
         {
             // Setup the ray
             RayDesc ray;
@@ -185,7 +201,7 @@ void RayGen()
         result += payload.m_radiance;
     }
 
-    output[LaunchIndex.xy] = float4(result, 1.0f);
+    output[LaunchIndex.xy] = float4(result / 4.0f, 1.0f);
 }
 
 [shader("closesthit")]
@@ -206,22 +222,59 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     const float2 rand0 = rand2(payload.m_seed2);
     const float3 outgoing_dir = cosine_hemisphere_from_square(rand0);
 
-    // sample triangle index
-    const float2 rand1 = rand2(rand0);
-    const uint emissive_mesh_blob_id = 0;
-    const uint num_triangles_in_mesh_blob = num_triangles[emissive_mesh_blob_id / 4][emissive_mesh_blob_id % 4];
+    Reservior reservior = Reservior_create();
+    float geometry_term = 0.0f;
+    VertexAttributes vattrib2;
+    float2 rando = rand0;
+    for (int i = 0; i < 32; i++)
+    {
+        // sample triangle index
+        rando = rand2(rando);
+        const uint geometry_id = 8;
+        const uint num_triangles_in_mesh_blob = num_triangles[geometry_id / 4][geometry_id % 4];
+        const uint primitive_id = int(rando.x * num_triangles_in_mesh_blob);
+        const float3 uvw = float3(frac(rando.x), rando.y, 1.0f - frac(rando.x) - rando.y);
+        const VertexAttributes candidate = get_vertex_attributes(geometry_id, primitive_id, uvw);
+        const float3 diff = candidate.m_position - vattrib.m_position;
+        const float candidate_geometry_term = connect(diff, vattrib.m_snormal, candidate.m_snormal);
+
+        rando = rand2(rando);
+        if (reservior.update(candidate_geometry_term, rando.x))
+        {
+            geometry_term = candidate_geometry_term;
+            vattrib2 = candidate;
+        }
+    }
+    const float weight = reservior.w_sum > 0.0f ? reservior.w_sum / (geometry_term * reservior.m) : 1.0f;
+
+    const float3 diff = vattrib2.m_position - vattrib.m_position;
+
+    // Setup the ray
+    RayDesc ray;
+    ray.Origin = vattrib.m_position;
+    ray.Direction = diff;
+    ray.TMin = 0.0001f;
+    ray.TMax = 0.9999f;
+    PtPayload shadow_payload;
+    shadow_payload.m_miss = false;
+    TraceRay(SceneBVH, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, 0xFF, 0, 0, 0, ray, shadow_payload);
 
     payload.m_importance *= diffuse_albedo / M_PI;
     payload.m_inout_dir = onb.to_global(outgoing_dir);
-    payload.m_seed2 = rand1;
+    payload.m_seed2 = rando;
     payload.m_hit_pos = vattrib.m_position;
-    payload.m_radiance += float3(0.00000001f, 0.0f, 0.0f) * num_triangles_in_mesh_blob + /*vattrib.m_gnormal*/float3(barycentrics);
+    payload.m_radiance += geometry_term * weight * 100.0f * shadow_payload.m_miss;
 }
 
 [shader("miss")]
 void Miss(inout PtPayload payload)
 {
-    //payload.m_radiance += payload.m_importance;// * float3(1.0f, 1.0f, 1.0f) * 2.0f;
-    //payload.m_radiance += float3(1.0f, 1.0f, 1.0f);
+    payload.m_radiance += payload.m_importance * float3(1.0f, 1.0f, 1.0f) * 1.0f;
+    payload.m_miss = true;
+}
+
+[shader("miss")]
+void ShadowMiss(inout PtPayload payload)
+{
     payload.m_miss = true;
 }

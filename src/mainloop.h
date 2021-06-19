@@ -166,8 +166,8 @@ struct MainLoop
     {
         size_t i_flight = 0;
 
-        //int2 sponza_mesh = m_asset_manager.add_pbr_object("sponza/sponza.obj");
-        int2 box_mesh = m_asset_manager.add_pbr_object("cube.obj");
+        int2 sponza_mesh = m_asset_manager.add_pbr_object("sponza/sponza.obj");
+        //int2 box_mesh = m_asset_manager.add_pbr_object("cube.obj");
 
         while (!m_window->should_close_window())
         {

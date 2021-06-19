@@ -124,11 +124,11 @@ struct Renderer
 
                 // create pipeline for ssao
                 Gp::ShaderSrc raygen_shader(Gp::ShaderStageEnum::RayGen);
-                raygen_shader.m_entry = "RayGen";
+                raygen_shader.m_entry     = "RayGen";
                 raygen_shader.m_file_path = shader_path / "pathtracer.hlsl";
 
                 Gp::ShaderSrc hit_shader(Gp::ShaderStageEnum::ClosestHit);
-                hit_shader.m_entry = "ClosestHit";
+                hit_shader.m_entry     = "ClosestHit";
                 hit_shader.m_file_path = shader_path / "pathtracer.hlsl";
 
                 /*
@@ -141,9 +141,15 @@ struct Renderer
                 miss_shader.m_entry     = "Miss";
                 miss_shader.m_file_path = shader_path / "pathtracer.hlsl";
 
+                Gp::ShaderSrc shadow_miss_shader(Gp::ShaderStageEnum::Miss);
+                shadow_miss_shader.m_entry     = "ShadowMiss";
+                shadow_miss_shader.m_file_path = shader_path / "pathtracer.hlsl";
+
+
                 Gp::RayTracingPipelineConfig rt_config;
                 [[maybe_unused]] size_t      raygen_id = rt_config.add_shader(raygen_shader);
                 [[maybe_unused]] size_t      miss_id   = rt_config.add_shader(miss_shader);
+                [[maybe_unused]] size_t      miss_id2  = rt_config.add_shader(miss_shader);
 
                 [[maybe_unused]] size_t closesthit_id = rt_config.add_shader(hit_shader);
                 [[maybe_unused]] size_t hitgroup_id   = rt_config.add_hit_group(closesthit_id);
@@ -167,9 +173,7 @@ struct Renderer
             {
                 Logger::Info(__FUNCTION__, " cannot reload shader due to ", e.what());
             }
-            
         }
-
     }
 
     // TODO:: this is a hack. remove this
