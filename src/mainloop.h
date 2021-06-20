@@ -109,7 +109,7 @@ struct MainLoop
     loop(const size_t i_flight)
     {
         GlfwHandler::Inst().poll_events();
-        m_camera.update(m_window, 0.01f);
+        m_camera.update(m_window, m_window->m_stop_watch.m_average_frame_time * 0.01f);
 
         // wait for resource in this flight to be ready
         m_flight_fences[i_flight].wait();
