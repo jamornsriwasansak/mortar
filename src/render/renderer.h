@@ -296,13 +296,16 @@ struct Renderer
                 .set_b_constant_buffer(0, m_cb_materials)
                 .set_b_constant_buffer(1, m_cb_material_id);
             // set bindless textures
-            for (size_t i = 0; i < params.m_textures->size(); i++)
+            for (size_t i = 0; i < 100; i++)
             {
-                ray_descriptor_sets[1].set_t_texture(0, params.m_textures->at(i), i);
-            }
-            for (size_t i = params.m_textures->size(); i < 100; i++)
-            {
-                ray_descriptor_sets[1].set_t_texture(0, *ctx.m_dummy_texture, i);
+                if (i < params.m_textures->size())
+                {
+                    ray_descriptor_sets[1].set_t_texture(0, params.m_textures->at(i), i);
+                }
+                else
+                {
+                    ray_descriptor_sets[1].set_t_texture(0, *ctx.m_dummy_texture, i);
+                }
             }
             ray_descriptor_sets[1].update();
         }
