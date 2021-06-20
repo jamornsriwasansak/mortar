@@ -19,30 +19,44 @@ struct Attributes
     float2 uv;
 };
 
-cbuffer cb_camera : register(b0)
+struct CameraInfo
 {
     float4x4 m_inv_view;
     float4x4 m_inv_proj;
 };
-RWTexture2D<float4> output : register(u0);
 
-SamplerState g_sampler : register(s0);
-RaytracingAccelerationStructure SceneBVH : register(t0, space0);
-cbuffer materials : register(b1, space0)
+struct PbrMaterialContainer
 {
-    PbrMaterial pbr_materials[100];
+    PbrMaterial materials[100];
 };
-cbuffer material_ids : register(b2, space0)
+
+struct MaterialIdContainer
 {
-    uint4 ids[25];
+    uint4 m_ids[25];
 };
-cbuffer num_triangles : register(b3, space0)
+
+struct NumTrianglesContainer
 {
-    uint4 num_triangles[25];
+    uint4 m_num_triangles[25];
 };
-ByteAddressBuffer indices[100] : register(t3, space0);
-StructuredBuffer<CompactVertex> vertices[100] : register(t0, space1);
-Texture2D<float4> g_textures[100] : register(t0, space2);
+
+// space 0
+ConstantBuffer<CameraInfo>            u_camera : register(b0, space0);
+RWTexture2D<float4>                   u_output : register(u0, space0);
+
+// space 1
+// bindless material
+SamplerState                          u_sampler : register(s0, space1);
+ConstantBuffer<PbrMaterialContainer>  u_pbr_materials : register(b0, space1);
+ConstantBuffer<MaterialIdContainer>   u_material_ids : register(b1, space1);
+Texture2D<float4>                     u_textures[100] : register(t0, space1);
+
+// space 2 & 3
+// bindless mesh info
+RaytracingAccelerationStructure       u_scene_bvh : register(t0, space2);
+ConstantBuffer<NumTrianglesContainer> u_num_triangles : register(b0, space2);
+ByteAddressBuffer                     u_index_buffers[100] : register(t1, space2);
+StructuredBuffer<CompactVertex>       u_vertex_buffers[100] : register(t0, space3);
 
 struct VertexAttributes
 {
@@ -59,24 +73,24 @@ uint3 get_indices(uint instanceIndex, uint triangleIndex)
     int address = triangleIndex * num_index_per_tri * num_bytes_per_index;
     if (address < 0)
         address = 0;
-    return indices[instanceIndex].Load3(address);
+    return u_index_buffers[instanceIndex].Load3(address);
 }
 
 float3 get_interpolated_indices(uint instanceIndex, uint triangleIndex, float3 barycentrics)
 {
-    uint3 indices = get_indices(instanceIndex, triangleIndex);
+    uint3 u_index_buffers = get_indices(instanceIndex, triangleIndex);
     float3 position = float3(0, 0, 0);
 
     for (uint i = 0; i < 3; i++)
     {
-        position += float3(indices[i], indices[i], indices[i]) * barycentrics[i];
+        position += float3(u_index_buffers[i], u_index_buffers[i], u_index_buffers[i]) * barycentrics[i];
     }
     return position;
 }
 
 VertexAttributes get_vertex_attributes(uint instanceIndex, uint triangleIndex, float3 barycentrics)
 {
-    uint3 indices = get_indices(instanceIndex, triangleIndex);
+    uint3 u_index_buffers = get_indices(instanceIndex, triangleIndex);
     VertexAttributes v;
     v.m_position = float3(0, 0, 0);
     v.m_snormal = float3(0, 0, 0);
@@ -86,7 +100,7 @@ VertexAttributes get_vertex_attributes(uint instanceIndex, uint triangleIndex, f
     float3 e1;
     [[unroll]]for (uint i = 0; i < 3; i++)
     {
-        CompactVertex vertex_in = vertices[instanceIndex][indices[i]];
+        CompactVertex vertex_in = u_vertex_buffers[instanceIndex][u_index_buffers[i]];
         v.m_position += vertex_in.m_position * barycentrics[i];
         v.m_snormal += vertex_in.m_snormal * barycentrics[i];
         v.m_uv += float2(vertex_in.m_texcoord_x, vertex_in.m_texcoord_y) * barycentrics[i];
@@ -166,9 +180,9 @@ void RayGen()
     const float2 uv = (float2(LaunchIndex) + float2(0.5f, 0.5f)) / float2(LaunchDimensions);
     const float2 ndc = uv * 2.0f - 1.0f;
 
-    const float3 origin = mul(m_inv_view, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    const float3 lookat = mul(m_inv_proj, float4(ndc.x, ndc.y, 1.0f, 1.0f)).xyz;
-    const float3 direction = mul(m_inv_view, float4(normalize(lookat), 0)).xyz;
+    const float3 origin = mul(u_camera.m_inv_view, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    const float3 lookat = mul(u_camera.m_inv_proj, float4(ndc.x, ndc.y, 1.0f, 1.0f)).xyz;
+    const float3 direction = mul(u_camera.m_inv_view, float4(normalize(lookat), 0)).xyz;
 
     PtPayload payload;
     payload.m_seed2 = uv;
@@ -194,14 +208,14 @@ void RayGen()
             // Trace the ray
             if (!payload.m_miss)
             {
-                TraceRay(SceneBVH, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
+                TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
             }
         }
 
         result += payload.m_radiance;
     }
 
-    output[LaunchIndex.xy] = float4(result / 4.0f, 1.0f);
+    u_output[LaunchIndex.xy] = float4(result / 4.0f, 1.0f);
 }
 
 [shader("closesthit")]
@@ -211,41 +225,42 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     const VertexAttributes vattrib = get_vertex_attributes(GeometryIndex(), PrimitiveIndex(), barycentrics);
 
     // fetch pbr material info
-    const uint material_id = ids[GeometryIndex() / 4][GeometryIndex() % 4];
-    const PbrMaterial material = pbr_materials[material_id];
-    const float3 diffuse_albedo = g_textures[material.m_diffuse_tex_id].SampleLevel(g_sampler, vattrib.m_uv, 0).rgb;
+    const uint material_id = u_material_ids.m_ids[GeometryIndex() / 4][GeometryIndex() % 4];
+    const PbrMaterial material = u_pbr_materials.materials[material_id];
+    const float3 diffuse_albedo = u_textures[material.m_diffuse_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).rgb;
 
     const Onb onb = Onb_create(vattrib.m_gnormal);
-    const float3 incident_dir = onb.to_local(-payload.m_inout_dir);
+    const float3 local_incident_dir = onb.to_local(-payload.m_inout_dir);
 
     // sample next direction
-    const float2 rand0 = rand2(payload.m_seed2);
-    const float3 outgoing_dir = cosine_hemisphere_from_square(rand0);
+    float2 samples = rand2(payload.m_seed2);
+    const float3 local_outgoing_dir = cosine_hemisphere_from_square(samples);
 
+    float connection_contrib = 0.0f;
     Reservior reservior = Reservior_create();
-    float geometry_term = 0.0f;
     VertexAttributes vattrib2;
-    float2 rando = rand0;
-    for (int i = 0; i < 32; i++)
-    {
+    for (int i = 0; i < 16; i++)
+    {;
         // sample triangle index
-        rando = rand2(rando);
-        const uint geometry_id = 8;
-        const uint num_triangles_in_mesh_blob = num_triangles[geometry_id / 4][geometry_id % 4];
-        const uint primitive_id = int(rando.x * num_triangles_in_mesh_blob);
-        const float3 uvw = float3(frac(rando.x), rando.y, 1.0f - frac(rando.x) - rando.y);
-        const VertexAttributes candidate = get_vertex_attributes(geometry_id, primitive_id, uvw);
-        const float3 diff = candidate.m_position - vattrib.m_position;
-        const float candidate_geometry_term = connect(diff, vattrib.m_snormal, candidate.m_snormal);
-
-        rando = rand2(rando);
-        if (reservior.update(candidate_geometry_term, rando.x))
+        samples = rand2(samples);
+        const uint geometry_id = 2;
+        const uint num_triangles = u_num_triangles.m_num_triangles[geometry_id / 4][geometry_id % 4];
+        const uint primitive_id = int(samples.x * num_triangles);
+        const float3 uvw = float3(frac(samples.x), samples.y, 1.0f - frac(samples.x) - samples.y);
+        const VertexAttributes candidate_attrib = get_vertex_attributes(geometry_id, primitive_id, uvw);
+        const float3 diff = candidate_attrib.m_position - vattrib.m_position;
+        const float candidate_connection_contrib = connect(diff, vattrib.m_snormal, candidate_attrib.m_snormal);
+        const float weight = candidate_connection_contrib;
+        samples = rand2(samples);
+        if (reservior.update(candidate_connection_contrib, samples.x))
         {
-            geometry_term = candidate_geometry_term;
-            vattrib2 = candidate;
+            connection_contrib = candidate_connection_contrib;
+            vattrib2 = candidate_attrib;
         }
     }
-    const float weight = reservior.w_sum > 0.0f ? reservior.w_sum / (geometry_term * reservior.m) : 1.0f;
+
+    const float chosen_weight = connection_contrib;
+    const float weight = reservior.w_sum > 0.0f ? reservior.w_sum / (chosen_weight * reservior.m) : 1.0f;
 
     const float3 diff = vattrib2.m_position - vattrib.m_position;
 
@@ -257,13 +272,13 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     ray.TMax = 0.9999f;
     PtPayload shadow_payload;
     shadow_payload.m_miss = false;
-    TraceRay(SceneBVH, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, 0xFF, 0, 0, 0, ray, shadow_payload);
+    TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, 0xFF, 0, 0, 0, ray, shadow_payload);
 
     payload.m_importance *= diffuse_albedo / M_PI;
-    payload.m_inout_dir = onb.to_global(outgoing_dir);
-    payload.m_seed2 = rando;
+    payload.m_inout_dir = onb.to_global(local_outgoing_dir);
+    payload.m_seed2 = samples;
     payload.m_hit_pos = vattrib.m_position;
-    payload.m_radiance += geometry_term * weight * 100.0f * shadow_payload.m_miss;
+    payload.m_radiance += connection_contrib * weight * 100.0f * shadow_payload.m_miss;
 }
 
 [shader("miss")]

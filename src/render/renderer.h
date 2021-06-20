@@ -147,9 +147,10 @@ struct Renderer
 
 
                 Gp::RayTracingPipelineConfig rt_config;
-                [[maybe_unused]] size_t      raygen_id = rt_config.add_shader(raygen_shader);
-                [[maybe_unused]] size_t      miss_id   = rt_config.add_shader(miss_shader);
-                [[maybe_unused]] size_t      miss_id2  = rt_config.add_shader(miss_shader);
+
+                [[maybe_unused]] size_t raygen_id = rt_config.add_shader(raygen_shader);
+                [[maybe_unused]] size_t miss_id   = rt_config.add_shader(miss_shader);
+                [[maybe_unused]] size_t miss_id2  = rt_config.add_shader(miss_shader);
 
                 [[maybe_unused]] size_t closesthit_id = rt_config.add_shader(hit_shader);
                 [[maybe_unused]] size_t hitgroup_id   = rt_config.add_hit_group(closesthit_id);
@@ -238,13 +239,15 @@ struct Renderer
         cmds.bind_raytrace_pipeline(m_rt_pipeline);
 
         // set ray desc
-        std::array<Gp::DescriptorSet, 3> ray_descriptor_sets;
+        std::array<Gp::DescriptorSet, 4> ray_descriptor_sets;
         ray_descriptor_sets[0] =
             Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 0, "rt_desc_set0");
         ray_descriptor_sets[1] =
             Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 1, "rt_desc_set1");
         ray_descriptor_sets[2] =
             Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 2, "rt_desc_set2");
+        ray_descriptor_sets[3] =
+            Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 3, "rt_desc_set3");
 
         // set camera uniform
         auto         transform = params.m_fps_camera->get_camera_props();
@@ -280,60 +283,76 @@ struct Renderer
         std::memcpy(m_cb_num_triangles.map(), num_triangles.data(), sizeof(uint32_t) * num_triangles.size());
         m_cb_num_triangles.unmap();
 
-        ray_descriptor_sets[0]
-            .set_b_constant_buffer(0, m_cb_camera_params)
-            .set_u_rw_texture(0, m_rt_result)
-            .set_t_ray_tracing_accel(0, m_rt_tlas)
-            .set_b_constant_buffer(1, m_cb_materials)
-            .set_b_constant_buffer(2, m_cb_material_id)
-            .set_b_constant_buffer(3, m_cb_num_triangles)
-            .set_s_sampler(0, m_sampler);
-        // set index buffer
-        for (size_t i = 0; i < params.m_static_meshes.size(); i++)
         {
-            const PbrMesh &  object = params.m_static_meshes[i];
-            const MeshBlob & mesh   = params.m_mesh_blobs->at(object.m_blob_id);
-            ray_descriptor_sets[0].set_t_byte_address_buffer(3,
-                                                             mesh.m_index_buffer,
-                                                             sizeof(uint32_t),
-                                                             mesh.get_num_indices(i),
-                                                             i,
-                                                             mesh.m_offset_in_indices[i]);
+            ray_descriptor_sets[0]
+                .set_b_constant_buffer(0, m_cb_camera_params)
+                .set_u_rw_texture(0, m_rt_result)
+                .update();
         }
-        for (size_t i = params.m_static_meshes.size(); i < 100; i++)
-        {
-            ray_descriptor_sets[0].set_t_byte_address_buffer(3, *ctx.m_dummy_buffer, sizeof(uint32_t), 1, i, 0);
-        }
-        ray_descriptor_sets[0].update();
 
-        // set vertex buffers
-        for (size_t i = 0; i < params.m_static_meshes.size(); i++)
         {
-            const PbrMesh &  object = params.m_static_meshes.at(i);
-            const MeshBlob & mesh   = params.m_mesh_blobs->at(object.m_blob_id);
-            ray_descriptor_sets[1].set_t_structured_buffer(0,
-                                                           mesh.m_vertex_buffer,
-                                                           sizeof(CompactVertex),
-                                                           mesh.get_num_vertices(i),
-                                                           i,
-                                                           mesh.m_offset_in_vertices[i]);
+            ray_descriptor_sets[1]
+                .set_s_sampler(0, m_sampler)
+                .set_b_constant_buffer(0, m_cb_materials)
+                .set_b_constant_buffer(1, m_cb_material_id);
+            // set bindless textures
+            for (size_t i = 0; i < params.m_textures->size(); i++)
+            {
+                ray_descriptor_sets[1].set_t_texture(0, params.m_textures->at(i), i);
+            }
+            for (size_t i = params.m_textures->size(); i < 100; i++)
+            {
+                ray_descriptor_sets[1].set_t_texture(0, *ctx.m_dummy_texture, i);
+            }
+            ray_descriptor_sets[1].update();
         }
-        for (size_t i = params.m_static_meshes.size(); i < 100; i++)
-        {
-            ray_descriptor_sets[1].set_t_structured_buffer(0, *ctx.m_dummy_buffer, sizeof(uint32_t), 1, i, 0);
-        }
-        ray_descriptor_sets[1].update();
 
-        // set bindless textures
-        for (size_t i = 0; i < params.m_textures->size(); i++)
         {
-            ray_descriptor_sets[2].set_t_texture(0, params.m_textures->at(i), i);
+            ray_descriptor_sets[2].set_t_ray_tracing_accel(0, m_rt_tlas).set_b_constant_buffer(0, m_cb_num_triangles);
+            // set index buffer
+            for (size_t i = 0; i < 100; i++)
+            {
+                if (i < params.m_static_meshes.size())
+                {
+                    const PbrMesh &  object = params.m_static_meshes[i];
+                    const MeshBlob & mesh   = params.m_mesh_blobs->at(object.m_blob_id);
+                    ray_descriptor_sets[2].set_t_byte_address_buffer(1,
+                                                                     mesh.m_index_buffer,
+                                                                     sizeof(uint32_t),
+                                                                     mesh.get_num_indices(i),
+                                                                     i,
+                                                                     mesh.m_offset_in_indices[i]);
+                }
+                else
+                {
+                    ray_descriptor_sets[2].set_t_byte_address_buffer(1, *ctx.m_dummy_buffer, sizeof(uint32_t), 1, i, 0);
+                }
+            }
+            ray_descriptor_sets[2].update();
         }
-        for (size_t i = params.m_textures->size(); i < 100; i++)
+
         {
-            ray_descriptor_sets[2].set_t_texture(0, *ctx.m_dummy_texture, i);
+            // set vertex buffers
+            for (size_t i = 0; i < 100; i++)
+            {
+                if (i < params.m_static_meshes.size())
+                {
+                    const PbrMesh &  object = params.m_static_meshes.at(i);
+                    const MeshBlob & mesh   = params.m_mesh_blobs->at(object.m_blob_id);
+                    ray_descriptor_sets[3].set_t_structured_buffer(0,
+                                                                   mesh.m_vertex_buffer,
+                                                                   sizeof(CompactVertex),
+                                                                   mesh.get_num_vertices(i),
+                                                                   i,
+                                                                   mesh.m_offset_in_vertices[i]);
+                }
+                else
+                {
+                    ray_descriptor_sets[3].set_t_structured_buffer(0, *ctx.m_dummy_buffer, sizeof(uint32_t), 1, i, 0);
+                }
+            }
+            ray_descriptor_sets[3].update();
         }
-        ray_descriptor_sets[2].update();
 
         // ray tracing pass
         cmds.bind_raytrace_descriptor_set(ray_descriptor_sets);
