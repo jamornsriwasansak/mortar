@@ -8,52 +8,40 @@
 #include <assimp/scene.h>
 #include <stb_image.h>
 
-struct MeshBlob
-{
-    Gp::Buffer          m_vertex_buffer;
-    Gp::Buffer          m_index_buffer;
-    size_t              m_num_vertices;
-    size_t              m_num_indices;
-    std::vector<size_t> m_offset_in_vertices;
-    std::vector<size_t> m_offset_in_indices;
-
-    size_t
-    get_num_vertices(const size_t i_sub_vertex_buffer) const
-    {
-        return m_offset_in_vertices[i_sub_vertex_buffer + 1] - m_offset_in_vertices[i_sub_vertex_buffer];
-    }
-
-    size_t
-    get_num_sub_buffers() const
-    {
-        return m_offset_in_vertices.size() - 1;
-    }
-
-    size_t
-    get_num_indices(const size_t i_sub_index_buffer) const
-    {
-        return m_offset_in_indices[i_sub_index_buffer + 1] - m_offset_in_indices[i_sub_index_buffer];
-    }
-};
-
 struct PbrMesh
 {
-    size_t m_blob_id;
-    size_t m_subblob_id;
+    size_t m_vertex_buffer_id;
+    size_t m_index_buffer_id;
+    size_t m_vertex_buffer_offset;
+    size_t m_index_buffer_offset;
+    size_t m_num_vertices;
+    size_t m_num_indices;
     size_t m_material_id;
+};
+
+struct VertexBuffer
+{
+    Gp::Buffer m_vertex_buffer;
+    size_t     m_num_vertices;
+};
+
+struct IndexBuffer
+{
+    Gp::Buffer    m_index_buffer;
+    size_t        m_num_indices;
+    Gp::IndexType m_type;
 };
 
 struct AssetManager
 {
-    std::vector<MeshBlob>                   m_mesh_blobs;
-    std::map<std::filesystem::path, size_t> m_mesh_id_from_path;
+    std::vector<VertexBuffer>               m_vertex_buffers;
+    std::vector<IndexBuffer>                m_index_buffers;
+    std::vector<PbrMaterial>                m_pbr_materials;
+    std::vector<PbrMesh>                    m_pbr_objects;
     std::vector<Gp::Texture>                m_textures;
     std::map<std::filesystem::path, size_t> m_texture_id_from_path;
     Gp::StagingBufferManager *              m_staging_buffer_manager = nullptr;
     Gp::Device *                            m_device                 = nullptr;
-
-    std::vector<PbrMaterial> m_pbr_materials;
-    std::vector<PbrMesh>     m_pbr_objects;
 
     AssetManager() {}
 
@@ -63,46 +51,30 @@ struct AssetManager
         init_empty_texture(staging_buffer_manager);
     }
 
-    bool
-    has_texture_path(const std::filesystem::path & path)
-    {
-        return m_texture_id_from_path.count(path) > 0;
-    }
-
-    bool
-    has_mesh_path(const std::filesystem::path & path)
-    {
-        return m_mesh_id_from_path.count(path) > 0;
-    }
-
-    size_t
+    int2
     add_mesh(const std::filesystem::path & path, const bool load_as_a_single_mesh = false, const aiScene * scene = nullptr)
     {
-        auto iter = m_mesh_id_from_path.find(path);
-        if (iter != m_mesh_id_from_path.end())
-        {
-            Logger::Warn(__FUNCTION__, " ", path.string(), " has already been added");
-            return iter->second;
-        }
-
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
 
-        MeshBlob           result;
         const unsigned int num_meshes = scene->mNumMeshes;
-        result.m_offset_in_indices.resize(num_meshes + 1);
-        result.m_offset_in_vertices.resize(num_meshes + 1);
-        // result.m_material_ids.resize(num_meshes);
-        unsigned int ii = 0;
-        unsigned int iv = 0;
+        unsigned int       ii         = 0;
+        unsigned int       iv         = 0;
+
+        int2 result;
+        result.x = m_pbr_objects.size();
+        result.y = m_pbr_objects.size() + num_meshes;
+        m_pbr_objects.resize(m_pbr_objects.size() + num_meshes);
 
         for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
         {
-            const aiMesh *     aimesh           = scene->mMeshes[i_mesh];
-            const unsigned int num_vertices     = aimesh->mNumVertices;
-            const unsigned int num_faces        = aimesh->mNumFaces;
-            result.m_offset_in_indices[i_mesh]  = ii;
-            result.m_offset_in_vertices[i_mesh] = iv;
+            const aiMesh *     aimesh                               = scene->mMeshes[i_mesh];
+            const unsigned int num_vertices                         = aimesh->mNumVertices;
+            const unsigned int num_faces                            = aimesh->mNumFaces;
+            m_pbr_objects[result.x + i_mesh].m_vertex_buffer_offset = iv;
+            m_pbr_objects[result.x + i_mesh].m_index_buffer_offset  = ii;
+            m_pbr_objects[result.x + i_mesh].m_num_vertices         = num_vertices;
+            m_pbr_objects[result.x + i_mesh].m_num_indices          = num_faces * 3;
             iv += num_vertices;
             ii += num_faces * 3;
 
@@ -110,10 +82,6 @@ struct AssetManager
             iv = round_up(iv, 32);
             ii = round_up(ii, 32);
         }
-        result.m_offset_in_indices[num_meshes]  = ii;
-        result.m_offset_in_vertices[num_meshes] = iv;
-        result.m_num_indices                    = ii;
-        result.m_num_vertices                   = iv;
 
         std::vector<CompactVertex> vertices(iv);
         std::vector<uint32_t>      indices(ii);
@@ -121,21 +89,21 @@ struct AssetManager
         for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
         {
             // set vertex
-            const aiMesh *     aimesh          = scene->mMeshes[i_mesh];
-            const unsigned int num_vertices    = aimesh->mNumVertices;
-            const size_t       i_vertex_offset = result.m_offset_in_vertices[i_mesh];
+            const aiMesh *     aimesh       = scene->mMeshes[i_mesh];
+            const unsigned int num_vertices = aimesh->mNumVertices;
+            const size_t i_vertex_offset = m_pbr_objects[result.x + i_mesh].m_vertex_buffer_offset;
             for (unsigned int i_vertex = 0; i_vertex < num_vertices; i_vertex++)
             {
                 CompactVertex & vertex = vertices[i_vertex_offset + i_vertex];
                 vertex.m_position      = to_float3(aimesh->mVertices[i_vertex]);
-                vertex.m_snormal        = to_float3(aimesh->mNormals[i_vertex]);
+                vertex.m_snormal       = to_float3(aimesh->mNormals[i_vertex]);
                 vertex.m_texcoord_x    = aimesh->mTextureCoords[0][i_vertex].x;
                 vertex.m_texcoord_y    = aimesh->mTextureCoords[0][i_vertex].y;
             }
 
             // set faces
-            const unsigned int num_faces      = aimesh->mNumFaces;
-            const size_t       i_index_offset = result.m_offset_in_indices[i_mesh];
+            const unsigned int num_faces = aimesh->mNumFaces;
+            const size_t i_index_offset  = m_pbr_objects[result.x + i_mesh].m_index_buffer_offset;
             for (unsigned int i_face = 0; i_face < num_faces; i_face++)
             {
                 for (size_t i_vertex = 0; i_vertex < 3; i_vertex++)
@@ -150,27 +118,39 @@ struct AssetManager
             }
         }
 
-        result.m_vertex_buffer = Gp::Buffer(m_device,
-                                            Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer,
-                                            Gp::MemoryUsageEnum::GpuOnly,
-                                            vertices.size() * sizeof(vertices[0]),
-                                            reinterpret_cast<std::byte *>(vertices.data()),
-                                            m_staging_buffer_manager,
-                                            "vertexbuffer:" + path.string());
-        result.m_index_buffer  = Gp::Buffer(m_device,
-                                           Gp::BufferUsageEnum::IndexBuffer | Gp::BufferUsageEnum::StorageBuffer,
-                                           Gp::MemoryUsageEnum::GpuOnly,
-                                           indices.size() * sizeof(indices[0]),
-                                           reinterpret_cast<std::byte *>(indices.data()),
-                                           m_staging_buffer_manager,
-                                           "indexbuffer:" + path.string());
         m_staging_buffer_manager->submit_all_pending_upload();
 
-        const size_t index = m_mesh_blobs.size();
-        m_mesh_blobs.emplace_back(std::move(result));
-        m_mesh_id_from_path[path] = index;
+        VertexBuffer vb;
+        vb.m_vertex_buffer = Gp::Buffer(m_device,
+                                        Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer,
+                                        Gp::MemoryUsageEnum::GpuOnly,
+                                        vertices.size() * sizeof(vertices[0]),
+                                        reinterpret_cast<std::byte *>(vertices.data()),
+                                        m_staging_buffer_manager,
+                                        "vertexbuffer:" + path.string());
+        vb.m_num_vertices  = vertices.size();
 
-        return index;
+        IndexBuffer ib;
+        ib.m_index_buffer = Gp::Buffer(m_device,
+                                       Gp::BufferUsageEnum::IndexBuffer | Gp::BufferUsageEnum::StorageBuffer,
+                                       Gp::MemoryUsageEnum::GpuOnly,
+                                       indices.size() * sizeof(indices[0]),
+                                       reinterpret_cast<std::byte *>(indices.data()),
+                                       m_staging_buffer_manager,
+                                       "indexbuffer:" + path.string());
+        ib.m_num_indices  = indices.size();
+        ib.m_type         = Gp::IndexType::Uint32;
+
+        m_vertex_buffers.push_back(std::move(vb));
+        m_index_buffers.push_back(std::move(ib));
+
+        for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
+        {
+            m_pbr_objects[result.x + i_mesh].m_vertex_buffer_id = m_vertex_buffers.size() - 1;
+            m_pbr_objects[result.x + i_mesh].m_index_buffer_id  = m_index_buffers.size() - 1;
+        }
+
+        return result;
     }
 
     int2
@@ -217,20 +197,14 @@ struct AssetManager
             m_pbr_materials.push_back(pbr_material);
         }
 
-        const size_t mesh_id     = add_mesh(path, load_as_a_single_mesh, scene);
-        const size_t begin_index = m_pbr_objects.size();
-        for (size_t i_submesh = 0; i_submesh < scene->mNumMeshes; i_submesh++)
+        const int2 pbr_mesh_range = add_mesh(path, load_as_a_single_mesh, scene);
+        for (size_t i_mesh = 0; i_mesh < scene->mNumMeshes; i_mesh++)
         {
-            PbrMesh pbr_object;
-            pbr_object.m_blob_id    = mesh_id;
-            pbr_object.m_subblob_id = i_submesh;
-            pbr_object.m_material_id =
-                pbr_material_id_from_ai_material[scene->mMeshes[i_submesh]->mMaterialIndex];
-            m_pbr_objects.push_back(pbr_object);
+            PbrMesh & mesh = m_pbr_objects[pbr_mesh_range.x + i_mesh];
+            mesh.m_material_id = pbr_material_id_from_ai_material[scene->mMeshes[i_mesh]->mMaterialIndex];
         }
-        const size_t end_index = m_pbr_objects.size();
 
-        return int2(begin_index, end_index);
+        return pbr_mesh_range;
     }
 
     size_t

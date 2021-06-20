@@ -138,9 +138,10 @@ struct MainLoop
         ctx.m_dummy_texture                = &m_dummy_texture;
 
         RenderParams render_params;
+        render_params.m_vertex_buffers = &m_asset_manager.m_vertex_buffers;
+        render_params.m_index_buffers  = &m_asset_manager.m_index_buffers;
         render_params.m_materials  = &m_asset_manager.m_pbr_materials;
         render_params.m_textures   = &m_asset_manager.m_textures;
-        render_params.m_mesh_blobs = &m_asset_manager.m_mesh_blobs;
         render_params.m_resolution = m_window->get_resolution();
         render_params.m_static_meshes =
             m_asset_manager.m_pbr_objects; // TODO:: for now, we render all meshes as static

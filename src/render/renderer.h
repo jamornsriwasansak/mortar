@@ -6,14 +6,15 @@
 
 struct RenderParams
 {
-    int2                       m_resolution = { 0, 0 };
-    std::vector<Gp::Texture> * m_textures   = nullptr;
-    std::vector<MeshBlob> *    m_mesh_blobs = nullptr;
-    std::vector<PbrMaterial> * m_materials  = nullptr;
-    FpsCamera *                m_fps_camera = nullptr;
-    std::vector<PbrMesh>       m_static_meshes;
-    bool                       m_is_static_mesh_dirty = true;
-    bool                       m_is_shaders_dirty     = false;
+    int2                        m_resolution     = { 0, 0 };
+    std::vector<Gp::Texture> *  m_textures       = nullptr;
+    std::vector<VertexBuffer> * m_vertex_buffers = nullptr;
+    std::vector<IndexBuffer> *  m_index_buffers  = nullptr;
+    std::vector<PbrMaterial> *  m_materials      = nullptr;
+    FpsCamera *                 m_fps_camera     = nullptr;
+    std::vector<PbrMesh>        m_static_meshes;
+    bool                        m_is_static_mesh_dirty = true;
+    bool                        m_is_shaders_dirty     = false;
 };
 
 struct Renderer
@@ -193,20 +194,20 @@ struct Renderer
 
             for (size_t i = 0; i < params.m_static_meshes.size(); i++)
             {
-                const PbrMesh &  object = params.m_static_meshes.at(i);
-                const MeshBlob & mesh   = params.m_mesh_blobs->at(object.m_blob_id);
-
+                const PbrMesh &     object       = params.m_static_meshes[i];
+                const IndexBuffer & index_buffer = params.m_index_buffers->at(object.m_index_buffer_id);
+                const VertexBuffer & vertex_buffer = params.m_vertex_buffers->at(object.m_index_buffer_id);
                 raytracing_geom_descs[i].set_flag(Gp::RayTracingGeometryFlag::Opaque);
-                raytracing_geom_descs[i].set_index_buffer(mesh.m_index_buffer,
-                                                          mesh.get_num_indices(object.m_subblob_id),
+                raytracing_geom_descs[i].set_index_buffer(index_buffer.m_index_buffer,
+                                                          object.m_num_indices,
                                                           sizeof(uint32_t),
-                                                          Gp::IndexType::Uint32,
-                                                          mesh.m_offset_in_indices[object.m_subblob_id]);
-                raytracing_geom_descs[i].set_vertex_buffer(mesh.m_vertex_buffer,
-                                                           mesh.get_num_vertices(object.m_subblob_id),
+                                                          index_buffer.m_type,
+                                                          object.m_index_buffer_offset);
+                raytracing_geom_descs[i].set_vertex_buffer(vertex_buffer.m_vertex_buffer,
+                                                           object.m_num_vertices,
                                                            sizeof(CompactVertex),
                                                            Gp::FormatEnum::R32G32B32_SFloat,
-                                                           mesh.m_offset_in_vertices[object.m_subblob_id]);
+                                                           object.m_vertex_buffer_offset);
             }
             m_rt_static_mesh_blas = Gp::RayTracingBlas(device,
                                                        raytracing_geom_descs.data(),
@@ -278,7 +279,7 @@ struct Renderer
         for (size_t i = 0; i < params.m_static_meshes.size(); i++)
         {
             const PbrMesh & object = params.m_static_meshes[i];
-            num_triangles.push_back(params.m_mesh_blobs->at(object.m_blob_id).get_num_indices(i) / 3);
+            num_triangles.push_back(object.m_num_indices / 3);
         }
         std::memcpy(m_cb_num_triangles.map(), num_triangles.data(), sizeof(uint32_t) * num_triangles.size());
         m_cb_num_triangles.unmap();
@@ -317,14 +318,14 @@ struct Renderer
             {
                 if (i < params.m_static_meshes.size())
                 {
-                    const PbrMesh &  object = params.m_static_meshes[i];
-                    const MeshBlob & mesh   = params.m_mesh_blobs->at(object.m_blob_id);
+                    const PbrMesh & object           = params.m_static_meshes[i];
+                    const IndexBuffer & index_buffer = params.m_index_buffers->at(object.m_index_buffer_id);
                     ray_descriptor_sets[2].set_t_byte_address_buffer(1,
-                                                                     mesh.m_index_buffer,
+                                                                     index_buffer.m_index_buffer,
                                                                      sizeof(uint32_t),
-                                                                     mesh.get_num_indices(i),
+                                                                     object.m_num_indices,
                                                                      i,
-                                                                     mesh.m_offset_in_indices[i]);
+                                                                     object.m_index_buffer_offset);
                 }
                 else
                 {
@@ -340,14 +341,14 @@ struct Renderer
             {
                 if (i < params.m_static_meshes.size())
                 {
-                    const PbrMesh &  object = params.m_static_meshes.at(i);
-                    const MeshBlob & mesh   = params.m_mesh_blobs->at(object.m_blob_id);
+                    const PbrMesh & object           = params.m_static_meshes[i];
+                    const VertexBuffer & vertex_buffer = params.m_vertex_buffers->at(object.m_index_buffer_id);
                     ray_descriptor_sets[3].set_t_structured_buffer(0,
-                                                                   mesh.m_vertex_buffer,
+                                                                   vertex_buffer.m_vertex_buffer,
                                                                    sizeof(CompactVertex),
-                                                                   mesh.get_num_vertices(i),
+                                                                   object.m_num_vertices,
                                                                    i,
-                                                                   mesh.m_offset_in_vertices[i]);
+                                                                   object.m_vertex_buffer_offset);
                 }
                 else
                 {
@@ -360,40 +361,41 @@ struct Renderer
         // ray tracing pass
         cmds.bind_raytrace_descriptor_set(ray_descriptor_sets);
         cmds.trace_rays(m_rt_sbt, params.m_resolution.x, params.m_resolution.y);
+        {
+            // transition
+            cmds.transition_texture(m_rt_result,
+                                    Gp::TextureStateEnum::NonFragmentShaderVisible,
+                                    Gp::TextureStateEnum::FragmentShaderVisible);
+            cmds.transition_texture(*ctx.m_swapchain_texture,
+                                    Gp::TextureStateEnum::Present,
+                                    Gp::TextureStateEnum::ColorAttachment);
 
-        // transition
-        cmds.transition_texture(m_rt_result,
-                                Gp::TextureStateEnum::NonFragmentShaderVisible,
-                                Gp::TextureStateEnum::FragmentShaderVisible);
-        cmds.transition_texture(*ctx.m_swapchain_texture,
-                                Gp::TextureStateEnum::Present,
-                                Gp::TextureStateEnum::ColorAttachment);
+            // draw result
+            cmds.begin_render_pass(m_raster_fbindings[ctx.m_image_index]);
+            cmds.bind_raster_pipeline(m_raster_pipeline);
 
-        // draw result
-        cmds.begin_render_pass(m_raster_fbindings[ctx.m_image_index]);
-        cmds.bind_raster_pipeline(m_raster_pipeline);
+            // set ssao params
+            std::array<Gp::DescriptorSet, 1> ssao_descriptor_sets;
+            ssao_descriptor_sets[0] = Gp::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
+            ssao_descriptor_sets[0].set_t_texture(0, m_rt_result).set_s_sampler(0, m_sampler).update();
 
-        // set ssao params
-        std::array<Gp::DescriptorSet, 1> ssao_descriptor_sets;
-        ssao_descriptor_sets[0] = Gp::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
-        ssao_descriptor_sets[0].set_t_texture(0, m_rt_result).set_s_sampler(0, m_sampler).update();
+            // raster
+            cmds.bind_graphics_descriptor_set(ssao_descriptor_sets);
+            cmds.bind_vertex_buffer(params.m_vertex_buffers->at(0).m_vertex_buffer, sizeof(CompactVertex));
+            cmds.bind_index_buffer(params.m_index_buffers->at(0).m_index_buffer, Gp::IndexType::Uint32);
+            cmds.draw_instanced(3, 1, 0, 0);
+            cmds.end_render_pass();
 
-        // raster
-        cmds.bind_graphics_descriptor_set(ssao_descriptor_sets);
-        cmds.bind_vertex_buffer(params.m_mesh_blobs->at(0).m_vertex_buffer, sizeof(CompactVertex));
-        cmds.bind_index_buffer(params.m_mesh_blobs->at(0).m_index_buffer, Gp::IndexType::Uint32);
-        cmds.draw_instanced(3, 1, 0, 0);
-        cmds.end_render_pass();
+            // transition
+            cmds.transition_texture(*ctx.m_swapchain_texture,
+                                    Gp::TextureStateEnum::ColorAttachment,
+                                    Gp::TextureStateEnum::Present);
+            cmds.transition_texture(m_rt_result,
+                                    Gp::TextureStateEnum::FragmentShaderVisible,
+                                    Gp::TextureStateEnum::NonFragmentShaderVisible);
 
-        // transition
-        cmds.transition_texture(*ctx.m_swapchain_texture,
-                                Gp::TextureStateEnum::ColorAttachment,
-                                Gp::TextureStateEnum::Present);
-        cmds.transition_texture(m_rt_result,
-                                Gp::TextureStateEnum::FragmentShaderVisible,
-                                Gp::TextureStateEnum::NonFragmentShaderVisible);
-
-        cmds.end();
-        cmds.submit(ctx.m_flight_fence, ctx.m_image_ready_semaphore, ctx.m_image_presentable_semaphores);
+            cmds.end();
+            cmds.submit(ctx.m_flight_fence, ctx.m_image_ready_semaphore, ctx.m_image_presentable_semaphores);
+        }
     }
 };

@@ -239,7 +239,7 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     float connection_contrib = 0.0f;
     Reservior reservior = Reservior_create();
     VertexAttributes vattrib2;
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < 1; i++)
     {;
         // sample triangle index
         samples = rand2(samples);
@@ -274,11 +274,13 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     shadow_payload.m_miss = false;
     TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, 0xFF, 0, 0, 0, ray, shadow_payload);
 
+    float3 nee = payload.m_importance * connection_contrib * weight * 100.0f * shadow_payload.m_miss + diffuse_albedo;
+
     payload.m_importance *= diffuse_albedo / M_PI;
     payload.m_inout_dir = onb.to_global(local_outgoing_dir);
     payload.m_seed2 = samples;
     payload.m_hit_pos = vattrib.m_position;
-    payload.m_radiance += connection_contrib * weight * 100.0f * shadow_payload.m_miss;
+    payload.m_radiance += nee;
 }
 
 [shader("miss")]
