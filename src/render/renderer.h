@@ -2,6 +2,8 @@
 
 #include "graphicsapi/graphicsapi.h"
 #include "passes/directlight/bindlessobjectable.h"
+#include "passes/directlight/directlight_params.h"
+#include "passes/directlight/reservior.h"
 #include "rendercontext.h"
 #include "shared/cameraparam.h"
 
@@ -24,10 +26,12 @@ struct Renderer
     Gp::RayTracingBlas                   m_rt_static_mesh_emissive_blas;
     Gp::RayTracingTlas                   m_rt_tlas;
     std::vector<Gp::FramebufferBindings> m_raster_fbindings;
-    Gp::Texture                          m_rt_result;
+    std::array<Gp::Texture, 2>           m_rt_results;
+    std::array<Gp::Buffer, 2>            m_prev_frame_reserviors;
     Gp::Sampler                          m_sampler;
 
     Gp::Buffer m_cb_camera_params;
+    Gp::Buffer m_cb_directlight_params;
     Gp::Buffer m_cb_materials;
     Gp::Buffer m_cb_material_id;
     Gp::Buffer m_cb_num_triangles;
@@ -44,6 +48,10 @@ struct Renderer
         // create camera params buffer
         m_cb_camera_params =
             Gp::Buffer(device, Gp::BufferUsageEnum::ConstantBuffer, Gp::MemoryUsageEnum::CpuToGpu, sizeof(CameraParams));
+        m_cb_directlight_params = Gp::Buffer(device,
+                                             Gp::BufferUsageEnum::ConstantBuffer,
+                                             Gp::MemoryUsageEnum::CpuToGpu,
+                                             sizeof(DirectLightParams));
 
         resize(device, resolution, swapchain_attachment);
         init_shaders(device, true);
@@ -58,16 +66,26 @@ struct Renderer
             m_raster_fbindings[i] = Gp::FramebufferBindings(device, { &swapchain_attachment[i] });
         }
 
-        m_rt_result = Gp::Texture(device,
-                                  Gp::TextureUsageEnum::StorageImage |
-                                      Gp::TextureUsageEnum::ColorAttachment | Gp::TextureUsageEnum::Sampled,
-                                  Gp::TextureStateEnum::NonFragmentShaderVisible,
-                                  Gp::FormatEnum::R11G11B10_UFloat,
-                                  resolution,
-                                  nullptr,
-                                  nullptr,
-                                  float4(0.0f, 0.0f, 0.0f, 0.0f),
-                                  "ray_tracing_result");
+        for (size_t i = 0; i < 2; i++)
+        {
+            m_rt_results[i]            = Gp::Texture(device,
+                                          Gp::TextureUsageEnum::StorageImage | Gp::TextureUsageEnum::ColorAttachment |
+                                              Gp::TextureUsageEnum::Sampled,
+                                          Gp::TextureStateEnum::NonFragmentShaderVisible,
+                                          Gp::FormatEnum::R11G11B10_UFloat,
+                                          resolution,
+                                          nullptr,
+                                          nullptr,
+                                          float4(0.0f, 0.0f, 0.0f, 0.0f),
+                                          "ray_tracing_result");
+            m_prev_frame_reserviors[i] = Gp::Buffer(device,
+                                                    Gp::BufferUsageEnum::StorageBuffer,
+                                                    Gp::MemoryUsageEnum::GpuOnly,
+                                                    sizeof(Reservior) * resolution.x * resolution.y,
+                                                    nullptr,
+                                                    nullptr,
+                                                    "prev_frame_reservior");
+        }
     }
 
     void
@@ -294,6 +312,7 @@ struct Renderer
         notinit = false;
     }
 
+    int frame_count = 0;
     void
     loop(const RenderContext & ctx, const RenderParams & params)
     {
@@ -309,6 +328,11 @@ struct Renderer
         {
             init_shaders(device, false);
         }
+
+        DirectLightParams dl_params;
+        dl_params.m_rng_offset = static_cast<float>(frame_count++);
+        std::memcpy(m_cb_directlight_params.map(), &dl_params, sizeof(DirectLightParams));
+        m_cb_directlight_params.unmap();
 
         cmds.begin();
 
@@ -337,7 +361,20 @@ struct Renderer
         {
             ray_descriptor_sets[0]
                 .set_b_constant_buffer(0, m_cb_camera_params)
-                .set_u_rw_texture(0, m_rt_result)
+                .set_b_constant_buffer(1, m_cb_directlight_params)
+                .set_t_structured_buffer(0,
+                                         m_prev_frame_reserviors[(ctx.m_flight_index + 1) % 2],
+                                         sizeof(Reservior),
+                                         params.m_resolution.x * params.m_resolution.y,
+                                         0,
+                                         0)
+                .set_u_rw_texture(0, m_rt_results[ctx.m_flight_index % 2])
+                .set_u_rw_structure_buffer(1,
+                                           m_prev_frame_reserviors[ctx.m_flight_index % 2],
+                                           sizeof(Reservior),
+                                           params.m_resolution.x * params.m_resolution.y,
+                                           0,
+                                           0)
                 .update();
         }
 
@@ -422,7 +459,7 @@ struct Renderer
         cmds.trace_rays(m_rt_sbt, params.m_resolution.x, params.m_resolution.y);
         {
             // transition
-            cmds.transition_texture(m_rt_result,
+            cmds.transition_texture(m_rt_results[ctx.m_flight_index % 2],
                                     Gp::TextureStateEnum::NonFragmentShaderVisible,
                                     Gp::TextureStateEnum::FragmentShaderVisible);
             cmds.transition_texture(*ctx.m_swapchain_texture,
@@ -436,7 +473,10 @@ struct Renderer
             // set ssao params
             std::array<Gp::DescriptorSet, 1> ssao_descriptor_sets;
             ssao_descriptor_sets[0] = Gp::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
-            ssao_descriptor_sets[0].set_t_texture(0, m_rt_result).set_s_sampler(0, m_sampler).update();
+            ssao_descriptor_sets[0]
+                .set_t_texture(0, m_rt_results[ctx.m_flight_index % 2])
+                .set_s_sampler(0, m_sampler)
+                .update();
 
             // raster
             cmds.bind_graphics_descriptor_set(ssao_descriptor_sets);
@@ -449,7 +489,7 @@ struct Renderer
             cmds.transition_texture(*ctx.m_swapchain_texture,
                                     Gp::TextureStateEnum::ColorAttachment,
                                     Gp::TextureStateEnum::Present);
-            cmds.transition_texture(m_rt_result,
+            cmds.transition_texture(m_rt_results[ctx.m_flight_index % 2],
                                     Gp::TextureStateEnum::FragmentShaderVisible,
                                     Gp::TextureStateEnum::NonFragmentShaderVisible);
 

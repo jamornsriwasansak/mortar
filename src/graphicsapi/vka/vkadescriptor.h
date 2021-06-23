@@ -202,6 +202,31 @@ struct DescriptorSet
     }
 
     DescriptorSet &
+    set_u_rw_structure_buffer(const size_t   binding,
+                              const Buffer & buffer,
+                              const size_t   stride,
+                              const size_t   num_elements,
+                              const size_t   first_element,
+                              const size_t   i_element = 0)
+    {
+        vk::DescriptorBufferInfo buf_info = {};
+        buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
+        buf_info.setOffset(stride * first_element);
+        buf_info.setRange(stride * num_elements);
+        m_descriptor_buffer_infos.push_back(buf_info);
+
+        vk::WriteDescriptorSet write_descriptor = {};
+        write_descriptor.setDstSet(m_vk_descriptor_set);
+        write_descriptor.setDstBinding(static_cast<uint32_t>(binding + HlslDxcCompiler::UShift));
+        write_descriptor.setDstArrayElement(static_cast<uint32_t>(i_element));
+        write_descriptor.setDescriptorCount(1);
+        write_descriptor.setDescriptorType(vk::DescriptorType::eStorageBuffer);
+        write_descriptor.setPBufferInfo(&m_descriptor_buffer_infos.back());
+        m_write_descriptor_set.push_back(write_descriptor);
+        return *this;
+    }
+
+    DescriptorSet &
     set_s_sampler(const size_t binding, const Sampler & sampler)
     {
         vk::DescriptorImageInfo image_info = {};
