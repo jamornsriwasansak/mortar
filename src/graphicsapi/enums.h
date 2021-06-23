@@ -381,6 +381,8 @@ struct EnumHelper
         {
         case FormatEnum::None:
             return 0;
+        case FormatEnum::R8_UNorm:
+            return sizeof(uint8_t);
         case FormatEnum::R8G8B8A8_UNorm:
             return 4 * sizeof(uint8_t);
         default:

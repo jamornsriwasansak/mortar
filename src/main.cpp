@@ -7,7 +7,7 @@ main()
 
     // default parameters
     const size_t num_flights = 2;
-    const int2   target_resolution(1080, 720);
+    const int2   target_resolution(1920, 1080);
 
     // create main window
     Window main_window("Mortar", target_resolution);

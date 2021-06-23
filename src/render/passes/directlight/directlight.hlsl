@@ -1,6 +1,7 @@
 #include "../../shared/compactvertex.h"
 #include "../../shared/pbrmaterial.h"
 #include "weightedreservior.h"
+#include "bindlessobjectable.h"
 #include "mapping.h"
 #include "onb.h"
 
@@ -54,7 +55,8 @@ Texture2D<float4>                     u_textures[100] : register(t0, space1);
 // space 2 & 3
 // bindless mesh info
 RaytracingAccelerationStructure       u_scene_bvh : register(t0, space2);
-ConstantBuffer<NumTrianglesContainer> u_num_triangles : register(b0, space2);
+ConstantBuffer<BindlessObjectTable>   u_bindless_mesh_table : register(b0, space2);
+ConstantBuffer<NumTrianglesContainer> u_num_triangles : register(b1, space2);
 ByteAddressBuffer                     u_index_buffers[100] : register(t1, space2);
 StructuredBuffer<CompactVertex>       u_vertex_buffers[100] : register(t0, space3);
 
@@ -168,7 +170,7 @@ float length2(const float3 x)
 
 float connect(const float3 diff, const float3 normal1, const float3 normal2)
 {
-    return max(dot(diff, normal1), 0.0f) * max(dot(diff, normal2), 0.0f) / sqr(length2(diff));
+    return max(dot(diff, normal1), 0.0f) * max(-dot(diff, normal2), 0.0f) / length2(diff);
 }
 
 [shader("raygeneration")]
@@ -188,7 +190,7 @@ void RayGen()
     payload.m_seed2 = uv;
 
     float3 result = float3(0.0f, 0.0f, 0.0f);
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 1; i++)
     {
         payload.m_inout_dir = direction;
         payload.m_miss = false;
@@ -215,7 +217,7 @@ void RayGen()
         result += payload.m_radiance;
     }
 
-    u_output[LaunchIndex.xy] = float4(result / 4.0f, 1.0f);
+    u_output[LaunchIndex.xy] = float4(result / 1.0f, 1.0f);
 }
 
 [shader("closesthit")]
@@ -227,7 +229,9 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     // fetch pbr material info
     const uint material_id = u_material_ids.m_ids[GeometryIndex() / 4][GeometryIndex() % 4];
     const PbrMaterial material = u_pbr_materials.materials[material_id];
-    const float3 diffuse_albedo = u_textures[material.m_diffuse_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).rgb;
+    const float3 diffuse_reflectance = u_textures[material.m_diffuse_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).rgb;
+    const float3 specular_reflectance = u_textures[material.m_specular_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).rgb;
+    const float specular_roughness = u_textures[material.m_roughness_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).r;
 
     const Onb onb = Onb_create(vattrib.m_gnormal);
     const float3 local_incident_dir = onb.to_local(-payload.m_inout_dir);
@@ -239,20 +243,26 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     float connection_contrib = 0.0f;
     Reservior reservior = Reservior_create();
     VertexAttributes vattrib2;
-    for (int i = 0; i < 1; i++)
-    {;
+    for (int i = 0; i < 10; i++)
+    {
         // sample triangle index
         samples = rand2(samples);
-        const uint geometry_id = 2;
-        const uint num_triangles = u_num_triangles.m_num_triangles[geometry_id / 4][geometry_id % 4];
-        const uint primitive_id = int(samples.x * num_triangles);
-        const float3 uvw = float3(frac(samples.x), samples.y, 1.0f - frac(samples.x) - samples.y);
+        float2 samples0 = samples;
+        samples = rand2(samples);
+        float2 samples1 = samples;
+        samples = rand2(samples);
+        float2 samples2 = samples;
+        const uint emissive_id = samples0.x * u_bindless_mesh_table.m_num_emissive_objects;
+        const uint geometry_id = emissive_id + u_bindless_mesh_table.m_emissive_object_start_index;
+        const uint num_triangles = u_num_triangles.m_num_triangles[emissive_id / 4][emissive_id % 4];
+        const uint primitive_id = int(samples0.y * num_triangles);
+        const float2 uv = triangle_from_square(samples1);
+        const float3 uvw = float3(uv.x, uv.y, 1.0f - uv.x - uv.y);
         const VertexAttributes candidate_attrib = get_vertex_attributes(geometry_id, primitive_id, uvw);
         const float3 diff = candidate_attrib.m_position - vattrib.m_position;
         const float candidate_connection_contrib = connect(diff, vattrib.m_snormal, candidate_attrib.m_snormal);
         const float weight = candidate_connection_contrib;
-        samples = rand2(samples);
-        if (reservior.update(candidate_connection_contrib, samples.x))
+        if (reservior.update(candidate_connection_contrib, samples2.x))
         {
             connection_contrib = candidate_connection_contrib;
             vattrib2 = candidate_attrib;
@@ -268,25 +278,33 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     RayDesc ray;
     ray.Origin = vattrib.m_position;
     ray.Direction = diff;
-    ray.TMin = 0.0001f;
-    ray.TMax = 0.9999f;
+    ray.TMin = 0.00001f;
+    ray.TMax = 0.99999f;
     PtPayload shadow_payload;
     shadow_payload.m_miss = false;
     TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, 0xFF, 0, 0, 0, ray, shadow_payload);
 
-    float3 nee = payload.m_importance * connection_contrib * weight * 100.0f * shadow_payload.m_miss + diffuse_albedo;
+    float3 nee = payload.m_importance * connection_contrib * weight * shadow_payload.m_miss;
 
-    payload.m_importance *= diffuse_albedo / M_PI;
+    float3 test = u_bindless_mesh_table.m_emissive_object_start_index != GeometryIndex() ? float3(1.0f, 1.0f, 1.0f) : float3(0.0f, 0.0f, 0.0f);
+
+    payload.m_importance *= diffuse_reflectance / M_PI;
     payload.m_inout_dir = onb.to_global(local_outgoing_dir);
     payload.m_seed2 = samples;
     payload.m_hit_pos = vattrib.m_position;
-    payload.m_radiance += nee;
+    payload.m_radiance += nee * diffuse_reflectance * 10.0f;
+}
+
+[shader("closesthit")]
+void EmissiveClosestHit(inout PtPayload payload, const Attributes attrib)
+{
+    payload.m_radiance += payload.m_importance * 0.0f;
 }
 
 [shader("miss")]
 void Miss(inout PtPayload payload)
 {
-    payload.m_radiance += payload.m_importance * float3(1.0f, 1.0f, 1.0f) * 1.0f;
+    //payload.m_radiance += payload.m_importance * float3(1.0f, 1.0f, 1.0f) * 1.0f;
     payload.m_miss = true;
 }
 

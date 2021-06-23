@@ -21,6 +21,7 @@ struct RayTracingGeometryDesc
                       const FormatEnum vk_format,
                       const size_t     starting_index = 0)
     {
+        assert(num_vertices > 0);
         m_geometry_trimesh_desc.setVertexData(buffer.m_device_address + starting_index * stride_in_bytes);
         m_geometry_trimesh_desc.setVertexFormat(vk::Format(vk_format));
         m_geometry_trimesh_desc.setMaxVertex(static_cast<uint32_t>(num_vertices));
@@ -158,23 +159,22 @@ struct RayTracingTlas
 
     RayTracingTlas() {}
 
-    RayTracingTlas(const Device *             device,
-                   const RayTracingInstance * instance,
-                   const size_t               num_instances,
-                   StagingBufferManager *     buf_manager,
-                   const std::string &        name = "")
+    RayTracingTlas(const Device *                          device,
+                   const std::span<RayTracingInstance *> & instance,
+                   StagingBufferManager *                  buf_manager,
+                   const std::string &                     name = "")
     {
-        std::vector<vk::AccelerationStructureInstanceKHR> instances(num_instances);
-        for (size_t i_instance = 0; i_instance < num_instances; i_instance++)
+        std::vector<vk::AccelerationStructureInstanceKHR> instances(instance.size());
+        for (size_t i_instance = 0; i_instance < instance.size(); i_instance++)
         {
-            instances[i_instance] = instance[i_instance].m_vk_instance;
+            instances[i_instance] = instance[i_instance]->m_vk_instance;
         }
 
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
         m_instance_buffer                      = Buffer(device,
                                    BufferUsageEnum::TransferSrc,
                                    MemoryUsageEnum::CpuOnly,
-                                   sizeof(vk::AccelerationStructureInstanceKHR) * num_instances,
+                                   sizeof(vk::AccelerationStructureInstanceKHR) * instance.size(),
                                    reinterpret_cast<std::byte *>(instances.data()),
                                    buf_manager,
                                    instance_buffer_name);

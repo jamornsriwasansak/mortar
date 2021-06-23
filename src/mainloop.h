@@ -17,14 +17,16 @@ struct MainLoop
     std::vector<Gp::CommandPool>    m_graphics_command_pool;
     std::vector<Gp::DescriptorPool> m_descriptor_pools;
     std::vector<Gp::Semaphore>      m_image_ready_semaphores;
-    std::vector<Gp::Semaphore>      m_image_presentable_semaphores;
+    std::vector<Gp::Semaphore>      m_image_presentable_semaphore;
     size_t                          m_swapchain_length = 0;
     size_t                          m_num_flights      = 0;
 
     Gp::StagingBufferManager m_staging_buffer_manager;
-    AssetManager             m_asset_manager;
+    AssetPool                m_asset_pool;
     FpsCamera                m_camera;
     Renderer                 m_renderer;
+
+    std::vector<PbrObject> m_static_objects;
 
     Gp::Buffer  m_dummy_buffer;
     Gp::Buffer  m_dummy_index_buffer;
@@ -53,13 +55,13 @@ struct MainLoop
         m_graphics_command_pool.resize(m_num_flights);
         m_descriptor_pools.resize(m_num_flights);
         m_image_ready_semaphores.resize(m_num_flights);
-        m_image_presentable_semaphores.resize(m_num_flights);
+        m_image_presentable_semaphore.resize(m_num_flights);
         for (size_t i = 0; i < m_num_flights; i++)
         {
             m_graphics_command_pool[i]        = Gp::CommandPool(m_device);
             m_descriptor_pools[i]             = Gp::DescriptorPool(m_device);
             m_image_ready_semaphores[i]       = Gp::Semaphore(m_device);
-            m_image_presentable_semaphores[i] = Gp::Semaphore(m_device);
+            m_image_presentable_semaphore[i] = Gp::Semaphore(m_device);
         }
 
         // create swapchain
@@ -73,7 +75,7 @@ struct MainLoop
 
         // staging buffer manager
         m_staging_buffer_manager = Gp::StagingBufferManager(m_device, "main_staging_buffer_manager");
-        m_asset_manager          = AssetManager(m_device, &m_staging_buffer_manager);
+        m_asset_pool             = AssetPool(m_device, &m_staging_buffer_manager);
 
         // initialize renderer
         m_renderer.init(m_device, m_window->get_resolution(), m_swapchain_textures);
@@ -128,7 +130,7 @@ struct MainLoop
         ctx.m_graphics_command_pool        = &m_graphics_command_pool[i_flight];
         ctx.m_descriptor_pool              = &m_descriptor_pools[i_flight];
         ctx.m_image_ready_semaphore        = &m_image_ready_semaphores[i_flight];
-        ctx.m_image_presentable_semaphores = &m_image_presentable_semaphores[i_flight];
+        ctx.m_image_presentable_semaphore = &m_image_presentable_semaphore[i_flight];
         ctx.m_flight_fence                 = &m_flight_fences[i_flight];
         ctx.m_flight_index                 = i_flight;
         ctx.m_image_index                  = m_swapchain.m_image_index;
@@ -138,13 +140,9 @@ struct MainLoop
         ctx.m_dummy_texture                = &m_dummy_texture;
 
         RenderParams render_params;
-        render_params.m_vertex_buffers = &m_asset_manager.m_vertex_buffers;
-        render_params.m_index_buffers  = &m_asset_manager.m_index_buffers;
-        render_params.m_materials  = &m_asset_manager.m_pbr_materials;
-        render_params.m_textures   = &m_asset_manager.m_textures;
-        render_params.m_resolution = m_window->get_resolution();
-        render_params.m_static_meshes =
-            m_asset_manager.m_pbr_objects; // TODO:: for now, we render all meshes as static
+        render_params.m_resolution           = m_window->get_resolution();
+        render_params.m_asset_pool           = &m_asset_pool;
+        render_params.m_static_objects       = &m_static_objects;
         render_params.m_is_static_mesh_dirty = false;
         render_params.m_fps_camera           = &m_camera;
         render_params.m_is_shaders_dirty     = false;
@@ -158,7 +156,7 @@ struct MainLoop
         // run renderer
         m_renderer.loop(ctx, render_params);
 
-        m_swapchain.present(&m_image_presentable_semaphores[i_flight]);
+        m_swapchain.present(&m_image_presentable_semaphore[i_flight]);
         m_window->update();
     }
 
@@ -167,8 +165,24 @@ struct MainLoop
     {
         size_t i_flight = 0;
 
-        int2 sponza_mesh = m_asset_manager.add_pbr_object("sponza/sponza.obj");
-        //int2 box_mesh = m_asset_manager.add_pbr_object("cube.obj");
+        std::vector<PbrObject> sponza_mesh = m_asset_pool.add_pbr_meshes("sponza/sponza.obj");
+        int                    white_tex_id =
+            m_asset_pool.add_constant_texture(std::array<uint8_t, 4>{ static_cast<uint8_t>(256),
+                                                                      static_cast<uint8_t>(256),
+                                                                      static_cast<uint8_t>(256),
+                                                                      static_cast<uint8_t>(256) });
+        m_static_objects.insert(m_static_objects.end(), sponza_mesh.begin(), sponza_mesh.end());
+
+        PbrEmissive pbr_emissive;
+        pbr_emissive.m_emissive_tex_id = white_tex_id;
+        pbr_emissive.m_emissive_scale  = 100.0f;
+        int emissive_id                = m_asset_pool.add_pbr_emissive(pbr_emissive);
+
+        std::vector<PbrObject> box_mesh = m_asset_pool.add_pbr_meshes("cube.obj", false, false);
+        box_mesh[0].m_emissive_id       = emissive_id;
+        m_static_objects.insert(m_static_objects.end(), box_mesh.begin(), box_mesh.end());
+
+        // int2 salle = m_asset_manager.add_pbr_object("salle_de_bain/salle_de_bain.obj");
 
         while (!m_window->should_close_window())
         {

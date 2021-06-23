@@ -124,7 +124,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
                                 COMPILER_FLAGS "-w")
 
     # generating executable
-    add_executable(mortar ${mortar_src} ${spirv_reflect_src} ${d3d12ma} ${aftercrash_src} ${GFSDK_Aftermath_src})
+    add_executable(mortar ${mortar_src} ${spirv_reflect_src} ${d3d12ma} ${aftercrash_src} ${GFSDK_Aftermath_src} "src/render/passes/directlight/bindlessobjectable.h")
     target_link_libraries(mortar PUBLIC ${DEPS_LIBRARIES})
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
