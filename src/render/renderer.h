@@ -72,7 +72,7 @@ struct Renderer
                                           Gp::TextureUsageEnum::StorageImage | Gp::TextureUsageEnum::ColorAttachment |
                                               Gp::TextureUsageEnum::Sampled,
                                           Gp::TextureStateEnum::NonFragmentShaderVisible,
-                                          Gp::FormatEnum::R11G11B10_UFloat,
+                                          Gp::FormatEnum::R32G32B32A32_SFloat,
                                           resolution,
                                           nullptr,
                                           nullptr,

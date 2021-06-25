@@ -261,7 +261,7 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     uint2 resolution = DispatchRaysDimensions().xy;
     uint pixel_index = pixel.y * resolution.x + pixel.x;
 
-    int num_samples = 1;
+    int num_samples = 16;
     Reservior reservior = Reservior_create();
     float3 nee;
     {
@@ -319,12 +319,12 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     Reservior combined_reservior = Reservior_create();
     samples = rand2(samples);
     combined_reservior.update(reservior.m_y, reservior.m_p_y, reservior.m_w_sum, reservior.m_num_samples, samples.x);
-    int radius = 2;
+    int radius = 0;
     for (int i = -radius; i <= radius; i++)
         for (int j = -radius; j <= radius; j++)
         {
             samples = rand2(samples);
-            int2 offset_pixel = clamp(pixel_index + int2(i, j), int2(0, 0), resolution);
+            int2 offset_pixel = clamp(pixel + int2(i, j), int2(0, 0), resolution);
             int offset_pixel_index = offset_pixel.y * resolution.x + offset_pixel.x;
             Reservior prev_reservior = u_prev_frame_reservior[offset_pixel_index];
             combined_reservior.update(prev_reservior.m_y, prev_reservior.m_p_y, prev_reservior.m_w_sum, prev_reservior.m_num_samples, samples.y);
@@ -348,7 +348,7 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     payload.m_hit_pos = vattrib.m_position;
     payload.m_radiance += nee * diffuse_reflectance * 500.0f + diffuse_reflectance * 0.1f;
 
-    u_frame_reservior[pixel_index] = reservior;
+    u_frame_reservior[pixel_index] = combined_reservior;
 }
 
 [shader("closesthit")]
