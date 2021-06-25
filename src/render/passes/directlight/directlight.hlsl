@@ -43,26 +43,26 @@ struct NumTrianglesContainer
 };
 
 // space 0
-ConstantBuffer<CameraInfo>            u_camera : register(b0, space0);
-ConstantBuffer<DirectLightParams>     u_params : register(b1, space0);
-StructuredBuffer<Reservior>           u_prev_frame_reservior : register(t0, space0);
-RWTexture2D<float4>                   u_output : register(u0, space0);
-RWStructuredBuffer<Reservior>         u_frame_reservior : register(u1, space0);
+ConstantBuffer<CameraInfo> u_camera : register(b0, space0);
+ConstantBuffer<DirectLightParams> u_params : register(b1, space0);
+StructuredBuffer<Reservior> u_prev_frame_reservior : register(t0, space0);
+RWTexture2D<float4> u_output : register(u0, space0);
+RWStructuredBuffer<Reservior> u_frame_reservior : register(u1, space0);
 
 // space 1
 // bindless material
-SamplerState                          u_sampler : register(s0, space1);
-ConstantBuffer<PbrMaterialContainer>  u_pbr_materials : register(b0, space1);
-ConstantBuffer<MaterialIdContainer>   u_material_ids : register(b1, space1);
-Texture2D<float4>                     u_textures[100] : register(t0, space1);
+SamplerState u_sampler : register(s0, space1);
+ConstantBuffer<PbrMaterialContainer> u_pbr_materials : register(b0, space1);
+ConstantBuffer<MaterialIdContainer> u_material_ids : register(b1, space1);
+Texture2D<float4> u_textures[100] : register(t0, space1);
 
 // space 2 & 3
 // bindless mesh info
-RaytracingAccelerationStructure       u_scene_bvh : register(t0, space2);
-ConstantBuffer<BindlessObjectTable>   u_bindless_mesh_table : register(b0, space2);
+RaytracingAccelerationStructure u_scene_bvh : register(t0, space2);
+ConstantBuffer<BindlessObjectTable> u_bindless_mesh_table : register(b0, space2);
 ConstantBuffer<NumTrianglesContainer> u_num_triangles : register(b1, space2);
-ByteAddressBuffer                     u_index_buffers[100] : register(t1, space2);
-StructuredBuffer<CompactVertex>       u_vertex_buffers[100] : register(t0, space3);
+ByteAddressBuffer u_index_buffers[100] : register(t1, space2);
+StructuredBuffer<CompactVertex> u_vertex_buffers[100] : register(t0, space3);
 
 struct VertexAttributes
 {
@@ -104,7 +104,8 @@ VertexAttributes get_vertex_attributes(uint instanceIndex, uint triangleIndex, f
 
     float3 e0;
     float3 e1;
-    [[unroll]]for (uint i = 0; i < 3; i++)
+    [[unroll]]
+    for (uint i = 0; i < 3; i++)
     {
         CompactVertex vertex_in = u_vertex_buffers[instanceIndex][u_index_buffers[i]];
         v.m_position += vertex_in.m_position * barycentrics[i];
@@ -174,7 +175,7 @@ float length2(const float3 x)
 
 float connect(const float3 diff, const float3 normal1, const float3 normal2)
 {
-    return max(dot(diff, normal1), 0.0f) * max(-dot(diff, normal2), 0.0f) / length2(diff);
+    return max(dot(diff, normal1), 0.0f) * max(-dot(diff, normal2), 0.0f) / sqr(length2(diff));
 }
 
 [shader("raygeneration")]
@@ -193,8 +194,9 @@ void RayGen()
     PtPayload payload;
     payload.m_seed2 = uv + u_params.m_rng_offset / 1024.0f;
 
+    const int num_samples = 1;
     float3 result = float3(0.0f, 0.0f, 0.0f);
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < num_samples; i++)
     {
         payload.m_inout_dir = direction;
         payload.m_miss = false;
@@ -221,7 +223,17 @@ void RayGen()
         result += payload.m_radiance;
     }
 
-    u_output[LaunchIndex.xy] = float4(result / 1.0f, 1.0f);
+    if (false)
+    {
+        float4 input = u_output[LaunchIndex.xy];
+        float3 combined_contrib = input.xyz * input.w + result;
+        float combined_num_samples = input.w + num_samples;
+        u_output[LaunchIndex.xy] = float4(combined_contrib / float(combined_num_samples), combined_num_samples);
+    }
+    else
+    {
+        u_output[LaunchIndex.xy] = float4(result, 1.0f);
+    }
 }
 
 [shader("closesthit")]
@@ -248,13 +260,13 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     uint2 pixel = DispatchRaysIndex().xy;
     uint2 resolution = DispatchRaysDimensions().xy;
     uint pixel_index = pixel.y * resolution.x + pixel.x;
-    Reservior prev_frame_reservior = u_prev_frame_reservior[pixel_index];
 
+    int num_samples = 1;
     Reservior reservior = Reservior_create();
     float3 nee;
     {
         VertexAttributes vattrib2;
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < num_samples; i++)
         {
             // sample triangle index
             samples = rand2(samples);
@@ -263,6 +275,7 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
             float2 samples1 = samples;
             samples = rand2(samples);
             float2 samples2 = samples;
+
             const uint emissive_id = samples0.x * u_bindless_mesh_table.m_num_emissive_objects;
             const uint geometry_id = emissive_id + u_bindless_mesh_table.m_emissive_object_start_index;
             const uint num_triangles = u_num_triangles.m_num_triangles[emissive_id / 4][emissive_id % 4];
@@ -275,13 +288,13 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
             const float candidate_connection_contrib = connect(diff, vattrib.m_snormal, candidate_attrib.m_snormal);
             const float weight = candidate_connection_contrib;
 
-            if (reservior.update(float3(1.0f, 1.0f, 1.0f) * candidate_connection_contrib, candidate_connection_contrib, samples2.x))
+            if (reservior.update(float3(1.0f, 1.0f, 1.0f) * candidate_connection_contrib, candidate_connection_contrib, candidate_connection_contrib, 1.0f, samples2.x))
             {
                 vattrib2 = candidate_attrib;
             }
         }
 
-        reservior.m_w = reservior.m_w_sum > 0.0f ? reservior.m_w_sum / (reservior.m_p_y * reservior.m_m) : 1.0f;
+        reservior.m_inv_pdf = reservior.m_w_sum > 0.0f ? reservior.m_w_sum / (reservior.m_p_y * reservior.m_num_samples) : 1.0f;
         const float3 diff = vattrib2.m_position - vattrib.m_position;
 
         // Setup the ray
@@ -298,37 +311,50 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
         if (!shadow_payload.m_miss)
         {
             reservior.m_y = float3(0.0f, 0.0f, 0.0f);
+            reservior.m_p_y = 0.0f;
+            reservior.m_w_sum = 0.0f;
         }
-
     }
 
-    samples = rand2(samples);
-
-    /*
     Reservior combined_reservior = Reservior_create();
-    combined_reservior.update(reservior.m_y, reservior.m_p_y, reservior.m_y * reservior.m_w, samples.x);
-    combined_reservior.update(prev_reservior.m_y, prev_reservior.m_p_y, prev_reservior.m_y * prev_reservior.m_w, samples.y);
+    samples = rand2(samples);
+    combined_reservior.update(reservior.m_y, reservior.m_p_y, reservior.m_w_sum, reservior.m_num_samples, samples.x);
+    int radius = 2;
+    for (int i = -radius; i <= radius; i++)
+        for (int j = -radius; j <= radius; j++)
+        {
+            samples = rand2(samples);
+            int2 offset_pixel = clamp(pixel_index + int2(i, j), int2(0, 0), resolution);
+            int offset_pixel_index = offset_pixel.y * resolution.x + offset_pixel.x;
+            Reservior prev_reservior = u_prev_frame_reservior[offset_pixel_index];
+            combined_reservior.update(prev_reservior.m_y, prev_reservior.m_p_y, prev_reservior.m_w_sum, prev_reservior.m_num_samples, samples.y);
+        }
+    combined_reservior.m_inv_pdf = combined_reservior.m_w_sum > 0.0f ? combined_reservior.m_w_sum / (combined_reservior.m_p_y * combined_reservior.m_num_samples) : 0.0f;
 
-    combined_reservior.m_m = reservior.m_m + prev_reservior.m_m;
-    combined_reservior.m_p_y = reservior.m_p_y + prev_reservior.m_p_y;
-*/
-
-    // nee
-    nee = payload.m_importance * reservior.m_y * reservior.m_w;
+    if (true)
+    {
+        nee = payload.m_importance * combined_reservior.m_y * combined_reservior.m_inv_pdf;
+    }
+    else
+    {
+        // check if reservior from the previous frame is valid or not
+        Reservior prev_reservior = u_prev_frame_reservior[pixel_index];
+        nee = payload.m_importance * prev_reservior.m_y * prev_reservior.m_inv_pdf;
+    }
 
     payload.m_importance *= diffuse_reflectance / M_PI;
     payload.m_inout_dir = onb.to_global(local_outgoing_dir);
     payload.m_seed2 = samples;
     payload.m_hit_pos = vattrib.m_position;
-    payload.m_radiance += nee * diffuse_reflectance * 10.0f + diffuse_reflectance * 0.1f;
+    payload.m_radiance += nee * diffuse_reflectance * 500.0f + diffuse_reflectance * 0.1f;
 
-    u_frame_reservior[pixel_index] = prev_frame_reservior;
+    u_frame_reservior[pixel_index] = reservior;
 }
 
 [shader("closesthit")]
 void EmissiveClosestHit(inout PtPayload payload, const Attributes attrib)
 {
-    payload.m_radiance += 10.0f;
+    payload.m_radiance += 500.0f;
 }
 
 [shader("miss")]
