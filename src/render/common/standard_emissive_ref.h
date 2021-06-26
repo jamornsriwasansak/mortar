@@ -1,5 +1,5 @@
-#ifndef STANDARD_EMISSIVE
-#define STANDARD_EMISSIVE
+#ifndef STANDARD_EMISSIVE_H
+#define STANDARD_EMISSIVE_H
 
 struct StandardEmissive
 {

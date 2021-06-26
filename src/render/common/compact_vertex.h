@@ -1,5 +1,5 @@
-#ifndef PBVERTEX_H
-#define PBVERTEX_H
+#ifndef COMPACT_VERTEX_H
+#define COMPACT_VERTEX_H
 
 #include "shared.h"
 
@@ -11,4 +11,4 @@ struct CompactVertex
     float  m_texcoord_y;
 };
 
-#endif // PBVERTEX_H
+#endif // COMPACT_VERTEX_H
