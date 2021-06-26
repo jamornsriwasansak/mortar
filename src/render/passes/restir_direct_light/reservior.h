@@ -24,6 +24,9 @@ struct Reservior
             m_w_sum       = 0.0f;
             m_num_samples = 0.0f;
             m_inv_pdf     = 0.0f;
+             m_y_pss = float2(0.0f, 0.0f);
+            padding0 = 0.0f;
+            padding1 = 0.0f;
     }
 
     bool

@@ -136,26 +136,25 @@ struct RayTracingTlas
 
     RayTracingTlas() {}
 
-    RayTracingTlas(Device *                   device,
-                   const RayTracingInstance * instance,
-                   const size_t               num_instances,
-                   StagingBufferManager *     temp_resource_manager,
-                   const std::string &        name = "")
+    RayTracingTlas(Device *                              device,
+                   const std::span<RayTracingInstance *> instances,
+                   StagingBufferManager *                temp_resource_manager,
+                   const std::string &                   name = "")
     {
         // copy description of instance into the buffer
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
         m_instance_desc_buffer                 = Buffer(device,
                                         BufferUsageEnum::None,
                                         MemoryUsageEnum::CpuOnly,
-                                        sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * num_instances,
+                                        sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instances.size(),
                                         nullptr,
                                         nullptr,
                                         instance_buffer_name);
         std::byte * instance_dst = reinterpret_cast<std::byte *>(m_instance_desc_buffer.map());
-        for (size_t i = 0; i < num_instances; i++)
+        for (size_t i = 0; i < instances.size(); i++)
         {
             size_t offset = i * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-            std::memcpy(instance_dst + offset, &instance[i].m_instance_desc, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
+            std::memcpy(instance_dst + offset, &instances[i]->m_instance_desc, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
         }
         m_instance_desc_buffer.unmap();
 
@@ -165,7 +164,7 @@ struct RayTracingTlas
         top_level_inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
         top_level_inputs.InstanceDescs =
             m_instance_desc_buffer.m_allocation->GetResource()->GetGPUVirtualAddress();
-        top_level_inputs.NumDescs = static_cast<UINT>(num_instances);
+        top_level_inputs.NumDescs = static_cast<UINT>(instances.size());
         top_level_inputs.Type     = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
         // tlas input info

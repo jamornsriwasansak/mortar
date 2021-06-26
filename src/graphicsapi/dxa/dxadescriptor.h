@@ -304,6 +304,44 @@ struct DescriptorSet
         return *this;
     }
 
+    DescriptorSet &
+    set_u_rw_structured_buffer(const size_t   binding,
+                               const Buffer & buffer,
+                               const size_t   stride,
+                               const size_t   num_elements  = 1,
+                               const size_t   i_buffer      = 0,
+                               const size_t   first_element = 0)
+    {
+        assert(first_element % 32 == 0);
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+        uav_desc.Format                           = DXGI_FORMAT_UNKNOWN;
+        uav_desc.Buffer.FirstElement              = first_element;
+        uav_desc.Buffer.StructureByteStride       = static_cast<UINT>(stride);
+        uav_desc.Buffer.NumElements               = static_cast<UINT>(num_elements);
+        uav_desc.ViewDimension                    = D3D12_UAV_DIMENSION_BUFFER;
+        std::optional<DescriptorHandle> handle =
+            get_handle(D3D_SIT_UAV_RWSTRUCTURED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
+
+        if (handle.has_value())
+        {
+            m_device->m_dx_device->CreateUnorderedAccessView(buffer.m_allocation->GetResource(),
+                                                             nullptr,
+                                                             &uav_desc,
+                                                             handle->m_dx_cpu_handle);
+        }
+        else
+        {
+            Logger::Warn(__FUNCTION__,
+                         " cannot set_u_rw_structured_buffer(",
+                         std::to_string(m_set),
+                         ", ",
+                         std::to_string(binding),
+                         ")");
+        }
+        return *this;
+    }
+
+
     void
     update()
     {

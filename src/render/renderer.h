@@ -376,12 +376,12 @@ struct Renderer
                                          0,
                                          0)
                 .set_u_rw_texture(0, m_rt_results[ctx.m_flight_index % 2])
-                .set_u_rw_structure_buffer(1,
-                                           m_prev_frame_reserviors[ctx.m_flight_index % 2],
-                                           sizeof(Reservior),
-                                           params.m_resolution.x * params.m_resolution.y,
-                                           0,
-                                           0)
+                .set_u_rw_structured_buffer(1,
+                                            m_prev_frame_reserviors[ctx.m_flight_index % 2],
+                                            sizeof(Reservior),
+                                            params.m_resolution.x * params.m_resolution.y,
+                                            0,
+                                            0)
                 .update();
         }
 

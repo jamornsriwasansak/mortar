@@ -367,6 +367,21 @@ private:
             root_parameter.InitAsDescriptorTable(1, &desc_ranges->back(), get_shader_visibility(shader_stage));
             break;
         }
+        case D3D_SIT_UAV_RWSTRUCTURED:
+        {
+            /*
+            root_parameter.InitAsUnorderedAccessView(binding_desc.BindPoint,
+                                                     binding_desc.Space,
+                                                     get_shader_visibility(shader_stage));*/
+            CD3DX12_DESCRIPTOR_RANGE descriptor_range;
+            descriptor_range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+                                  binding_desc.BindCount,
+                                  binding_desc.BindPoint,
+                                  binding_desc.Space);
+            desc_ranges->push_back(descriptor_range);
+            root_parameter.InitAsDescriptorTable(1, &desc_ranges->back(), get_shader_visibility(shader_stage));
+            break;
+        }
         case D3D_SIT_RTACCELERATIONSTRUCTURE:
         {
             CD3DX12_DESCRIPTOR_RANGE descriptor_range;
