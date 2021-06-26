@@ -1,7 +1,7 @@
-#ifndef PBR_OBJECT_H
-#define PBR_OBJECT_H
+#ifndef STANDARD_OBJECT_H
+#define STANDARD_OBJECT_H
 
-struct PbrMesh
+struct StandardMesh
 {
     int m_vertex_buffer_id     = -1;
     int m_index_buffer_id      = -1;

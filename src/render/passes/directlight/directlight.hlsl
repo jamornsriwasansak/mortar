@@ -1,5 +1,5 @@
 #include "../../shared/compactvertex.h"
-#include "../../shared/pbrmaterial.h"
+#include "../../shared/standardmaterial.h"
 #include "reservior.h"
 #include "bindlessobjectable.h"
 #include "mapping.h"
@@ -27,9 +27,9 @@ struct CameraInfo
     float4x4 m_inv_proj;
 };
 
-struct PbrMaterialContainer
+struct StandardMaterialContainer
 {
-    PbrMaterial materials[100];
+    StandardMaterial materials[100];
 };
 
 struct MaterialIdContainer
@@ -52,7 +52,7 @@ RWStructuredBuffer<Reservior> u_frame_reservior : register(u1, space0);
 // space 1
 // bindless material
 SamplerState u_sampler : register(s0, space1);
-ConstantBuffer<PbrMaterialContainer> u_pbr_materials : register(b0, space1);
+ConstantBuffer<StandardMaterialContainer> u_pbr_materials : register(b0, space1);
 ConstantBuffer<MaterialIdContainer> u_material_ids : register(b1, space1);
 Texture2D<float4> u_textures[100] : register(t0, space1);
 
@@ -105,6 +105,7 @@ VertexAttributes get_vertex_attributes(uint instanceIndex, uint triangleIndex, f
     float3 e0;
     float3 e1;
     [[unroll]]
+
     for (uint i = 0; i < 3; i++)
     {
         CompactVertex vertex_in = u_vertex_buffers[instanceIndex][u_index_buffers[i]];
@@ -244,7 +245,7 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
 
     // fetch pbr material info
     const uint material_id = u_material_ids.m_ids[GeometryIndex() / 4][GeometryIndex() % 4];
-    const PbrMaterial material = u_pbr_materials.materials[material_id];
+    const StandardMaterial material = u_pbr_materials.materials[material_id];
     const float3 diffuse_reflectance = u_textures[material.m_diffuse_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).rgb;
     const float3 specular_reflectance = u_textures[material.m_specular_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).rgb;
     const float specular_roughness = u_textures[material.m_roughness_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).r;
@@ -261,7 +262,7 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     uint2 resolution = DispatchRaysDimensions().xy;
     uint pixel_index = pixel.y * resolution.x + pixel.x;
 
-    int num_samples = 16;
+    int num_samples = 2;
     Reservior reservior = Reservior_create();
     float3 nee;
     {
@@ -311,7 +312,7 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
         if (!shadow_payload.m_miss)
         {
             reservior.m_y = float3(0.0f, 0.0f, 0.0f);
-            reservior.m_p_y = 0.0f;
+            //reservior.m_p_y = 0.0f;
             reservior.m_w_sum = 0.0f;
         }
     }
@@ -348,7 +349,7 @@ void ClosestHit(inout PtPayload payload, const Attributes attrib)
     payload.m_hit_pos = vattrib.m_position;
     payload.m_radiance += nee * diffuse_reflectance * 500.0f + diffuse_reflectance * 0.1f;
 
-    u_frame_reservior[pixel_index] = combined_reservior;
+    u_frame_reservior[pixel_index] = reservior;
 }
 
 [shader("closesthit")]

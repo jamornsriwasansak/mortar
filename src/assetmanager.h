@@ -2,14 +2,14 @@
 
 #include "graphicsapi/graphicsapi.h"
 #include "render/shared/compactvertex.h"
-#include "render/shared/pbremissive.h"
-#include "render/shared/pbrmaterial.h"
+#include "render/shared/standardemissive.h"
+#include "render/shared/standardmaterial.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <stb_image.h>
 
-struct PbrMesh
+struct StandardMesh
 {
     size_t m_vertex_buffer_id;
     size_t m_index_buffer_id;
@@ -19,7 +19,7 @@ struct PbrMesh
     size_t m_num_indices;
 };
 
-struct PbrObject
+struct StandardObject
 {
     int m_mesh_id     = -1;
     int m_material_id = -1;
@@ -41,7 +41,7 @@ struct IndexBuffer
 
 struct AssetPool
 {
-    enum class LoadPbrParamEnum
+    enum class LoadStandardParamEnum
     {
         DiffuseReflectance,
         SpecularReflectance,
@@ -51,9 +51,9 @@ struct AssetPool
     // pool
     std::vector<VertexBuffer>               m_vertex_buffers;
     std::vector<IndexBuffer>                m_index_buffers;
-    std::vector<PbrMaterial>                m_pbr_materials;
-    std::vector<PbrEmissive>                m_pbr_emissives;
-    std::vector<PbrMesh>                    m_pbr_meshes;
+    std::vector<StandardMaterial>           m_standard_materials;
+    std::vector<StandardEmissive>           m_standard_emissives;
+    std::vector<StandardMesh>               m_standard_meshes;
     std::vector<Gp::Texture>                m_textures;
     std::map<std::filesystem::path, size_t> m_texture_id_from_path;
     Gp::StagingBufferManager *              m_staging_buffer_manager = nullptr;
@@ -78,19 +78,19 @@ struct AssetPool
         unsigned int       iv         = 0;
 
         int2 result;
-        result.x = m_pbr_meshes.size();
-        result.y = m_pbr_meshes.size() + num_meshes;
-        m_pbr_meshes.resize(m_pbr_meshes.size() + num_meshes);
+        result.x = m_standard_meshes.size();
+        result.y = m_standard_meshes.size() + num_meshes;
+        m_standard_meshes.resize(m_standard_meshes.size() + num_meshes);
 
         for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
         {
-            const aiMesh *     aimesh                              = scene->mMeshes[i_mesh];
-            const unsigned int num_vertices                        = aimesh->mNumVertices;
-            const unsigned int num_faces                           = aimesh->mNumFaces;
-            m_pbr_meshes[result.x + i_mesh].m_vertex_buffer_offset = iv;
-            m_pbr_meshes[result.x + i_mesh].m_index_buffer_offset  = ii;
-            m_pbr_meshes[result.x + i_mesh].m_num_vertices         = num_vertices;
-            m_pbr_meshes[result.x + i_mesh].m_num_indices          = num_faces * 3;
+            const aiMesh *     aimesh                                   = scene->mMeshes[i_mesh];
+            const unsigned int num_vertices                             = aimesh->mNumVertices;
+            const unsigned int num_faces                                = aimesh->mNumFaces;
+            m_standard_meshes[result.x + i_mesh].m_vertex_buffer_offset = iv;
+            m_standard_meshes[result.x + i_mesh].m_index_buffer_offset  = ii;
+            m_standard_meshes[result.x + i_mesh].m_num_vertices         = num_vertices;
+            m_standard_meshes[result.x + i_mesh].m_num_indices          = num_faces * 3;
             iv += num_vertices;
             ii += num_faces * 3;
 
@@ -107,7 +107,7 @@ struct AssetPool
             // set vertex
             const aiMesh *     aimesh       = scene->mMeshes[i_mesh];
             const unsigned int num_vertices = aimesh->mNumVertices;
-            const size_t i_vertex_offset = m_pbr_meshes[result.x + i_mesh].m_vertex_buffer_offset;
+            const size_t i_vertex_offset = m_standard_meshes[result.x + i_mesh].m_vertex_buffer_offset;
             for (unsigned int i_vertex = 0; i_vertex < num_vertices; i_vertex++)
             {
                 CompactVertex & vertex = vertices[i_vertex_offset + i_vertex];
@@ -119,7 +119,7 @@ struct AssetPool
 
             // set faces
             const unsigned int num_faces = aimesh->mNumFaces;
-            const size_t i_index_offset  = m_pbr_meshes[result.x + i_mesh].m_index_buffer_offset;
+            const size_t i_index_offset = m_standard_meshes[result.x + i_mesh].m_index_buffer_offset;
             for (unsigned int i_face = 0; i_face < num_faces; i_face++)
             {
                 for (size_t i_vertex = 0; i_vertex < 3; i_vertex++)
@@ -162,46 +162,46 @@ struct AssetPool
 
         for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
         {
-            m_pbr_meshes[result.x + i_mesh].m_vertex_buffer_id = m_vertex_buffers.size() - 1;
-            m_pbr_meshes[result.x + i_mesh].m_index_buffer_id  = m_index_buffers.size() - 1;
+            m_standard_meshes[result.x + i_mesh].m_vertex_buffer_id = m_vertex_buffers.size() - 1;
+            m_standard_meshes[result.x + i_mesh].m_index_buffer_id  = m_index_buffers.size() - 1;
         }
 
         return result;
     }
 
     int
-    add_pbr_material(const PbrMaterial & material)
+    add_standard_material(const StandardMaterial & material)
     {
-        m_pbr_materials.push_back(material);
-        return m_pbr_materials.size() - 1;
+        m_standard_materials.push_back(material);
+        return m_standard_materials.size() - 1;
     }
 
     int
-    add_pbr_emissive(const PbrEmissive & emissive)
+    add_standard_emissive(const StandardEmissive & emissive)
     {
-        m_pbr_emissives.push_back(emissive);
-        return m_pbr_emissives.size() - 1;
+        m_standard_emissives.push_back(emissive);
+        return m_standard_emissives.size() - 1;
     }
 
     int
-    add_ai_texture(const std::filesystem::path & path, const aiMaterial * material, const LoadPbrParamEnum pbr_param)
+    add_ai_texture(const std::filesystem::path & path, const aiMaterial * material, const LoadStandardParamEnum standard_param)
     {
         aiTextureType ai_tex_type         = aiTextureType::aiTextureType_NONE;
         const char *  ai_mat_key          = nullptr;
         int           num_desired_channel = 0;
-        if (pbr_param == LoadPbrParamEnum::DiffuseReflectance)
+        if (standard_param == LoadStandardParamEnum::DiffuseReflectance)
         {
             ai_tex_type         = aiTextureType::aiTextureType_DIFFUSE;
             ai_mat_key          = AI_MATKEY_COLOR_DIFFUSE;
             num_desired_channel = 4;
         }
-        else if (pbr_param == LoadPbrParamEnum::SpecularReflectance)
+        else if (standard_param == LoadStandardParamEnum::SpecularReflectance)
         {
             ai_tex_type         = aiTextureType::aiTextureType_SPECULAR;
             ai_mat_key          = AI_MATKEY_COLOR_DIFFUSE;
             num_desired_channel = 4;
         }
-        else if (pbr_param == LoadPbrParamEnum::SpecularRoughness)
+        else if (standard_param == LoadStandardParamEnum::SpecularRoughness)
         {
             ai_tex_type         = aiTextureType::aiTextureType_SHININESS;
             ai_mat_key          = AI_MATKEY_COLOR_DIFFUSE;
@@ -235,10 +235,10 @@ struct AssetPool
         return static_cast<size_t>(0);
     };
 
-    std::vector<PbrObject>
-    add_pbr_meshes(const std::filesystem::path & path,
-                   const bool                    load_as_a_single_mesh = false,
-                   const bool                    load_material         = true)
+    std::vector<StandardObject>
+    add_standard_meshes(const std::filesystem::path & path,
+                        const bool                    load_as_a_single_mesh = false,
+                        const bool                    load_material         = true)
     {
         // load scene into assimp
         Assimp::Importer importer;
@@ -252,35 +252,36 @@ struct AssetPool
         }
 
         // load all materials
-        std::vector<size_t> pbr_material_id_from_ai_material(scene->mNumMaterials);
+        std::vector<size_t> standard_material_id_from_ai_material(scene->mNumMaterials);
         if (load_material)
         {
             for (unsigned int i_material = 0; i_material < scene->mNumMaterials; i_material++)
             {
                 const aiMaterial * material = scene->mMaterials[i_material];
 
-                PbrMaterial pbr_material;
-                pbr_material.m_diffuse_tex_id =
-                    add_ai_texture(path, material, LoadPbrParamEnum::DiffuseReflectance);
-                pbr_material.m_specular_tex_id =
-                    add_ai_texture(path, material, LoadPbrParamEnum::SpecularReflectance);
-                pbr_material.m_roughness_tex_id =
-                    add_ai_texture(path, material, LoadPbrParamEnum::SpecularRoughness);
+                StandardMaterial standard_material;
+                standard_material.m_diffuse_tex_id =
+                    add_ai_texture(path, material, LoadStandardParamEnum::DiffuseReflectance);
+                standard_material.m_specular_tex_id =
+                    add_ai_texture(path, material, LoadStandardParamEnum::SpecularReflectance);
+                standard_material.m_roughness_tex_id =
+                    add_ai_texture(path, material, LoadStandardParamEnum::SpecularRoughness);
 
-                pbr_material_id_from_ai_material[i_material] = m_pbr_materials.size();
-                m_pbr_materials.push_back(pbr_material);
+                standard_material_id_from_ai_material[i_material] = m_standard_materials.size();
+                m_standard_materials.push_back(standard_material);
             }
         }
 
-        std::vector<PbrObject> result;
-        const int2             pbr_mesh_range = add_mesh(path, load_as_a_single_mesh, scene);
+        std::vector<StandardObject> result;
+        const int2 standard_mesh_range = add_mesh(path, load_as_a_single_mesh, scene);
         for (size_t i_mesh = 0; i_mesh < scene->mNumMeshes; i_mesh++)
         {
-            PbrObject object;
-            object.m_mesh_id = pbr_mesh_range.x + i_mesh;
+            StandardObject object;
+            object.m_mesh_id = standard_mesh_range.x + i_mesh;
             if (load_material)
             {
-                object.m_material_id = pbr_material_id_from_ai_material[scene->mMeshes[i_mesh]->mMaterialIndex];
+                object.m_material_id =
+                    standard_material_id_from_ai_material[scene->mMeshes[i_mesh]->mMaterialIndex];
             }
             result.push_back(object);
         }

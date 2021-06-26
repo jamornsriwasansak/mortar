@@ -9,12 +9,12 @@
 
 struct RenderParams
 {
-    int2                     m_resolution = { 0, 0 };
-    AssetPool *              m_asset_pool = nullptr;
-    FpsCamera *              m_fps_camera = nullptr;
-    std::vector<PbrObject> * m_static_objects;
-    bool                     m_is_static_mesh_dirty = true;
-    bool                     m_is_shaders_dirty     = false;
+    int2                          m_resolution = { 0, 0 };
+    AssetPool *                   m_asset_pool = nullptr;
+    FpsCamera *                   m_fps_camera = nullptr;
+    std::vector<StandardObject> * m_static_objects;
+    bool                          m_is_static_mesh_dirty = true;
+    bool                          m_is_shaders_dirty     = false;
 };
 
 struct Renderer
@@ -119,9 +119,9 @@ struct Renderer
                 raygen_shader.m_entry     = "RayGen";
                 raygen_shader.m_file_path = shader_path / "directlight.hlsl";
 
-                Gp::ShaderSrc pbr_hit_shader(Gp::ShaderStageEnum::ClosestHit);
-                pbr_hit_shader.m_entry     = "ClosestHit";
-                pbr_hit_shader.m_file_path = shader_path / "directlight.hlsl";
+                Gp::ShaderSrc standard_hit_shader(Gp::ShaderStageEnum::ClosestHit);
+                standard_hit_shader.m_entry     = "ClosestHit";
+                standard_hit_shader.m_file_path = shader_path / "directlight.hlsl";
 
                 Gp::ShaderSrc emissive_hit_shader(Gp::ShaderStageEnum::ClosestHit);
                 emissive_hit_shader.m_entry     = "EmissiveClosestHit";
@@ -147,7 +147,7 @@ struct Renderer
                 [[maybe_unused]] size_t miss_id   = rt_config.add_shader(miss_shader);
                 [[maybe_unused]] size_t miss_id2  = rt_config.add_shader(miss_shader);
 
-                size_t                  closesthit_id = rt_config.add_shader(pbr_hit_shader);
+                size_t                  closesthit_id = rt_config.add_shader(standard_hit_shader);
                 [[maybe_unused]] size_t hitgroup_id   = rt_config.add_hit_group(closesthit_id);
 
                 size_t emissive_closesthit_id = rt_config.add_shader(emissive_hit_shader);
@@ -183,8 +183,8 @@ struct Renderer
 
         for (size_t i = 0; i < params.m_static_objects->size(); i++)
         {
-            const PbrObject & object = params.m_static_objects->at(i);
-            const PbrMesh &   mesh   = params.m_asset_pool->m_pbr_meshes[object.m_mesh_id];
+            const StandardObject & object = params.m_static_objects->at(i);
+            const StandardMesh &   mesh = params.m_asset_pool->m_standard_meshes[object.m_mesh_id];
 
             if (object.m_material_id != -1)
             {
@@ -268,8 +268,8 @@ struct Renderer
             Gp::Buffer(ctx.m_device,
                        Gp::BufferUsageEnum::ConstantBuffer,
                        Gp::MemoryUsageEnum::GpuOnly,
-                       sizeof(PbrMaterial) * 100,
-                       reinterpret_cast<std::byte *>(params.m_asset_pool->m_pbr_materials.data()),
+                       sizeof(StandardMaterial) * 100,
+                       reinterpret_cast<std::byte *>(params.m_asset_pool->m_standard_materials.data()),
                        ctx.m_staging_buffer_manager,
                        "material_buffer");
 
@@ -408,8 +408,8 @@ struct Renderer
             {
                 if (i < params.m_static_objects->size())
                 {
-                    const PbrObject & object = params.m_static_objects->at(i);
-                    const PbrMesh &   mesh   = params.m_asset_pool->m_pbr_meshes[object.m_mesh_id];
+                    const StandardObject & object = params.m_static_objects->at(i);
+                    const StandardMesh & mesh = params.m_asset_pool->m_standard_meshes[object.m_mesh_id];
 
                     const IndexBuffer & index_buffer =
                         params.m_asset_pool->m_index_buffers[mesh.m_index_buffer_id];
@@ -434,8 +434,8 @@ struct Renderer
             {
                 if (i < params.m_static_objects->size())
                 {
-                    const PbrObject & object = params.m_static_objects->at(i);
-                    const PbrMesh &   mesh   = params.m_asset_pool->m_pbr_meshes[object.m_mesh_id];
+                    const StandardObject & object = params.m_static_objects->at(i);
+                    const StandardMesh & mesh = params.m_asset_pool->m_standard_meshes[object.m_mesh_id];
 
                     const VertexBuffer & vertex_buffer =
                         params.m_asset_pool->m_vertex_buffers[mesh.m_index_buffer_id];

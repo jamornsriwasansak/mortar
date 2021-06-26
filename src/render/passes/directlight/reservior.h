@@ -5,10 +5,15 @@ struct Reservior
 {
     float3 m_y;
     float  m_p_y;
+    //
     float  m_selected_w;
     float  m_w_sum;
     float  m_num_samples;
     float  m_inv_pdf;
+    //
+    float2 m_y_pss;
+    float  padding0;
+    float  padding1;
 
     bool
     update(float3 y, float p_y, float w, float num_samples, float rnd)

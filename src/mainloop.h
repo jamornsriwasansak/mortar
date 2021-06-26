@@ -26,7 +26,7 @@ struct MainLoop
     FpsCamera                m_camera;
     Renderer                 m_renderer;
 
-    std::vector<PbrObject> m_static_objects;
+    std::vector<StandardObject> m_static_objects;
 
     Gp::Buffer  m_dummy_buffer;
     Gp::Buffer  m_dummy_index_buffer;
@@ -58,9 +58,9 @@ struct MainLoop
         m_image_presentable_semaphore.resize(m_num_flights);
         for (size_t i = 0; i < m_num_flights; i++)
         {
-            m_graphics_command_pool[i]        = Gp::CommandPool(m_device);
-            m_descriptor_pools[i]             = Gp::DescriptorPool(m_device);
-            m_image_ready_semaphores[i]       = Gp::Semaphore(m_device);
+            m_graphics_command_pool[i]       = Gp::CommandPool(m_device);
+            m_descriptor_pools[i]            = Gp::DescriptorPool(m_device);
+            m_image_ready_semaphores[i]      = Gp::Semaphore(m_device);
             m_image_presentable_semaphore[i] = Gp::Semaphore(m_device);
         }
 
@@ -126,18 +126,18 @@ struct MainLoop
 
         // setup context
         RenderContext ctx;
-        ctx.m_device                       = m_device;
-        ctx.m_graphics_command_pool        = &m_graphics_command_pool[i_flight];
-        ctx.m_descriptor_pool              = &m_descriptor_pools[i_flight];
-        ctx.m_image_ready_semaphore        = &m_image_ready_semaphores[i_flight];
+        ctx.m_device                      = m_device;
+        ctx.m_graphics_command_pool       = &m_graphics_command_pool[i_flight];
+        ctx.m_descriptor_pool             = &m_descriptor_pools[i_flight];
+        ctx.m_image_ready_semaphore       = &m_image_ready_semaphores[i_flight];
         ctx.m_image_presentable_semaphore = &m_image_presentable_semaphore[i_flight];
-        ctx.m_flight_fence                 = &m_flight_fences[i_flight];
-        ctx.m_flight_index                 = i_flight;
-        ctx.m_image_index                  = m_swapchain.m_image_index;
-        ctx.m_swapchain_texture            = &m_swapchain_textures[m_swapchain.m_image_index];
-        ctx.m_staging_buffer_manager       = &m_staging_buffer_manager;
-        ctx.m_dummy_buffer                 = &m_dummy_buffer;
-        ctx.m_dummy_texture                = &m_dummy_texture;
+        ctx.m_flight_fence                = &m_flight_fences[i_flight];
+        ctx.m_flight_index                = i_flight;
+        ctx.m_image_index                 = m_swapchain.m_image_index;
+        ctx.m_swapchain_texture           = &m_swapchain_textures[m_swapchain.m_image_index];
+        ctx.m_staging_buffer_manager      = &m_staging_buffer_manager;
+        ctx.m_dummy_buffer                = &m_dummy_buffer;
+        ctx.m_dummy_texture               = &m_dummy_texture;
 
         RenderParams render_params;
         render_params.m_resolution           = m_window->get_resolution();
@@ -165,24 +165,25 @@ struct MainLoop
     {
         size_t i_flight = 0;
 
-        std::vector<PbrObject> sponza_mesh = m_asset_pool.add_pbr_meshes("sponza/sponza.obj");
-        int                    white_tex_id =
+        std::vector<StandardObject> sponza_mesh =
+            m_asset_pool.add_standard_meshes("sponza/sponza.obj");
+        int white_tex_id =
             m_asset_pool.add_constant_texture(std::array<uint8_t, 4>{ static_cast<uint8_t>(256),
                                                                       static_cast<uint8_t>(256),
                                                                       static_cast<uint8_t>(256),
                                                                       static_cast<uint8_t>(256) });
         m_static_objects.insert(m_static_objects.end(), sponza_mesh.begin(), sponza_mesh.end());
 
-        PbrEmissive pbr_emissive;
-        pbr_emissive.m_emissive_tex_id = white_tex_id;
-        pbr_emissive.m_emissive_scale  = 100.0f;
-        int emissive_id                = m_asset_pool.add_pbr_emissive(pbr_emissive);
+        StandardEmissive standard_emissive;
+        standard_emissive.m_emissive_tex_id = white_tex_id;
+        standard_emissive.m_emissive_scale  = 100.0f;
+        int emissive_id                     = m_asset_pool.add_standard_emissive(standard_emissive);
 
-        std::vector<PbrObject> box_mesh = m_asset_pool.add_pbr_meshes("cube.obj", false, false);
-        box_mesh[0].m_emissive_id       = emissive_id;
+        std::vector<StandardObject> box_mesh = m_asset_pool.add_standard_meshes("cube.obj", false, false);
+        box_mesh[0].m_emissive_id            = emissive_id;
         m_static_objects.insert(m_static_objects.end(), box_mesh.begin(), box_mesh.end());
 
-        // int2 salle = m_asset_manager.add_pbr_object("salle_de_bain/salle_de_bain.obj");
+        // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");
 
         while (!m_window->should_close_window())
         {

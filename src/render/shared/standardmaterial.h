@@ -1,7 +1,7 @@
-#ifndef PBR_MATERIAL
-#define PBR_MATERIAL
+#ifndef STANDARD_MATERIAL
+#define STANDARD_MATERIAL
 
-struct PbrMaterial
+struct StandardMaterial
 {
     int m_diffuse_tex_id;
     int m_specular_tex_id;
