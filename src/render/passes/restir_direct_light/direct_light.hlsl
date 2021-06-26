@@ -1,10 +1,10 @@
-#include "../../shared/compactvertex.h"
-#include "../../shared/standardmaterial.h"
+#include "../../common/compact_vertex.h"
+#include "../../common/standard_material_ref.h"
+#include "../../common/mapping.h"
+#include "../../common/onb.h"
 #include "reservior.h"
-#include "bindlessobjectable.h"
-#include "mapping.h"
-#include "onb.h"
-#include "directlight_params.h"
+#include "bindless_object_table.h"
+#include "direct_light_params.h"
 
 struct PtPayload
 {

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "graphicsapi/graphicsapi.h"
-#include "render/shared/compactvertex.h"
-#include "render/shared/standardemissive.h"
-#include "render/shared/standardmaterial.h"
+#include "render/common/compact_vertex.h"
+#include "render/common/standard_emissive_ref.h"
+#include "render/common/standard_material_ref.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>

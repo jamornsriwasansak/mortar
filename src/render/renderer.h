@@ -1,11 +1,11 @@
 #pragma once
 
 #include "graphicsapi/graphicsapi.h"
-#include "passes/restir_directlight/bindlessobjectable.h"
-#include "passes/restir_directlight/directlight_params.h"
-#include "passes/restir_directlight/reservior.h"
+#include "passes/restir_direct_light/bindless_object_table.h"
+#include "passes/restir_direct_light/camera_params.h"
+#include "passes/restir_direct_light/direct_light_params.h"
+#include "passes/restir_direct_light/reservior.h"
 #include "rendercontext.h"
-#include "shared/cameraparam.h"
 
 struct RenderParams
 {
@@ -95,14 +95,15 @@ struct Renderer
         try
         {
             m_raster_pipeline = [&]() {
-                std::filesystem::path shader_path = "../src/render/passes/flat/";
+                std::filesystem::path shader_path = "../src/render/passes/beauty/";
                 Gp::ShaderSrc         vertexShaderSrc2(Gp::ShaderStageEnum::Vertex);
-                vertexShaderSrc2.m_entry     = "vs_main";
-                vertexShaderSrc2.m_file_path = shader_path / "00ssao.hlsl";
+                vertexShaderSrc2.m_entry     = "VsMain";
+                vertexShaderSrc2.m_file_path = shader_path / "beauty.hlsl";
 
                 Gp::ShaderSrc fragmentShaderSrc2(Gp::ShaderStageEnum::Fragment);
-                fragmentShaderSrc2.m_entry     = "fs_main";
-                fragmentShaderSrc2.m_file_path = shader_path / "00ssao.hlsl";
+                fragmentShaderSrc2.m_entry     = "FsMain";
+                fragmentShaderSrc2.m_file_path = shader_path / "beauty.hlsl";
+
                 std::vector<Gp::ShaderSrc> ssao_shader_srcs;
                 ssao_shader_srcs.push_back(vertexShaderSrc2);
                 ssao_shader_srcs.push_back(fragmentShaderSrc2);
@@ -112,34 +113,28 @@ struct Renderer
 
             // raytracing pipeline
             m_rt_pipeline = [&]() {
-                std::filesystem::path shader_path = "../src/render/passes/restir_directlight/";
+                std::filesystem::path shader_path = "../src/render/passes/restir_direct_light/";
 
                 // create pipeline for ssao
                 Gp::ShaderSrc raygen_shader(Gp::ShaderStageEnum::RayGen);
                 raygen_shader.m_entry     = "RayGen";
-                raygen_shader.m_file_path = shader_path / "directlight.hlsl";
+                raygen_shader.m_file_path = shader_path / "direct_light.hlsl";
 
                 Gp::ShaderSrc standard_hit_shader(Gp::ShaderStageEnum::ClosestHit);
                 standard_hit_shader.m_entry     = "ClosestHit";
-                standard_hit_shader.m_file_path = shader_path / "directlight.hlsl";
+                standard_hit_shader.m_file_path = shader_path / "direct_light.hlsl";
 
                 Gp::ShaderSrc emissive_hit_shader(Gp::ShaderStageEnum::ClosestHit);
                 emissive_hit_shader.m_entry     = "EmissiveClosestHit";
-                emissive_hit_shader.m_file_path = shader_path / "directlight.hlsl";
-
-                /*
-                Gp::ShaderSrc hit_shader2(Gp::ShaderStageEnum::ClosestHit);
-                hit_shader2.m_entry     = "ClosestHit";
-                hit_shader2.m_file_path = shader_path / "directlight.hlsl";
-                */
+                emissive_hit_shader.m_file_path = shader_path / "direct_light.hlsl";
 
                 Gp::ShaderSrc miss_shader(Gp::ShaderStageEnum::Miss);
                 miss_shader.m_entry     = "Miss";
-                miss_shader.m_file_path = shader_path / "directlight.hlsl";
+                miss_shader.m_file_path = shader_path / "direct_light.hlsl";
 
                 Gp::ShaderSrc shadow_miss_shader(Gp::ShaderStageEnum::Miss);
                 shadow_miss_shader.m_entry     = "ShadowMiss";
-                shadow_miss_shader.m_file_path = shader_path / "directlight.hlsl";
+                shadow_miss_shader.m_file_path = shader_path / "direct_light.hlsl";
 
                 Gp::RayTracingPipelineConfig rt_config;
 
@@ -471,15 +466,15 @@ struct Renderer
             cmds.bind_raster_pipeline(m_raster_pipeline);
 
             // set ssao params
-            std::array<Gp::DescriptorSet, 1> ssao_descriptor_sets;
-            ssao_descriptor_sets[0] = Gp::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
-            ssao_descriptor_sets[0]
+            std::array<Gp::DescriptorSet, 1> beauty_desc_sets;
+            beauty_desc_sets[0] = Gp::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
+            beauty_desc_sets[0]
                 .set_t_texture(0, m_rt_results[ctx.m_flight_index % 2])
                 .set_s_sampler(0, m_sampler)
                 .update();
 
             // raster
-            cmds.bind_graphics_descriptor_set(ssao_descriptor_sets);
+            cmds.bind_graphics_descriptor_set(beauty_desc_sets);
             cmds.bind_vertex_buffer(params.m_asset_pool->m_vertex_buffers[0].m_buffer, sizeof(CompactVertex));
             cmds.bind_index_buffer(params.m_asset_pool->m_index_buffers[0].m_buffer, Gp::IndexType::Uint32);
             cmds.draw_instanced(3, 1, 0, 0);

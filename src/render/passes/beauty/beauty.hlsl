@@ -1,12 +1,10 @@
-#include "00ssaoparam.h"
-
 struct PsInput
 {
     float4 position : SV_POSITION;
     float2 texpos : TEXCOORD0;
 };
 
-PsInput vs_main(uint vid : SV_VertexID)
+PsInput VsMain(uint vid : SV_VertexID)
 {
     float2 positions[3] =
     {
@@ -23,7 +21,7 @@ PsInput vs_main(uint vid : SV_VertexID)
 Texture2D g_texture : register(t0);
 SamplerState g_sampler : register(s0);
 
-float4 fs_main(PsInput input) : SV_Target0
+float4 FsMain(PsInput input) : SV_Target0
 {
     return g_texture.Sample(g_sampler, input.texpos.xy);
 }
