@@ -101,8 +101,8 @@ uint hash(uint x) {
 }
 
 RngState
-srand(uvec2 pixel_index,
-      uvec2 image_size,
+srand(uint2 pixel_index,
+      uint2 image_size,
       uint sample_index)
 {
     RngState rng_state;
@@ -120,12 +120,12 @@ rand(inout RngState rng)
     return float(v) / float(UINT32_MAX);
 }
 
-vec2
+float2
 rand2(inout RngState rng)
 {
     const uint u = pcg32_random_r(rng.pcg_rng);
     const uint v = pcg32_random_r(rng.pcg_rng);
-    return vec2(u, v) / float(UINT32_MAX);
+    return float2(u, v) / float(UINT32_MAX);
 }
 #endif
 #endif

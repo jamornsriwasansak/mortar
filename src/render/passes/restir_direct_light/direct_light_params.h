@@ -2,7 +2,7 @@
 #define DIRECTLIGHT_PARAMS_H
 struct DirectLightParams
 {
-    float m_rng_offset;
+    int m_rng_stream_id;
     float a;
     float b;
     float c;

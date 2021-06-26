@@ -168,10 +168,10 @@ struct MainLoop
         std::vector<StandardObject> sponza_mesh =
             m_asset_pool.add_standard_meshes("sponza/sponza.obj");
         int white_tex_id =
-            m_asset_pool.add_constant_texture(std::array<uint8_t, 4>{ static_cast<uint8_t>(256),
-                                                                      static_cast<uint8_t>(256),
-                                                                      static_cast<uint8_t>(256),
-                                                                      static_cast<uint8_t>(256) });
+            m_asset_pool.add_constant_texture(std::array<uint8_t, 4>{ static_cast<uint8_t>(255),
+                                                                      static_cast<uint8_t>(255),
+                                                                      static_cast<uint8_t>(200),
+                                                                      static_cast<uint8_t>(255) });
         m_static_objects.insert(m_static_objects.end(), sponza_mesh.begin(), sponza_mesh.end());
 
         StandardEmissive standard_emissive;

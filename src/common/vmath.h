@@ -9,6 +9,14 @@
 
 using namespace glm;
 
+using uint2 = glm::uvec2;
+using uint3 = glm::uvec3;
+using uint4 = glm::uvec4;
+using half  = float;
+using half2 = glm::float2;
+using half3 = glm::float3;
+using half4 = glm::float4;
+
 template <typename T>
 constexpr const T
 digit(const T num, const uint32_t i_digit)

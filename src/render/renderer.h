@@ -36,7 +36,7 @@ struct Renderer
     Gp::Buffer m_cb_material_id;
     Gp::Buffer m_cb_num_triangles;
     Gp::Buffer m_cb_bindless_object_table;
-    Gp::Buffer m_cb_emissive_object_ids;
+    Gp::Buffer m_cb_emissives;
 
     Renderer() {}
 
@@ -118,23 +118,23 @@ struct Renderer
                 // create pipeline for ssao
                 Gp::ShaderSrc raygen_shader(Gp::ShaderStageEnum::RayGen);
                 raygen_shader.m_entry     = "RayGen";
-                raygen_shader.m_file_path = shader_path / "direct_light.hlsl";
+                raygen_shader.m_file_path = shader_path / "direct_light.h";
 
                 Gp::ShaderSrc standard_hit_shader(Gp::ShaderStageEnum::ClosestHit);
                 standard_hit_shader.m_entry     = "ClosestHit";
-                standard_hit_shader.m_file_path = shader_path / "direct_light.hlsl";
+                standard_hit_shader.m_file_path = shader_path / "direct_light.h";
 
                 Gp::ShaderSrc emissive_hit_shader(Gp::ShaderStageEnum::ClosestHit);
                 emissive_hit_shader.m_entry     = "EmissiveClosestHit";
-                emissive_hit_shader.m_file_path = shader_path / "direct_light.hlsl";
+                emissive_hit_shader.m_file_path = shader_path / "direct_light.h";
 
                 Gp::ShaderSrc miss_shader(Gp::ShaderStageEnum::Miss);
                 miss_shader.m_entry     = "Miss";
-                miss_shader.m_file_path = shader_path / "direct_light.hlsl";
+                miss_shader.m_file_path = shader_path / "direct_light.h";
 
                 Gp::ShaderSrc shadow_miss_shader(Gp::ShaderStageEnum::Miss);
                 shadow_miss_shader.m_entry     = "ShadowMiss";
-                shadow_miss_shader.m_file_path = shader_path / "direct_light.hlsl";
+                shadow_miss_shader.m_file_path = shader_path / "direct_light.h";
 
                 Gp::RayTracingPipelineConfig rt_config;
 
@@ -255,7 +255,6 @@ struct Renderer
                                        instances,
                                        ctx.m_staging_buffer_manager,
                                        "ray_tracing_tlas");
-        ctx.m_staging_buffer_manager->submit_all_pending_upload();
 
         // TODO:: the following buffers should be GPU only and updated iff the info is dirty
         // create material buffer
@@ -267,6 +266,7 @@ struct Renderer
                        reinterpret_cast<std::byte *>(params.m_asset_pool->m_standard_materials.data()),
                        ctx.m_staging_buffer_manager,
                        "material_buffer");
+        ctx.m_staging_buffer_manager->submit_all_pending_upload();
 
         // create material id buffer
         m_cb_material_id = Gp::Buffer(ctx.m_device,
@@ -294,6 +294,18 @@ struct Renderer
                                                 reinterpret_cast<std::byte *>(num_triangles.data()),
                                                 ctx.m_staging_buffer_manager,
                                                 "num_triangles");
+
+        // emissive info buffer
+        m_cb_emissives =
+            Gp::Buffer(ctx.m_device,
+                       Gp::BufferUsageEnum::ConstantBuffer,
+                       Gp::MemoryUsageEnum::GpuOnly,
+                       sizeof(StandardEmissive) * 100,
+                       reinterpret_cast<std::byte *>(params.m_asset_pool->m_standard_emissives.data()),
+                       ctx.m_staging_buffer_manager,
+                       "emissives");
+        ctx.m_staging_buffer_manager->submit_all_pending_upload();
+
         BindlessObjectTable bot;
         bot.m_nonemissive_object_start_index = 0;
         bot.m_num_nonemissive_objects        = static_nonemissive_mesh_descs.size();
@@ -325,7 +337,7 @@ struct Renderer
         }
 
         DirectLightParams dl_params;
-        dl_params.m_rng_offset = static_cast<float>(frame_count++);
+        dl_params.m_rng_stream_id = frame_count++;
         std::memcpy(m_cb_directlight_params.map(), &dl_params, sizeof(DirectLightParams));
         m_cb_directlight_params.unmap();
 
@@ -377,7 +389,8 @@ struct Renderer
             ray_descriptor_sets[1]
                 .set_s_sampler(0, m_sampler)
                 .set_b_constant_buffer(0, m_cb_materials)
-                .set_b_constant_buffer(1, m_cb_material_id);
+                .set_b_constant_buffer(1, m_cb_material_id)
+                .set_b_constant_buffer(2, m_cb_emissives);
             // set bindless textures
             for (size_t i = 0; i < 100; i++)
             {
