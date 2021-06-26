@@ -1,9 +1,9 @@
 #pragma once
 
 #include "graphicsapi/graphicsapi.h"
-#include "passes/directlight/bindlessobjectable.h"
-#include "passes/directlight/directlight_params.h"
-#include "passes/directlight/reservior.h"
+#include "passes/restir_directlight/bindlessobjectable.h"
+#include "passes/restir_directlight/directlight_params.h"
+#include "passes/restir_directlight/reservior.h"
 #include "rendercontext.h"
 #include "shared/cameraparam.h"
 
@@ -112,7 +112,7 @@ struct Renderer
 
             // raytracing pipeline
             m_rt_pipeline = [&]() {
-                std::filesystem::path shader_path = "../src/render/passes/directlight/";
+                std::filesystem::path shader_path = "../src/render/passes/restir_directlight/";
 
                 // create pipeline for ssao
                 Gp::ShaderSrc raygen_shader(Gp::ShaderStageEnum::RayGen);
