@@ -11,26 +11,22 @@ struct Reservior
     float m_num_samples;
     float m_inv_pdf;
     //
-    float2 m_y_pss;
-    float  padding0;
-    float  padding1;
+    float4 m_y_pss;
 
     void
     init()
     {
-            m_y           = float3(0.0f, 0.0f, 0.0f);
-            m_p_y         = 0.0f;
-            m_selected_w  = 0.0f;
-            m_w_sum       = 0.0f;
-            m_num_samples = 0.0f;
-            m_inv_pdf     = 0.0f;
-             m_y_pss = float2(0.0f, 0.0f);
-            padding0 = 0.0f;
-            padding1 = 0.0f;
+        m_y           = float3(0.0f, 0.0f, 0.0f);
+        m_p_y         = 0.0f;
+        m_selected_w  = 0.0f;
+        m_w_sum       = 0.0f;
+        m_num_samples = 0.0f;
+        m_inv_pdf     = 0.0f;
+        m_y_pss       = float4(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     bool
-    update(float3 y, float p_y, float w, float num_samples, float rnd)
+    update(float4 y_pss, float3 y, float p_y, float w, float num_samples, float rnd)
     {
         m_w_sum = m_w_sum + w;
         m_num_samples += num_samples;
@@ -39,6 +35,7 @@ struct Reservior
             m_y          = y;
             m_p_y        = p_y;
             m_selected_w = w;
+            m_y_pss      = y_pss;
             return true;
         }
         else
