@@ -3,6 +3,7 @@ Recently, I deprecated the old Vulkan backend and replaced with a new backend th
 The shader language is also changed from GLSL to HLSL.
 Many features are therefore also deprecated.
 For now, please do not clone the code.
+I will slowly port the features from the old backend to the new one.
 
 ---------------------------
 
