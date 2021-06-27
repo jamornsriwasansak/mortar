@@ -207,16 +207,20 @@ struct LightSample
     float3 m_gnormal;
 };
 
-LightSample
-sample_light(const float2 random0, const float2 random1)
+void
+sample_emissive_geometry(INOUT(uint) geometry_id, INOUT(uint) primitive_id, INOUT(half2) uv, const float2 random0, const float2 random1)
 {
-    const uint   emittor_id    = random0.x * u_bindless_mesh_table.m_num_emissive_objects;
-    const uint   geometry_id   = emittor_id + u_bindless_mesh_table.m_emissive_object_start_index;
-    const uint   num_triangles = u_num_triangles.m_num_triangles[emittor_id / 4][emittor_id % 4];
-    const uint   primitive_id  = int(random0.y * num_triangles);
-    const float2 uv            = triangle_from_square(random1);
-    const float3 uvw           = float3(uv.x, uv.y, 1.0f - uv.x - uv.y);
+    const uint emittor_id    = random0.x * u_bindless_mesh_table.m_num_emissive_objects;
+    geometry_id              = emittor_id + u_bindless_mesh_table.m_emissive_object_start_index;
+    const uint num_triangles = u_num_triangles.m_num_triangles[emittor_id / 4][emittor_id % 4];
+    primitive_id             = int(random0.y * num_triangles);
+    uv                       = triangle_from_square(random1);
+}
 
+LightSample
+sample_light(const uint geometry_id, const uint primitive_id, const half2 uv)
+{
+    const float3           uvw    = float3(uv.x, uv.y, 1.0f - uv.x - uv.y);
     const VertexAttributes attrib = get_vertex_attributes(geometry_id, primitive_id, uvw);
 
     LightSample light_sample;
@@ -240,38 +244,6 @@ eval_connection(const VertexAttributes hit, const LightSample light_sample, cons
                                 max(-dot(diff, light_sample.m_snormal), 0.0f) / sqr(length2(diff));
     return material.eval(normalize(diff), incident) * geometry_term * light_sample.m_emission;
 }
-
-float3
-eval_connection_with_visibility(const VertexAttributes     hit,
-                                const LightSample          light_sample,
-                                const float3               incident,
-                                const StandardMaterialInfo material)
-{
-    const float3 diff          = light_sample.m_position - hit.m_position;
-    const float  geometry_term = max(dot(diff, hit.m_snormal), 0.0f) *
-                                max(-dot(diff, light_sample.m_snormal), 0.0f) / sqr(length2(diff));
-
-    // Setup the ray
-    RayDesc ray;
-    ray.Origin    = hit.m_position;
-    ray.Direction = diff;
-    ray.TMin      = 0.001f;
-    ray.TMax      = 0.999f;
-    PtPayload shadow_payload;
-    shadow_payload.m_miss = false;
-    TraceRay(u_scene_bvh,
-             RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
-             0xFF,
-             0,
-             0,
-             0,
-             ray,
-             shadow_payload);
-
-    return material.eval(normalize(diff), incident) * geometry_term * light_sample.m_emission *
-           shadow_payload.m_miss;
-}
-
 
 SHADER_TYPE("raygeneration")
 void
@@ -363,26 +335,33 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
     // sample next direction
     const float3 local_outgoing_dir = cosine_hemisphere_from_square(payload.m_rng.next_float2(rng_inc));
 
-    int       num_samples       = 4;
+    int       num_samples       = 8;
     int       total_num_samples = 0;
     Reservior reservior;
     reservior.init();
 
-    float3 selected_nee;
-    float  selected_weight;
-    float3 selected_diff;
     {
+        float3 selected_diff;
+        float3 selected_nee;
+        float  selected_weight;
         for (int i = 0; i < num_samples; i++)
         {
-            const float2      random0      = payload.m_rng.next_float2(rng_inc);
-            const float2      random1      = payload.m_rng.next_float2(rng_inc);
-            const LightSample light_sample = sample_light(random0, random1);
+            const float2 random0 = payload.m_rng.next_float2(rng_inc);
+            const float2 random1 = payload.m_rng.next_float2(rng_inc);
+
+            // sample geometry
+            uint  geometry_id;
+            uint  primitive_id;
+            half2 uv;
+            sample_emissive_geometry(geometry_id, primitive_id, uv, random0, random1);
+
+            const LightSample light_sample = sample_light(geometry_id, primitive_id, uv);
             const float3      diff         = light_sample.m_position - vattrib.m_position;
             const float3 nee = eval_connection(vattrib, light_sample, local_incident_dir, material_info);
             const float weight = length(nee);
 
             float random = payload.m_rng.next_float(rng_inc);
-            if (reservior.update(float4(random0, random1), nee, 1.0f, weight, 0.0f, random))
+            if (reservior.update(geometry_id, primitive_id, uv, weight, random))
             {
                 selected_nee    = nee;
                 selected_weight = weight;
@@ -390,29 +369,30 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
             }
         }
 
-        LightSample  light_sample = sample_light(reservior.m_y_pss.xy, reservior.m_y_pss.zw);
+        LightSample light_sample =
+            sample_light(reservior.m_geometry_id, reservior.m_primitive_id, reservior.m_uv);
         const float3 nee = eval_connection(vattrib, light_sample, local_incident_dir, material_info);
         const float  weight = length(nee);
         total_num_samples += num_samples;
-    }
 
-    // evaluate visibility
-    RayDesc ray;
-    ray.Origin    = vattrib.m_position;
-    ray.Direction = selected_diff;
-    ray.TMin      = 0.001f;
-    ray.TMax      = 0.999f;
-    PtPayload shadow_payload;
-    shadow_payload.m_miss = false;
-    TraceRay(u_scene_bvh,
-             RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
-             0xFF,
-             0,
-             0,
-             0,
-             ray,
-             shadow_payload);
-    reservior.m_w_sum *= shadow_payload.m_miss;
+        // evaluate visibility
+        RayDesc ray;
+        ray.Origin    = vattrib.m_position;
+        ray.Direction = selected_diff;
+        ray.TMin      = 0.001f;
+        ray.TMax      = 0.999f;
+        PtPayload shadow_payload;
+        shadow_payload.m_miss = false;
+        TraceRay(u_scene_bvh,
+                 RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
+                 0xFF,
+                 0,
+                 0,
+                 0,
+                 ray,
+                 shadow_payload);
+        reservior.m_w_sum *= shadow_payload.m_miss;
+    }
 
     u_frame_reservior[pixel_index] = reservior;
 
@@ -423,33 +403,22 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
             int2      offset_pixel       = clamp(pixel + int2(i, j), int2(0, 0), resolution);
             int       offset_pixel_index = offset_pixel.y * resolution.x + offset_pixel.x;
             Reservior prev_reservior     = u_prev_frame_reservior[offset_pixel_index];
-
-            LightSample light_sample =
-                sample_light(prev_reservior.m_y_pss.xy, prev_reservior.m_y_pss.zw);
-            const float3 nee = eval_connection(vattrib, light_sample, local_incident_dir, material_info);
-            const float weight = length(nee);
             total_num_samples += num_samples;
 
-            if (reservior.update(prev_reservior.m_y_pss,
-                                 0.0f,
-                                 weight,
-                                 prev_reservior.m_w_sum,
-                                 0,
-                                 payload.m_rng.next_float(rng_inc)))
-            {
-                selected_nee    = nee;
-                selected_weight = weight;
-            }
+            reservior.update(prev_reservior.m_geometry_id,
+                             prev_reservior.m_primitive_id,
+                             prev_reservior.m_uv,
+                             prev_reservior.m_w_sum,
+                             payload.m_rng.next_float(rng_inc));
         }
 
-    LightSample  light_sample = sample_light(reservior.m_y_pss.xy, reservior.m_y_pss.zw);
+    LightSample light_sample =
+        sample_light(reservior.m_geometry_id, reservior.m_primitive_id, reservior.m_uv);
     const float3 nee    = eval_connection(vattrib, light_sample, local_incident_dir, material_info);
     const float  weight = length(nee);
-    const float  inv_pdf =
-        selected_weight > 0.0f ? reservior.m_w_sum / (selected_weight * total_num_samples) : 0.0f;
+    const float  inv_pdf = weight > 0.0f ? reservior.m_w_sum / (weight * total_num_samples) : 0.0f;
 
-    const float3 nee_contrib =
-        diff_refl * payload.m_importance * selected_nee * inv_pdf;
+    const float3 nee_contrib = diff_refl * payload.m_importance * nee * inv_pdf;
     payload.m_importance *= diff_refl / M_PI;
     payload.m_inout_dir = onb.to_global(local_outgoing_dir);
     payload.m_hit_pos   = vattrib.m_position;

@@ -3,39 +3,30 @@
 
 struct Reservior
 {
-    float3 m_y;
-    float  m_p_y;
-    //
-    float m_selected_w;
-    float m_w_sum;
-    float m_num_samples;
-    float m_inv_pdf;
-    //
-    float4 m_y_pss;
+    uint32_t m_geometry_id;
+    uint32_t m_primitive_id;
+    float2   m_uv;
+    float    m_w_sum;
+    float    m_padding[3];
 
     void
     init()
     {
-        m_y           = float3(0.0f, 0.0f, 0.0f);
-        m_p_y         = 0.0f;
-        m_selected_w  = 0.0f;
-        m_w_sum       = 0.0f;
-        m_num_samples = 0.0f;
-        m_inv_pdf     = 0.0f;
-        m_y_pss       = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        m_w_sum        = 0.0f;
+        m_geometry_id  = 0;
+        m_primitive_id = 0;
+        m_uv           = half2(0, 0);
     }
 
     bool
-    update(float4 y_pss, float3 y, float p_y, float w, float num_samples, float rnd)
+    update(const uint geometry_id, const uint primitive_id, const half2 uv, float w, float rnd)
     {
         m_w_sum = m_w_sum + w;
-        m_num_samples += num_samples;
         if (rnd < (w / m_w_sum) || m_w_sum == 0.0f)
         {
-            m_y          = y;
-            m_p_y        = p_y;
-            m_selected_w = w;
-            m_y_pss      = y_pss;
+            m_geometry_id  = geometry_id;
+            m_primitive_id = primitive_id;
+            m_uv           = uv;
             return true;
         }
         else
@@ -44,5 +35,10 @@ struct Reservior
         }
     }
 };
+
+// TODO:: investigate why we cannot align by 16
+#ifdef __cplusplus
+static_assert(sizeof(Reservior) == 32, "size of reservior must be aligned by 32");
+#endif
 
 #endif
