@@ -3,6 +3,7 @@
 #include "../../common/onb.h"
 #include "../../common/shared.h"
 #include "../../common/standard_emissive_ref.h"
+#include "../../common/standard_material.h"
 #include "../../common/standard_material_ref.h"
 #include "../../rng/pcg.h"
 #include "bindless_object_table.h"
@@ -230,6 +231,47 @@ sample_light(const float2 random0, const float2 random1)
 
     return light_sample;
 }
+
+float3
+eval_connection(const VertexAttributes hit, const LightSample light_sample, const float3 incident, const StandardMaterialInfo material)
+{
+    const float3 diff          = light_sample.m_position - hit.m_position;
+    const float  geometry_term = max(dot(diff, hit.m_snormal), 0.0f) *
+                                max(-dot(diff, light_sample.m_snormal), 0.0f) / sqr(length2(diff));
+    return material.eval(normalize(diff), incident) * geometry_term * light_sample.m_emission;
+}
+
+float3
+eval_connection_with_visibility(const VertexAttributes     hit,
+                                const LightSample          light_sample,
+                                const float3               incident,
+                                const StandardMaterialInfo material)
+{
+    const float3 diff          = light_sample.m_position - hit.m_position;
+    const float  geometry_term = max(dot(diff, hit.m_snormal), 0.0f) *
+                                max(-dot(diff, light_sample.m_snormal), 0.0f) / sqr(length2(diff));
+
+    // Setup the ray
+    RayDesc ray;
+    ray.Origin    = hit.m_position;
+    ray.Direction = diff;
+    ray.TMin      = 0.001f;
+    ray.TMax      = 0.999f;
+    PtPayload shadow_payload;
+    shadow_payload.m_miss = false;
+    TraceRay(u_scene_bvh,
+             RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
+             0xFF,
+             0,
+             0,
+             0,
+             ray,
+             shadow_payload);
+
+    return material.eval(normalize(diff), incident) * geometry_term * light_sample.m_emission *
+           shadow_payload.m_miss;
+}
+
 
 SHADER_TYPE("raygeneration")
 void

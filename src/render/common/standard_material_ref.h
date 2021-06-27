@@ -1,5 +1,5 @@
-#ifndef STANDARD_MATERIAL_H
-#define STANDARD_MATERIAL_H
+#ifndef STANDARD_MATERIAL_REF_H
+#define STANDARD_MATERIAL_REF_H
 
 struct StandardMaterial
 {
