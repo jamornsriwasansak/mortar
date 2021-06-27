@@ -145,60 +145,6 @@ get_vertex_attributes(uint instanceIndex, uint triangleIndex, float3 barycentric
     return v;
 }
 
-float3
-hue(float H)
-{
-    half R = abs(H * 6 - 3) - 1;
-    half G = 2 - abs(H * 6 - 2);
-    half B = 2 - abs(H * 6 - 4);
-    return saturate(half3(R, G, B));
-}
-
-half3
-hsv_to_rgb(const half3 hsv)
-{
-    return half3(((hue(hsv.x) - 1) * hsv.y + 1) * hsv.z);
-}
-
-float3
-get_color(const int primitive_index)
-{
-    float h = float(primitive_index % 256) / 256.0f;
-    return hsv_to_rgb(half3(h, 1.0f, 1.0f));
-}
-
-float
-rand(const float2 co)
-{
-    return min(frac(sin(dot(co, float2(12.9898f, 78.233f))) * 43758.5453f) + 0.0000000001f, 1.0f);
-}
-
-float2
-rand2(const float2 co)
-{
-    float x = rand(co);
-    float y = rand(float2(co.x, x));
-    return float2(x, y);
-}
-
-float
-sqr(float x)
-{
-    return x * x;
-}
-
-float
-length2(const float3 x)
-{
-    return dot(x, x);
-}
-
-float
-connect(const float3 diff, const float3 normal1, const float3 normal2)
-{
-    return max(dot(diff, normal1), 0.0f) * max(-dot(diff, normal2), 0.0f) / sqr(length2(diff));
-}
-
 struct LightSample
 {
     float3 m_emission;
@@ -234,6 +180,18 @@ sample_light(const uint geometry_id, const uint primitive_id, const half2 uv)
         u_textures[emissive.m_emissive_tex_id].SampleLevel(u_sampler, attrib.m_uv, 0).rgb * emissive.m_emissive_scale;
 
     return light_sample;
+}
+
+float
+sqr(float x)
+{
+    return x * x;
+}
+
+float
+length2(const float3 x)
+{
+    return dot(x, x);
 }
 
 float3
