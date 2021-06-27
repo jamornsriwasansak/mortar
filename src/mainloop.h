@@ -116,6 +116,16 @@ struct MainLoop
         // wait for resource in this flight to be ready
         m_flight_fences[i_flight].wait();
 
+        bool reload_shader = false;
+        if (glfwGetKey(m_window->m_glfw_window, GLFW_KEY_R) == GLFW_PRESS)
+        {
+            reload_shader = true;
+            for (size_t i = 0 ; i < m_num_flights;i++)
+            {
+                m_flight_fences[i].wait();
+            }
+        }
+
         // reset all resource
         m_flight_fences[i_flight].reset();
         m_graphics_command_pool[i_flight].reset();
@@ -145,13 +155,7 @@ struct MainLoop
         render_params.m_static_objects       = &m_static_objects;
         render_params.m_is_static_mesh_dirty = false;
         render_params.m_fps_camera           = &m_camera;
-        render_params.m_is_shaders_dirty     = false;
-
-        if (glfwGetKey(m_window->m_glfw_window, GLFW_KEY_R) == GLFW_PRESS)
-        {
-            Logger::Info("marked shaders dirty");
-            render_params.m_is_shaders_dirty = true;
-        }
+        render_params.m_is_shaders_dirty     = reload_shader;
 
         // run renderer
         m_renderer.loop(ctx, render_params);
