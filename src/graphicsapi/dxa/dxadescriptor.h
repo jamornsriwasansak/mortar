@@ -308,7 +308,7 @@ struct DescriptorSet
     set_u_rw_structured_buffer(const size_t   binding,
                                const Buffer & buffer,
                                const size_t   stride,
-                               const size_t   num_elements  = 1,
+                               const size_t   num_elements,
                                const size_t   i_buffer      = 0,
                                const size_t   first_element = 0)
     {

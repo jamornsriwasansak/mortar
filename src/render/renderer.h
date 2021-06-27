@@ -298,7 +298,7 @@ struct Renderer
         // emissive info buffer
         m_cb_emissives =
             Gp::Buffer(ctx.m_device,
-                       Gp::BufferUsageEnum::ConstantBuffer,
+                       Gp::BufferUsageEnum::StorageBuffer,
                        Gp::MemoryUsageEnum::GpuOnly,
                        sizeof(StandardEmissive) * 100,
                        reinterpret_cast<std::byte *>(params.m_asset_pool->m_standard_emissives.data()),
@@ -390,17 +390,17 @@ struct Renderer
                 .set_s_sampler(0, m_sampler)
                 .set_b_constant_buffer(0, m_cb_materials)
                 .set_b_constant_buffer(1, m_cb_material_id)
-                .set_b_constant_buffer(2, m_cb_emissives);
+                .set_t_structured_buffer(0, m_cb_emissives, 100, sizeof(StandardEmissive));
             // set bindless textures
             for (size_t i = 0; i < 100; i++)
             {
                 if (i < params.m_asset_pool->m_textures.size())
                 {
-                    ray_descriptor_sets[1].set_t_texture(0, params.m_asset_pool->m_textures[i], i);
+                    ray_descriptor_sets[1].set_t_texture(1, params.m_asset_pool->m_textures[i], i);
                 }
                 else
                 {
-                    ray_descriptor_sets[1].set_t_texture(0, *ctx.m_dummy_texture, i);
+                    ray_descriptor_sets[1].set_t_texture(1, *ctx.m_dummy_texture, i);
                 }
             }
             ray_descriptor_sets[1].update();

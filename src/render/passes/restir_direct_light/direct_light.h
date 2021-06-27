@@ -62,8 +62,8 @@ RWStructuredBuffer<Reservior> u_frame_reservior    REGISTER(u1, space0);
 SamplerState u_sampler                                    REGISTER(s0, space1);
 ConstantBuffer<StandardMaterialContainer> u_pbr_materials REGISTER(b0, space1);
 ConstantBuffer<MaterialIdContainer> u_material_ids        REGISTER(b1, space1);
-ConstantBuffer<StandardEmissiveContainer> u_emissives     REGISTER(b2, space1);
-Texture2D<float4>                                         u_textures[100] REGISTER(t0, space1);
+StructuredBuffer<StandardEmissive> u_emissives            REGISTER(t0, space1);
+Texture2D<float4>                                         u_textures[100] REGISTER(t1, space1);
 
 // space 2 & 3
 // bindless mesh info
@@ -224,7 +224,7 @@ sample_light(const float2 random0, const float2 random1)
     light_sample.m_gnormal  = attrib.m_gnormal;
 
     // fetch texture value from texel
-    StandardEmissive emissive = u_emissives.emissives[0];
+    StandardEmissive emissive = u_emissives[0];
     light_sample.m_emission =
         u_textures[emissive.m_emissive_tex_id].SampleLevel(u_sampler, attrib.m_uv, 0).rgb * emissive.m_emissive_scale;
 

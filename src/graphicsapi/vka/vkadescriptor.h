@@ -202,12 +202,12 @@ struct DescriptorSet
     }
 
     DescriptorSet &
-    set_u_rw_structure_buffer(const size_t   binding,
-                              const Buffer & buffer,
-                              const size_t   stride,
-                              const size_t   num_elements,
-                              const size_t   first_element,
-                              const size_t   i_element = 0)
+    set_u_rw_structured_buffer(const size_t   binding,
+                               const Buffer & buffer,
+                               const size_t   stride,
+                               const size_t   num_elements,
+                               const size_t   first_element,
+                               const size_t   i_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
         buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
