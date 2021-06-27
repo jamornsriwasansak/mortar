@@ -21,7 +21,12 @@ PsInput VsMain(uint vid : SV_VertexID)
 Texture2D g_texture : register(t0);
 SamplerState g_sampler : register(s0);
 
+float4 eval_eotf(const float4 v)
+{
+    return pow(v, 1.0f / 2.2f);
+}
+
 float4 FsMain(PsInput input) : SV_Target0
 {
-    return g_texture.Sample(g_sampler, input.texpos.xy);
+    return eval_eotf(g_texture.Sample(g_sampler, input.texpos.xy));
 }
