@@ -32,6 +32,7 @@ In its current early stage, it supports:
 * GPU-based PCG random number generator ported from [pcg-random.org](https://www.pcg-random.org/)
 * Lambert diffuse BRDF
 * FPS-style camera for traversing the scene
+* Spatiotemporal reservoir resampling (Biased)
 #### Feature (Deprecated and will be added back)
 * GPU-based Low discreprancy sampler with blue-noise property ported from [Heitz et al.](https://eheitzresearch.wordpress.com/762-2/) \[2019]  ([code](https://github.com/jamornsriwasansak/mortar/blob/master/deprecated-vk-pt-src/shaders/rng/bluesobol.glsl))
 * GGX Microfacet BSDF (rough conductor and rough dielectric) ([code](https://github.com/jamornsriwasansak/mortar/blob/master/deprecated-vk-pt-src/shaders/common/bsdf.glsl))
