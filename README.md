@@ -7,7 +7,7 @@ I will slowly port the features from the old backend to the new one.
 
 ---------------------------
 
-# Mortar - A fast (enough) physically based renderer
+# Mortar - A fast (enough) physically based rendering engine
 
 Mortar is a small physically based renderer with agnostic api.
 It can use either Vulkan or DX12 as a backend.
