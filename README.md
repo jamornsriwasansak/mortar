@@ -7,7 +7,7 @@ I will slowly port the features from the old backend to the new one.
 
 ---------------------------
 
-# Mortar - A fast (enough) physically based renderer
+# Mortar - A fast (enough) physically based rendering engine
 
 Mortar is a small physically based renderer with agnostic api.
 It can use either Vulkan or DX12 as a backend.
@@ -27,8 +27,8 @@ An example is in "src/mainloop.cpp"
 
 ### Features
 In its current early stage, it supports:
-* DX12 and Vulkan backend with same interface.
 * Alpha-testing
+* DX12 and Vulkan backend with same interface.
 * GPU-based PCG random number generator ported from [pcg-random.org](https://www.pcg-random.org/)
 * Lambert diffuse BRDF
 * FPS-style camera for traversing the scene
