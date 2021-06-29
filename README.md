@@ -27,13 +27,13 @@ An example is in "src/mainloop.cpp"
 
 ### Features
 In its current early stage, it supports:
-* Alpha-testing
 * DX12 and Vulkan backend with same interface.
 * GPU-based PCG random number generator ported from [pcg-random.org](https://www.pcg-random.org/)
 * Lambert diffuse BRDF
 * FPS-style camera for traversing the scene
 * Spatiotemporal reservoir resampling (Biased) from [Bitterli et al. 2020](https://research.nvidia.com/publication/2020-07_Spatiotemporal-reservoir-resampling)
 #### Feature (Deprecated and will be added back)
+* Alpha-testing
 * GPU-based Low discreprancy sampler with blue-noise property ported from [Heitz et al.](https://eheitzresearch.wordpress.com/762-2/) \[2019]  ([code](https://github.com/jamornsriwasansak/mortar/blob/master/deprecated-vk-pt-src/shaders/rng/bluesobol.glsl))
 * GGX Microfacet BSDF (rough conductor and rough dielectric) ([code](https://github.com/jamornsriwasansak/mortar/blob/master/deprecated-vk-pt-src/shaders/common/bsdf.glsl))
 * Environment map importance sampling  ([code](https://github.com/jamornsriwasansak/mortar/blob/master/deprecated-vk-pt-src/common/envmap.h))
@@ -41,8 +41,6 @@ In its current early stage, it supports:
 * Path tracer with next event estimation utilizing MIS [Veach's thesis](https://graphics.stanford.edu/papers/veach_thesis) \[1997] ([code](https://github.com/jamornsriwasansak/mortar/blob/master/deprecated-vk-pt-src/shaders/renderer/pathtracer/pathtracer.rgen))
 * GPU-based voxelizer ([code](https://github.com/jamornsriwasansak/mortar/blob/master/deprecated-vk-pt-src/shaders/compute/voxelizer/voxelizer.comp))
 * Voxel-based probe placement from [Silvenoinen et al.](https://arisilvennoinen.github.io/Projects/RTGI/index.html) ([code](https://github.com/jamornsriwasansak/mortar/blob/master/deprecated-vk-pt-src/misc_app/probeplacer_silvennoinen17.h))
-
-I plan to add Spatiotemporal reservoir resampling for direct light soon.
 
 ### Dependencies
 The following dependencies aside from vulkan sdk are already included as submodules
