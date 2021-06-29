@@ -19,6 +19,7 @@ struct DescriptorSet
     const Device *     m_device;
     vk::PipelineLayout m_vk_pipeline_layout;
 
+    // TODO:: avoid std::list
     std::list<vk::DescriptorBufferInfo>                       m_descriptor_buffer_infos;
     std::list<vk::DescriptorImageInfo>                        m_descriptor_image_infos;
     std::list<vk::WriteDescriptorSetAccelerationStructureKHR> m_descriptor_accel_infos;

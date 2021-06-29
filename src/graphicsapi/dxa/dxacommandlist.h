@@ -19,6 +19,7 @@ struct CommandList
     ComPtr<ID3D12GraphicsCommandList4> m_dx_cmd_list  = nullptr;
     ID3D12CommandQueue *               m_dx_cmd_queue = nullptr;
 
+    // TODO:: avoid std::list
     std::list<std::vector<D3D12_VERTEX_BUFFER_VIEW>> m_bound_vertex_buffer_views;
     ID3D12RootSignature *                            m_dx_root_signature = nullptr;
 
