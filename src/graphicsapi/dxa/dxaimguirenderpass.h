@@ -32,6 +32,7 @@ struct ImGuiRenderPass
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO & io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         (void)io;
 
         // Setup Dear ImGui style
