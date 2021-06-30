@@ -494,11 +494,11 @@ struct Renderer
                 cmds.bind_index_buffer(params.m_asset_pool->m_index_buffers[0].m_buffer, Gp::IndexType::Uint32);
                 cmds.draw_instanced(3, 1, 0, 0);
 
-                ImGui::ShowDemoWindow(&x);
-                cmds.render_imgui(*ctx.m_imgui_render_pass);
             }
             cmds.end_render_pass();
 
+            ImGui::ShowDemoWindow(&x);
+            cmds.render_imgui(*ctx.m_imgui_render_pass, ctx.m_image_index);
 
             // transition
             cmds.transition_texture(*ctx.m_swapchain_texture,

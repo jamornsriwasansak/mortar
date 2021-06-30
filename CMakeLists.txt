@@ -98,7 +98,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
 # imgui
     include_directories(SYSTEM ${DEPS_PATH}/imgui/)
     file(GLOB imgui_src "${DEPS_PATH}/imgui/*.cpp")
-    file(GLOB imgui_backend_src  "${DEPS_PATH}/imgui/backends/imgui_impl_dx12.cpp" "${DEPS_PATH}/imgui/backends/imgui_impl_glfw.cpp")
+    file(GLOB imgui_backend_src  "${DEPS_PATH}/imgui/backends/imgui_impl_dx12.cpp" "${DEPS_PATH}/imgui/backends/imgui_impl_vulkan.cpp" "${DEPS_PATH}/imgui/backends/imgui_impl_glfw.cpp")
 
 # mortar
     # find all sources

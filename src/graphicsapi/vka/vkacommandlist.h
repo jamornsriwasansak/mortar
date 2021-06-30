@@ -5,6 +5,7 @@
 #include "vkadevice.h"
 #include "vkafence.h"
 #include "vkaframebufferbinding.h"
+#include "vkaimguirenderpass.h"
 #include "vkarasterpipeline.h"
 #include "vkaraytracingpipeline.h"
 #include "vkasemaphore.h"
@@ -172,6 +173,23 @@ struct CommandList
         default:
             return vk::AccessFlags();
         }
+    }
+
+    void
+    render_imgui(const ImGuiRenderPass & imgui_render_pass, const size_t i_image)
+    {
+        ImGui::Render();
+
+        vk::RenderPassBeginInfo render_pass_bi;
+        render_pass_bi.setRenderPass(imgui_render_pass.m_vk_render_pass);
+        render_pass_bi.setFramebuffer(imgui_render_pass.m_vk_framebuffer[i_image]);
+        render_pass_bi.renderArea.offset.x = 0;
+        render_pass_bi.renderArea.offset.y = 0;
+        render_pass_bi.renderArea.extent =
+            vk::Extent2D(imgui_render_pass.m_resolution.x, imgui_render_pass.m_resolution.y);
+        m_vk_command_buffer.beginRenderPass(render_pass_bi, vk::SubpassContents::eInline);
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_vk_command_buffer);
+        m_vk_command_buffer.endRenderPass();
     }
 
     void

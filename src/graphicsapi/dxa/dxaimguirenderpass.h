@@ -18,7 +18,7 @@ struct ImGuiRenderPass
 
     ImGuiRenderPass() {}
 
-    ImGuiRenderPass(const Device * device, const Window & window, const size_t swapchain_length, const size_t num_flights)
+    ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain, const size_t num_flights)
     {
         // create descriptor heap for imgui font
         D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
@@ -36,26 +36,21 @@ struct ImGuiRenderPass
         (void)io;
 
         // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
-        // ImGui::StyleColorsClassic();
+        //ImGui::StyleColorsDark();
+        ImGui::StyleColorsClassic();
 
         // Setup Platform/Renderer backends
         ImGui_ImplGlfw_InitForOther(window.m_glfw_window, true);
         ImGui_ImplDX12_Init(device->m_dx_device.Get(),
-                            num_flights,
-                            DXGI_FORMAT_R8G8B8A8_UNORM,
+                            swapchain.m_num_images,
+                            swapchain.m_dx_format,
                             m_dx_descriptor_heap.Get(),
                             m_dx_descriptor_heap->GetCPUDescriptorHandleForHeapStart(),
                             m_dx_descriptor_heap->GetGPUDescriptorHandleForHeapStart());
-
-        /*if (!ImGui_ImplDX12_CreateDeviceObjects())
-        {
-            Logger::Error<true>(__FUNCTION__, " cannot create imgui device");
-        }*/
     }
 
     void
-    new_frame()
+    new_frame() const
     {
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
@@ -64,11 +59,17 @@ struct ImGuiRenderPass
     }
 
     void
-    shut_down()
+    end_frame() const
+    {
+        ImGui::EndFrame();
+    }
+
+    void
+    shut_down() const
     {
         // Cleanup
         ImGui_ImplDX12_Shutdown();
-        ImGui_ImplGlfw_NewFrame();
+        ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
     }
 };

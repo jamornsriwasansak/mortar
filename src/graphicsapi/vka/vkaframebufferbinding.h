@@ -8,6 +8,9 @@ namespace Vka
 {
 struct FramebufferBindings
 {
+    // note:: this struct contains both vk_render_pass and vk_framebuffer
+    // it's unlikely that you will use different framebuffer with same render pass
+
     vk::UniqueRenderPass  m_vk_render_pass;
     vk::UniqueFramebuffer m_vk_framebuffer;
     int2                  m_resolution = int2(0, 0);

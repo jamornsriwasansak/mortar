@@ -107,7 +107,7 @@ struct MainLoop
                                       nullptr,
                                       float4(0.0f, 0.0f, 0.0f, 0.0f),
                                       "dummy_texture");
-        m_imgui_render_pass = Gp::ImGuiRenderPass(m_device, *m_window, 3, 3);
+        m_imgui_render_pass = Gp::ImGuiRenderPass(m_device, *m_window, m_swapchain, m_num_flights);
     }
 
     void
@@ -167,6 +167,7 @@ struct MainLoop
         m_renderer.loop(ctx, render_params);
 
         m_swapchain.present(&m_image_presentable_semaphore[i_flight]);
+        m_imgui_render_pass.end_frame();
         m_window->update();
     }
 

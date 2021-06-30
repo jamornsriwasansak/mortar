@@ -10,6 +10,7 @@
 #include "vkaentry.h"
 #include "vkafence.h"
 #include "vkaframebufferbinding.h"
+#include "vkaimguirenderpass.h"
 #include "vkarasterpipeline.h"
 #include "vkaraytracingaccel.h"
 #include "vkaraytracingpipeline.h"

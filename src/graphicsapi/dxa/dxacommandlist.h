@@ -313,7 +313,7 @@ struct CommandList
     }
 
     void
-    render_imgui(const ImGuiRenderPass & imgui_render_pass)
+    render_imgui(const ImGuiRenderPass & imgui_render_pass, const size_t i_image)
     {
         ImGui::Render();
         ID3D12DescriptorHeap * p[] = { imgui_render_pass.m_dx_descriptor_heap.Get() };
