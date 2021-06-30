@@ -13,14 +13,15 @@ namespace Vka
 {
 struct ImGuiRenderPass
 {
-    vk::UniqueDescriptorPool   m_vk_descriptor_pool;
-    VkRenderPass               m_vk_render_pass;
-    std::vector<VkFramebuffer> m_vk_framebuffer;
-    int2                       m_resolution;
+    vk::UniqueDescriptorPool           m_vk_descriptor_pool;
+    vk::UniqueRenderPass               m_vk_render_pass;
+    std::vector<vk::UniqueImageView>   m_vk_image_views;
+    std::vector<vk::UniqueFramebuffer> m_vk_framebuffers;
+    int2                               m_resolution;
 
     ImGuiRenderPass() {}
 
-    vk::ImageView
+    vk::UniqueImageView
     create_image_view(const vk::Device device, const vk::Image image, const vk::Format format)
     {
         vk::ImageViewCreateInfo image_view_ci;
@@ -36,7 +37,7 @@ struct ImGuiRenderPass
         image_view_ci.subresourceRange.setLevelCount(1);
         image_view_ci.subresourceRange.setBaseArrayLayer(0);
         image_view_ci.subresourceRange.setLayerCount(1);
-        return device.createImageView(image_view_ci);
+        return device.createImageViewUnique(image_view_ci);
     }
 
     ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain, const size_t num_flights)
@@ -59,76 +60,61 @@ struct ImGuiRenderPass
         pool_ci.setMaxSets(100);
         m_vk_descriptor_pool = device->m_vk_ldevice->createDescriptorPoolUnique(pool_ci);
 
-        VkAttachmentDescription attachment = {};
-        attachment.format                  = static_cast<VkFormat>(swapchain.m_vk_format);
-        attachment.samples                 = VK_SAMPLE_COUNT_1_BIT;
-        attachment.loadOp                  = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachment.storeOp                 = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment.stencilLoadOp           = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment.stencilStoreOp          = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment.initialLayout           = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachment.finalLayout             = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        vk::AttachmentDescription attachment = {};
+        attachment.setFormat(swapchain.m_vk_format);
+        attachment.setSamples(vk::SampleCountFlagBits::e1);
+        attachment.setLoadOp(vk::AttachmentLoadOp::eLoad);
+        attachment.setStoreOp(vk::AttachmentStoreOp::eStore);
+        attachment.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare);
+        attachment.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+        attachment.setInitialLayout(vk::ImageLayout::eUndefined);
+        attachment.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
-        VkAttachmentReference color_attachment = {};
-        color_attachment.attachment            = 0;
-        color_attachment.layout                = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        vk::AttachmentReference color_attachment = {};
+        color_attachment.setAttachment(0);
+        color_attachment.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments    = &color_attachment;
+        vk::SubpassDescription subpass = {};
+        subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+        subpass.setColorAttachmentCount(1);
+        subpass.setPColorAttachments(&color_attachment);
 
-        VkSubpassDependency dependency = {};
-        dependency.srcSubpass          = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass          = 0;
-        dependency.srcStageMask        = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstStageMask        = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask       = 0; // or VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        dependency.dstAccessMask       = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        vk::SubpassDependency dependency = {};
+        dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL);
+        dependency.setDstSubpass(0);
+        dependency.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+        dependency.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+        dependency.setSrcAccessMask(vk::AccessFlags());
+        dependency.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 
-        VkRenderPassCreateInfo info = {};
-        info.sType                  = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        info.attachmentCount        = 1;
-        info.pAttachments           = &attachment;
-        info.subpassCount           = 1;
-        info.pSubpasses             = &subpass;
-        info.dependencyCount        = 1;
-        info.pDependencies          = &dependency;
-        if (vkCreateRenderPass(device->m_vk_ldevice.get(), &info, nullptr, &m_vk_render_pass) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Could not create Dear ImGui's render pass");
-        }
+        vk::RenderPassCreateInfo info = {};
+        info.setAttachmentCount(1);
+        info.setPAttachments(&attachment);
+        info.setSubpassCount(1);
+        info.setPSubpasses(&subpass);
+        info.setDependencyCount(1);
+        info.setPDependencies(&dependency);
+        m_vk_render_pass = device->m_vk_ldevice->createRenderPassUnique(info);
 
         auto swapchain_images = device->m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain);
         for (uint32_t i = 0; i < swapchain.m_num_images; i++)
         {
-            VkImageView image_views[1];
-            auto        image_view =
+            vk::ImageView       image_views[1];
+            vk::UniqueImageView image_view =
                 create_image_view(device->m_vk_ldevice.get(), swapchain_images[i], swapchain.m_vk_format);
-            image_views[0] = image_view;
+            image_views[0] = image_view.get();
 
-            VkFramebufferCreateInfo framebuffer_ci = {};
-            framebuffer_ci.sType                   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebuffer_ci.renderPass              = m_vk_render_pass;
-            framebuffer_ci.attachmentCount         = 1;
-            framebuffer_ci.pAttachments            = &(image_views[0]);
-            framebuffer_ci.width                   = m_resolution.x;
-            framebuffer_ci.height                  = m_resolution.y;
-            framebuffer_ci.layers                  = 1;
+            vk::FramebufferCreateInfo framebuffer_ci = {};
+            framebuffer_ci.setRenderPass(m_vk_render_pass.get());
+            framebuffer_ci.setAttachmentCount(1);
+            framebuffer_ci.setPAttachments(&(image_views[0]));
+            framebuffer_ci.width  = m_resolution.x;
+            framebuffer_ci.height = m_resolution.y;
+            framebuffer_ci.layers = 1;
 
-            VkFramebuffer fb;
-            vkCreateFramebuffer(device->m_vk_ldevice.get(), &framebuffer_ci, nullptr, &fb);
-
-            m_vk_framebuffer.push_back(fb);
+            m_vk_framebuffers.push_back(device->m_vk_ldevice->createFramebufferUnique(framebuffer_ci));
+            m_vk_image_views.push_back(std::move(image_view));
         }
-
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO & io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-        ImGui::StyleColorsDark();
 
         ImGui_ImplGlfw_InitForVulkan(window.m_glfw_window, true);
         ImGui_ImplVulkan_InitInfo init_info = {};
@@ -143,7 +129,7 @@ struct ImGuiRenderPass
         init_info.MinImageCount             = swapchain.m_num_images;
         init_info.ImageCount                = swapchain.m_num_images;
         init_info.CheckVkResultFn           = nullptr;
-        ImGui_ImplVulkan_Init(&init_info, m_vk_render_pass);
+        ImGui_ImplVulkan_Init(&init_info, m_vk_render_pass.get());
 
         device->one_time_command_submit(
             [&](vk::CommandBuffer cmd_buf) { ImGui_ImplVulkan_CreateFontsTexture(cmd_buf); });

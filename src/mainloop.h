@@ -90,7 +90,7 @@ struct MainLoop
                              float(resolution.x) / float(resolution.y));
 
         // init dummy buffers and texture
-        m_dummy_buffer      = Gp::Buffer(m_device,
+        m_dummy_buffer  = Gp::Buffer(m_device,
                                     Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::IndexBuffer |
                                         Gp::BufferUsageEnum::StorageBuffer,
                                     Gp::MemoryUsageEnum::GpuOnly,
@@ -98,7 +98,7 @@ struct MainLoop
                                     nullptr,
                                     nullptr,
                                     "dummy_vertex_buffer");
-        m_dummy_texture     = Gp::Texture(m_device,
+        m_dummy_texture = Gp::Texture(m_device,
                                       Gp::TextureUsageEnum::Sampled,
                                       Gp::TextureStateEnum::AllShaderVisible,
                                       Gp::FormatEnum::R8G8B8A8_UNorm,
@@ -107,6 +107,14 @@ struct MainLoop
                                       nullptr,
                                       float4(0.0f, 0.0f, 0.0f, 0.0f),
                                       "dummy_texture");
+
+        // setup dear imgui
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO & io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+        ImGui::StyleColorsDark();
         m_imgui_render_pass = Gp::ImGuiRenderPass(m_device, *m_window, m_swapchain, m_num_flights);
     }
 

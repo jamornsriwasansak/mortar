@@ -181,8 +181,8 @@ struct CommandList
         ImGui::Render();
 
         vk::RenderPassBeginInfo render_pass_bi;
-        render_pass_bi.setRenderPass(imgui_render_pass.m_vk_render_pass);
-        render_pass_bi.setFramebuffer(imgui_render_pass.m_vk_framebuffer[i_image]);
+        render_pass_bi.setRenderPass(imgui_render_pass.m_vk_render_pass.get());
+        render_pass_bi.setFramebuffer(imgui_render_pass.m_vk_framebuffers[i_image].get());
         render_pass_bi.renderArea.offset.x = 0;
         render_pass_bi.renderArea.offset.y = 0;
         render_pass_bi.renderArea.extent =

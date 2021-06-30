@@ -28,17 +28,6 @@ struct ImGuiRenderPass
         DXCK(device->m_dx_device->CreateDescriptorHeap(&heap_desc,
                                                        IID_PPV_ARGS(m_dx_descriptor_heap.GetAddressOf())));
 
-        // Setup Dear ImGui context
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO & io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        (void)io;
-
-        // Setup Dear ImGui style
-        //ImGui::StyleColorsDark();
-        ImGui::StyleColorsClassic();
-
         // Setup Platform/Renderer backends
         ImGui_ImplGlfw_InitForOther(window.m_glfw_window, true);
         ImGui_ImplDX12_Init(device->m_dx_device.Get(),
