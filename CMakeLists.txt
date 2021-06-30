@@ -95,6 +95,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
     #include_directories(SYSTEM "${DEPS_PATH}/aftercrash/include")
     #file(GLOB aftercrash_src "${DEPS_PATH}/aftercrash/src/D3d12AfterCrash.cpp" "${DEPS_PATH}/aftercrash/src/vulkanaftercrash.cpp")
 
+# imgui
+    include_directories(SYSTEM ${DEPS_PATH}/imgui/)
+    file(GLOB imgui_src "${DEPS_PATH}/imgui/*.cpp")
+    file(GLOB imgui_backend_src  "${DEPS_PATH}/imgui/backends/imgui_impl_dx12.cpp" "${DEPS_PATH}/imgui/backends/imgui_impl_glfw.cpp")
+
 # mortar
     # find all sources
     include_directories(src)
@@ -124,7 +129,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
                                 COMPILER_FLAGS "-w")
 
     # generating executable
-    add_executable(mortar ${mortar_src} ${spirv_reflect_src} ${d3d12ma} ${aftercrash_src} ${GFSDK_Aftermath_src})
+    add_executable(mortar ${mortar_src} ${spirv_reflect_src} ${d3d12ma} ${aftercrash_src} ${GFSDK_Aftermath_src} ${imgui_src} ${imgui_backend_src})
     target_link_libraries(mortar PUBLIC ${DEPS_LIBRARIES})
 
 set(CMAKE_VERBOSE_MAKEFILE ON)

@@ -32,6 +32,8 @@ struct MainLoop
     Gp::Buffer  m_dummy_index_buffer;
     Gp::Texture m_dummy_texture;
 
+    Gp::ImGuiRenderPass m_imgui_render_pass;
+
     MainLoop() {}
 
     MainLoop(Gp::Device * device, Window * window, const size_t num_flights)
@@ -88,7 +90,7 @@ struct MainLoop
                              float(resolution.x) / float(resolution.y));
 
         // init dummy buffers and texture
-        m_dummy_buffer  = Gp::Buffer(m_device,
+        m_dummy_buffer      = Gp::Buffer(m_device,
                                     Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::IndexBuffer |
                                         Gp::BufferUsageEnum::StorageBuffer,
                                     Gp::MemoryUsageEnum::GpuOnly,
@@ -96,7 +98,7 @@ struct MainLoop
                                     nullptr,
                                     nullptr,
                                     "dummy_vertex_buffer");
-        m_dummy_texture = Gp::Texture(m_device,
+        m_dummy_texture     = Gp::Texture(m_device,
                                       Gp::TextureUsageEnum::Sampled,
                                       Gp::TextureStateEnum::AllShaderVisible,
                                       Gp::FormatEnum::R8G8B8A8_UNorm,
@@ -105,6 +107,7 @@ struct MainLoop
                                       nullptr,
                                       float4(0.0f, 0.0f, 0.0f, 0.0f),
                                       "dummy_texture");
+        m_imgui_render_pass = Gp::ImGuiRenderPass(m_device, *m_window, 3, 3);
     }
 
     void
@@ -120,7 +123,7 @@ struct MainLoop
         if (glfwGetKey(m_window->m_glfw_window, GLFW_KEY_R) == GLFW_PRESS)
         {
             reload_shader = true;
-            for (size_t i = 0 ; i < m_num_flights;i++)
+            for (size_t i = 0; i < m_num_flights; i++)
             {
                 m_flight_fences[i].wait();
             }
@@ -148,6 +151,7 @@ struct MainLoop
         ctx.m_staging_buffer_manager      = &m_staging_buffer_manager;
         ctx.m_dummy_buffer                = &m_dummy_buffer;
         ctx.m_dummy_texture               = &m_dummy_texture;
+        ctx.m_imgui_render_pass           = &m_imgui_render_pass;
 
         RenderParams render_params;
         render_params.m_resolution           = m_window->get_resolution();
@@ -156,6 +160,8 @@ struct MainLoop
         render_params.m_is_static_mesh_dirty = false;
         render_params.m_fps_camera           = &m_camera;
         render_params.m_is_shaders_dirty     = reload_shader;
+
+        m_imgui_render_pass.new_frame();
 
         // run renderer
         m_renderer.loop(ctx, render_params);
@@ -194,5 +200,7 @@ struct MainLoop
             loop(i_flight);
             i_flight = (i_flight + 1) % m_num_flights;
         }
+
+        m_imgui_render_pass.shut_down();
     }
 };

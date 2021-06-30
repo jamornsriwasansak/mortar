@@ -16,6 +16,9 @@ struct Reservior
         m_geometry_id  = 0;
         m_primitive_id = 0;
         m_uv           = half2(0, 0);
+        m_padding[0]   = 0.0f;
+        m_padding[1]   = 0.0f;
+        m_padding[2]   = 0.0f;
     }
 
     bool

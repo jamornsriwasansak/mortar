@@ -6,6 +6,7 @@
 #include "dxaentry.h"
 #include "dxafence.h"
 #include "dxaframebufferbinding.h"
+#include "dxaimguirenderpass.h"
 #include "dxarasterpipeline.h"
 #include "dxaraytracingpipeline.h"
 #include "dxasemaphore.h"
@@ -309,6 +310,15 @@ struct CommandList
             D3D12_RESOURCE_STATE_RENDER_TARGET,
             D3D12_RESOURCE_STATE_PRESENT);
         m_dx_cmd_list->ResourceBarrier(1, &barrier_rtv_to_present);
+    }
+
+    void
+    render_imgui(const ImGuiRenderPass & imgui_render_pass)
+    {
+        ImGui::Render();
+        ID3D12DescriptorHeap * p[] = { imgui_render_pass.m_dx_descriptor_heap.Get() };
+        m_dx_cmd_list->SetDescriptorHeaps(1, p);
+        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_dx_cmd_list.Get());
     }
 
     void

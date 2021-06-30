@@ -462,6 +462,7 @@ struct Renderer
             ray_descriptor_sets[3].update();
         }
 
+        bool x = true;
         // ray tracing pass
         cmds.bind_raytrace_descriptor_set(ray_descriptor_sets);
         cmds.trace_rays(m_rt_sbt, params.m_resolution.x, params.m_resolution.y);
@@ -476,22 +477,28 @@ struct Renderer
 
             // draw result
             cmds.begin_render_pass(m_raster_fbindings[ctx.m_image_index]);
-            cmds.bind_raster_pipeline(m_raster_pipeline);
+            {
+                cmds.bind_raster_pipeline(m_raster_pipeline);
 
-            // set ssao params
-            std::array<Gp::DescriptorSet, 1> beauty_desc_sets;
-            beauty_desc_sets[0] = Gp::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
-            beauty_desc_sets[0]
-                .set_t_texture(0, m_rt_results[ctx.m_flight_index % 2])
-                .set_s_sampler(0, m_sampler)
-                .update();
+                // set ssao params
+                std::array<Gp::DescriptorSet, 1> beauty_desc_sets;
+                beauty_desc_sets[0] = Gp::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
+                beauty_desc_sets[0]
+                    .set_t_texture(0, m_rt_results[ctx.m_flight_index % 2])
+                    .set_s_sampler(0, m_sampler)
+                    .update();
 
-            // raster
-            cmds.bind_graphics_descriptor_set(beauty_desc_sets);
-            cmds.bind_vertex_buffer(params.m_asset_pool->m_vertex_buffers[0].m_buffer, sizeof(CompactVertex));
-            cmds.bind_index_buffer(params.m_asset_pool->m_index_buffers[0].m_buffer, Gp::IndexType::Uint32);
-            cmds.draw_instanced(3, 1, 0, 0);
+                // raster
+                cmds.bind_graphics_descriptor_set(beauty_desc_sets);
+                cmds.bind_vertex_buffer(params.m_asset_pool->m_vertex_buffers[0].m_buffer, sizeof(CompactVertex));
+                cmds.bind_index_buffer(params.m_asset_pool->m_index_buffers[0].m_buffer, Gp::IndexType::Uint32);
+                cmds.draw_instanced(3, 1, 0, 0);
+
+                ImGui::ShowDemoWindow(&x);
+                cmds.render_imgui(*ctx.m_imgui_render_pass);
+            }
             cmds.end_render_pass();
+
 
             // transition
             cmds.transition_texture(*ctx.m_swapchain_texture,
