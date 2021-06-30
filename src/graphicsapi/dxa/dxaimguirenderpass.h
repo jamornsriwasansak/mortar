@@ -22,7 +22,7 @@ struct ImGuiRenderPass
     {
         // create descriptor heap for imgui font
         D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
-        heap_desc.NumDescriptors             = static_cast<UINT>(500);
+        heap_desc.NumDescriptors             = static_cast<UINT>(5);
         heap_desc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         heap_desc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         DXCK(device->m_dx_device->CreateDescriptorHeap(&heap_desc,
