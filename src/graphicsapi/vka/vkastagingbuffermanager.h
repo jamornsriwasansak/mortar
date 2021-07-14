@@ -49,14 +49,14 @@ struct StagingBufferManager
     std::list<UniqueVarHandle<StagingBuffer, StagingBufferDeleter>> m_staging_buffers;
     std::list<UniqueVarHandle<ScratchBuffer, ScratchBufferDeleter>> m_scratch_buffers;
     vk::UniqueCommandPool                                           m_vk_command_pool;
-    vk::UniqueCommandBuffer                                         m_vk_command_buffer;
+    vk::CommandBuffer                                               m_vk_command_buffer;
     std::string                                                     m_name;
     const Device *                                                  m_device;
     static constexpr size_t DefaultStagingBufferSize = 100 * 1024 * 1024; // 100 MB
 
     StagingBufferManager() {}
 
-    StagingBufferManager(const Device * device, const std::string & name = "")
+    StagingBufferManager(Device * device, const std::string & name = "")
     : m_device(device), m_name(name)
     {
         vk::CommandPoolCreateInfo cmd_pool_ci;
@@ -65,24 +65,30 @@ struct StagingBufferManager
 
         // create pool
         m_vk_command_pool = device->m_vk_ldevice->createCommandPoolUnique(cmd_pool_ci);
+        device->name_vkhpp_object<vk::CommandPool, vk::CommandPool::CType>(m_vk_command_pool.get(),
+                                                                           name + "_" +
+                                                                               "command_pool");
 
         // create command buffer
         vk::CommandBufferAllocateInfo allocate_info;
         allocate_info.setCommandPool(*m_vk_command_pool);
         allocate_info.setCommandBufferCount(1);
-        auto cmd_buffers    = device->m_vk_ldevice->allocateCommandBuffersUnique(allocate_info);
-        m_vk_command_buffer = std::move(cmd_buffers.at(0));
+        auto cmd_buffers    = device->m_vk_ldevice->allocateCommandBuffers(allocate_info);
+        m_vk_command_buffer = cmd_buffers.at(0);
+        device->name_vkhpp_object<vk::CommandBuffer, vk::CommandBuffer::CType>(
+            m_vk_command_buffer,
+            name + "_" + "command_buffer");
 
         // begin command buffer right away
         vk::CommandBufferBeginInfo cmd_buf_begin_info;
         cmd_buf_begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        m_vk_command_buffer->begin(cmd_buf_begin_info);
+        m_vk_command_buffer.begin(cmd_buf_begin_info);
     }
 
     void
     submit_all_pending_upload(const std::chrono::nanoseconds timeout = std::chrono::nanoseconds::max())
     {
-        m_vk_command_buffer.get().end();
+        m_vk_command_buffer.end();
 
         // create fence
         vk::FenceCreateInfo fence_ci;
@@ -93,19 +99,19 @@ struct StagingBufferManager
 
         // execute command list
         vk::SubmitInfo submit_info;
-        submit_info.setPCommandBuffers(&m_vk_command_buffer.get());
+        submit_info.setPCommandBuffers(&m_vk_command_buffer);
         submit_info.setCommandBufferCount(1);
         m_device->m_vk_graphics_queue.submit({ submit_info }, fence.get());
 
         // wait
         VKCK(m_device->m_vk_ldevice->waitForFences({ fence.get() }, VK_TRUE, timeout.count()));
 
-        m_vk_command_buffer->reset();
+        m_vk_command_buffer.reset();
 
         // begin command buffer right away
         vk::CommandBufferBeginInfo cmd_buf_begin_info;
         cmd_buf_begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        m_vk_command_buffer->begin(cmd_buf_begin_info);
+        m_vk_command_buffer.begin(cmd_buf_begin_info);
 
         for (auto & staging_buffer : m_staging_buffers)
         {

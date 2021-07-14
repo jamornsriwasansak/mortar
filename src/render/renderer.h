@@ -53,12 +53,12 @@ struct Renderer
                                              Gp::MemoryUsageEnum::CpuToGpu,
                                              sizeof(DirectLightParams));
 
-        resize(device, resolution, swapchain_attachment);
+        init_or_resize_resolution(device, resolution, swapchain_attachment);
         init_shaders(device, true);
     }
 
     void
-    resize(Gp::Device * device, const int2 resolution, const std::vector<Gp::Texture> & swapchain_attachment)
+    init_or_resize_resolution(Gp::Device * device, const int2 resolution, const std::vector<Gp::Texture> & swapchain_attachment)
     {
         m_raster_fbindings.resize(swapchain_attachment.size());
         for (size_t i = 0; i < swapchain_attachment.size(); i++)
@@ -497,8 +497,8 @@ struct Renderer
             }
             cmds.end_render_pass();
 
-            ImGui::ShowDemoWindow(&x);
-            cmds.render_imgui(*ctx.m_imgui_render_pass, ctx.m_image_index);
+            // render imgui onto swapchain
+            // cmds.render_imgui(*ctx.m_imgui_render_pass, ctx.m_image_index);
 
             // transition
             cmds.transition_texture(*ctx.m_swapchain_texture,

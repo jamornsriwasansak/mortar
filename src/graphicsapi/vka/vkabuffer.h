@@ -102,9 +102,9 @@ struct Buffer
                 copy_region.setSize(buffer_size_in_bytes);
                 copy_region.setSrcOffset(0);
                 copy_region.setDstOffset(0);
-                initial_data_loader->m_vk_command_buffer->copyBuffer(staging_buffer->m_vk_buffer,
-                                                                     m_vma_buffer_bundle->m_vk_buffer,
-                                                                     { copy_region });
+                initial_data_loader->m_vk_command_buffer.copyBuffer(staging_buffer->m_vk_buffer,
+                                                                    m_vma_buffer_bundle->m_vk_buffer,
+                                                                    { copy_region });
             }
             else
             {

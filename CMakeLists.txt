@@ -10,8 +10,8 @@ set(BUILD_TEST OFF CACHE BOOL "" FORCE)
 set(DEPS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/dep/ CACHE PATH "" FORCE)
 
 # output directory
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/out/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/out/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
 
 # GLFW 3
@@ -25,11 +25,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
 # directx
     add_subdirectory(${DEPS_PATH}/DirectX-Headers)
     set(DEPS_LIBRARIES ${DEPS_LIBRARIES} DirectX-Headers d3d12 dxgi dxguid d3dcompiler)
-    file(COPY
-         "${DEPS_PATH}/DirectXShaderCompilerPrebuilt-win/bin/x64/dxil.dll"
-         "${DEPS_PATH}/DirectXShaderCompilerPrebuilt-win/bin/x64/dxcompiler.dll"
-         DESTINATION
-         ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    #file(COPY
+         #"${DEPS_PATH}/DirectXShaderCompilerPrebuilt-win/bin/x64/dxil.dll"
+         #"${DEPS_PATH}/DirectXShaderCompilerPrebuilt-win/bin/x64/dxcompiler.dll"
+         #DESTINATION
+         #${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 # vulkan
     find_package(Vulkan REQUIRED)
@@ -116,6 +116,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sandbox")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
     add_compile_definitions(NOMINMAX)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        set(CMAKE_CXX_FLAGS_DEBUG "/ZI")
+        set(CMAKE_SHARED_LINKER_FLAGS "/SAFESEH:NO")
+        set(CMAKE_EXE_LINKER_FLAGS "/SAFESEH:NO")
+    endif()
 
     if(MSVC)
         add_compile_options(/W4)

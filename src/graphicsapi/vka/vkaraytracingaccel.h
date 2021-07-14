@@ -128,8 +128,8 @@ struct RayTracingBlas
         build_info.setDstAccelerationStructure(m_vk_accel_struct.get());
         build_info.setScratchData(scratch_buffer->m_vk_device_address);
 
-        buf_manager->m_vk_command_buffer->buildAccelerationStructuresKHR({ build_info },
-                                                                         { build_ranges.data() });
+        buf_manager->m_vk_command_buffer.buildAccelerationStructuresKHR({ build_info },
+                                                                        { build_ranges.data() });
     }
 };
 
@@ -242,14 +242,14 @@ struct RayTracingTlas
         // make sure that instance_buffer is completely written before we proceed further.
         vk::MemoryBarrier barrier(vk::AccessFlagBits::eTransferWrite,
                                   vk::AccessFlagBits::eAccelerationStructureWriteKHR);
-        buf_manager->m_vk_command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                                                          vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
-                                                          vk::DependencyFlags(),
-                                                          { barrier },
-                                                          {},
-                                                          {});
+        buf_manager->m_vk_command_buffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                                         vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
+                                                         vk::DependencyFlags(),
+                                                         { barrier },
+                                                         {},
+                                                         {});
 
-        buf_manager->m_vk_command_buffer->buildAccelerationStructuresKHR({ build_info }, { &build_range });
+        buf_manager->m_vk_command_buffer.buildAccelerationStructuresKHR({ build_info }, { &build_range });
     }
 };
 } // namespace Vka

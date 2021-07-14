@@ -32,7 +32,7 @@ struct Swapchain
         m_image_index = m_dx_swapchain->GetCurrentBackBufferIndex();
     }
 
-    void
+    bool
     present([[maybe_unused]] Semaphore * wait_semaphore)
     {
         // present in dx12 automatically queue the next frame so wait semaphore is never been used.
@@ -43,6 +43,7 @@ struct Swapchain
         UINT       sync_interval         = use_vsync ? 1 : 0;
         UINT present_flags = use_tearing_supported && !use_vsync ? DXGI_PRESENT_ALLOW_TEARING : 0;
         DXCK(m_dx_swapchain->Present(sync_interval, present_flags));
+        return true;
     }
 
 private:

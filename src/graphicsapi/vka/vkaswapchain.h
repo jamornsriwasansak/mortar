@@ -106,7 +106,7 @@ struct Swapchain
         m_image_index = i_image;
     }
 
-    void
+    bool
     present(const Semaphore * semaphore)
     {
         vk::PresentInfoKHR present_info = {};
@@ -120,8 +120,7 @@ struct Swapchain
         present_info.setPImageIndices(&m_image_index);
 
         vk::Result result = m_device->m_vk_present_queue.presentKHR(&present_info);
-        if (result != vk::Result::eSuccess)
-            Logger::Error<true>(__FUNCTION__, " present khr error " + vk::to_string(result));
+        return result == vk::Result::eSuccess;
     }
 
 private:

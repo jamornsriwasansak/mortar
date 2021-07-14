@@ -13,7 +13,6 @@ namespace Vka
 {
 struct ImGuiRenderPass
 {
-    vk::UniqueDescriptorPool           m_vk_descriptor_pool;
     vk::UniqueRenderPass               m_vk_render_pass;
     std::vector<vk::UniqueImageView>   m_vk_image_views;
     std::vector<vk::UniqueFramebuffer> m_vk_framebuffers;
@@ -43,22 +42,6 @@ struct ImGuiRenderPass
     ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain, const size_t num_flights)
     {
         m_resolution = swapchain.m_resolution;
-
-        std::array<vk::DescriptorPoolSize, 5> pool_sizes;
-        pool_sizes[0].setDescriptorCount(5);
-        pool_sizes[0].setType(vk::DescriptorType::eUniformBuffer);
-        pool_sizes[1].setDescriptorCount(5);
-        pool_sizes[1].setType(vk::DescriptorType::eStorageBuffer);
-        pool_sizes[2].setDescriptorCount(5);
-        pool_sizes[2].setType(vk::DescriptorType::eAccelerationStructureKHR);
-        pool_sizes[3].setDescriptorCount(5);
-        pool_sizes[3].setType(vk::DescriptorType::eSampler);
-        pool_sizes[4].setDescriptorCount(5);
-        pool_sizes[4].setType(vk::DescriptorType::eStorageImage);
-        vk::DescriptorPoolCreateInfo pool_ci;
-        pool_ci.setPoolSizes(pool_sizes);
-        pool_ci.setMaxSets(100);
-        m_vk_descriptor_pool = device->m_vk_ldevice->createDescriptorPoolUnique(pool_ci);
 
         vk::AttachmentDescription attachment = {};
         attachment.setFormat(swapchain.m_vk_format);
@@ -116,20 +99,46 @@ struct ImGuiRenderPass
             m_vk_image_views.push_back(std::move(image_view));
         }
 
-        ImGui_ImplGlfw_InitForVulkan(window.m_glfw_window, true);
-        ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.Instance                  = device->m_vk_instance;
-        init_info.PhysicalDevice            = device->m_vk_pdevice;
-        init_info.Device                    = device->m_vk_ldevice.get();
-        init_info.QueueFamily               = device->m_family_indices.m_graphics;
-        init_info.Queue                     = device->m_vk_graphics_queue;
-        init_info.PipelineCache             = VK_NULL_HANDLE;
-        init_info.DescriptorPool            = m_vk_descriptor_pool.get();
-        init_info.Allocator                 = nullptr;
-        init_info.MinImageCount             = swapchain.m_num_images;
-        init_info.ImageCount                = swapchain.m_num_images;
-        init_info.CheckVkResultFn           = nullptr;
-        ImGui_ImplVulkan_Init(&init_info, m_vk_render_pass.get());
+        static bool                     ImGuiVulkanInitialized = false;
+        static vk::UniqueDescriptorPool ImGuiVkDescriptorPool  = {};
+        if (!ImGuiVulkanInitialized)
+        {
+            // create descriptor pool
+            if (!ImGuiVkDescriptorPool)
+            {
+                std::array<vk::DescriptorPoolSize, 5> pool_sizes;
+                pool_sizes[0].setDescriptorCount(5);
+                pool_sizes[0].setType(vk::DescriptorType::eUniformBuffer);
+                pool_sizes[1].setDescriptorCount(5);
+                pool_sizes[1].setType(vk::DescriptorType::eStorageBuffer);
+                pool_sizes[2].setDescriptorCount(5);
+                pool_sizes[2].setType(vk::DescriptorType::eAccelerationStructureKHR);
+                pool_sizes[3].setDescriptorCount(5);
+                pool_sizes[3].setType(vk::DescriptorType::eSampler);
+                pool_sizes[4].setDescriptorCount(5);
+                pool_sizes[4].setType(vk::DescriptorType::eStorageImage);
+                vk::DescriptorPoolCreateInfo pool_ci;
+                pool_ci.setPoolSizes(pool_sizes);
+                pool_ci.setMaxSets(100);
+                ImGuiVkDescriptorPool = device->m_vk_ldevice->createDescriptorPoolUnique(pool_ci);
+            }
+
+            ImGui_ImplGlfw_InitForVulkan(window.m_glfw_window, true);
+            ImGui_ImplVulkan_InitInfo init_info = {};
+            init_info.Instance                  = device->m_vk_instance;
+            init_info.PhysicalDevice            = device->m_vk_pdevice;
+            init_info.Device                    = device->m_vk_ldevice.get();
+            init_info.QueueFamily               = device->m_family_indices.m_graphics;
+            init_info.Queue                     = device->m_vk_graphics_queue;
+            init_info.PipelineCache             = VK_NULL_HANDLE;
+            init_info.DescriptorPool            = ImGuiVkDescriptorPool.get();
+            init_info.Allocator                 = nullptr;
+            init_info.MinImageCount             = swapchain.m_num_images;
+            init_info.ImageCount                = swapchain.m_num_images;
+            init_info.CheckVkResultFn           = nullptr;
+            ImGui_ImplVulkan_Init(&init_info, m_vk_render_pass.get());
+            ImGuiVulkanInitialized = true;
+        }
 
         device->one_time_command_submit(
             [&](vk::CommandBuffer cmd_buf) { ImGui_ImplVulkan_CreateFontsTexture(cmd_buf); });

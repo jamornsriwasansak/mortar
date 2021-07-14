@@ -153,7 +153,7 @@ struct Texture
             const size_t image_size_in_bytes = bytes_per_pixel * resolution.x * resolution.y;
 
             // make image layout optimal for data being transferred to image (TransferDstOptimal)
-            transition_image_layout(initial_data_loader->m_vk_command_buffer.get(),
+            transition_image_layout(initial_data_loader->m_vk_command_buffer,
                                     m_vk_image,
                                     vk::ImageLayout::eUndefined,
                                     vk::ImageLayout::eTransferDstOptimal);
@@ -181,12 +181,12 @@ struct Texture
             copy_region.imageSubresource.setBaseArrayLayer(0);
             copy_region.imageSubresource.setLayerCount(1);
             copy_region.imageSubresource.setMipLevel(0);
-            initial_data_loader->m_vk_command_buffer->copyBufferToImage(staging_buffer->m_vk_buffer,
-                                                                        m_vk_image,
-                                                                        vk::ImageLayout::eTransferDstOptimal,
-                                                                        { copy_region });
+            initial_data_loader->m_vk_command_buffer.copyBufferToImage(staging_buffer->m_vk_buffer,
+                                                                       m_vk_image,
+                                                                       vk::ImageLayout::eTransferDstOptimal,
+                                                                       { copy_region });
 
-            transition_image_layout(initial_data_loader->m_vk_command_buffer.get(),
+            transition_image_layout(initial_data_loader->m_vk_command_buffer,
                                     m_vk_image,
                                     vk::ImageLayout::eTransferDstOptimal,
                                     initial_layout);

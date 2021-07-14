@@ -294,7 +294,6 @@ struct AssetPool
     add_constant_texture(const std::array<uint8_t, NumChannels> & v)
     {
         // load using stbi
-        int2 resolution;
         static_assert(NumChannels == 4 || NumChannels == 1, "num channels must be 4 or 1");
         Gp::FormatEnum format_enum = v.size() == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
         Gp::Texture texture(m_device,

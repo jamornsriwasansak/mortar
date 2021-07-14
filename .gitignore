@@ -1,3 +1,9 @@
-sandbox/
+sandbox/*.dll
 out/
 .vs
+sandbox/mortar.exe
+sandbox/imgui.ini
+sandbox/build/
+sandbox/lib/
+*.ilk
+*.pdb
