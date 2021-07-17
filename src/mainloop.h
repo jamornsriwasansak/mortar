@@ -147,7 +147,7 @@ struct MainLoop
         m_flight_fences[i_flight].wait();
 
         bool reload_shader = false;
-        if (glfwGetKey(m_window->m_glfw_window, GLFW_KEY_R) == GLFW_PRESS)
+        if (m_window->m_R.m_event == KeyEventEnum::JustPress)
         {
             reload_shader = true;
             for (size_t i = 0; i < m_num_flights; i++)
@@ -242,5 +242,10 @@ struct MainLoop
         }
 
         m_imgui_render_pass.shut_down();
+
+        for (size_t i = 0; i < m_num_flights; i++)
+        {
+            m_flight_fences[i].wait();
+        }
     }
 };

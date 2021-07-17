@@ -75,8 +75,64 @@ private:
     ~GlfwHandler() { glfwTerminate(); }
 };
 
+enum class KeyEventEnum
+{
+    JustPress,
+    JustRelease,
+    Hold,
+    Release
+};
+
+template <int TGlfwKey>
+struct KeyEvent
+{
+    KeyEventEnum m_event;
+};
+
+#define DECL_KEY_EVENT(KEY)   KeyEvent<GLFW_KEY_##KEY> m_##KEY
+#define UPDATE_KEY_EVENT(KEY) update_key(&m_##KEY)
+
 struct Window
 {
+    MAKE_NONCOPYABLE(Window);
+
+    DECL_KEY_EVENT(A);
+    DECL_KEY_EVENT(B);
+    DECL_KEY_EVENT(C);
+    DECL_KEY_EVENT(D);
+    DECL_KEY_EVENT(E);
+    DECL_KEY_EVENT(F);
+    DECL_KEY_EVENT(G);
+    DECL_KEY_EVENT(H);
+    DECL_KEY_EVENT(I);
+    DECL_KEY_EVENT(J);
+    DECL_KEY_EVENT(K);
+    DECL_KEY_EVENT(L);
+    DECL_KEY_EVENT(M);
+    DECL_KEY_EVENT(N);
+    DECL_KEY_EVENT(O);
+    DECL_KEY_EVENT(P);
+    DECL_KEY_EVENT(Q);
+    DECL_KEY_EVENT(R);
+    DECL_KEY_EVENT(S);
+    DECL_KEY_EVENT(T);
+    DECL_KEY_EVENT(U);
+    DECL_KEY_EVENT(V);
+    DECL_KEY_EVENT(W);
+    DECL_KEY_EVENT(X);
+    DECL_KEY_EVENT(Y);
+    DECL_KEY_EVENT(Z);
+    DECL_KEY_EVENT(0);
+    DECL_KEY_EVENT(1);
+    DECL_KEY_EVENT(2);
+    DECL_KEY_EVENT(3);
+    DECL_KEY_EVENT(4);
+    DECL_KEY_EVENT(5);
+    DECL_KEY_EVENT(6);
+    DECL_KEY_EVENT(7);
+    DECL_KEY_EVENT(8);
+    DECL_KEY_EVENT(9);
+
     GLFWwindow *                  m_glfw_window = nullptr;
     std::string                   m_title;
     AvgFrameTimeStopWatch         m_stop_watch;
@@ -140,8 +196,6 @@ struct Window
         }
     }
 
-    MAKE_NONCOPYABLE(Window);
-
     HWND
     get_hwnd() const
     {
@@ -162,10 +216,83 @@ struct Window
         return glfwWindowShouldClose(m_glfw_window);
     }
 
+    template <int GlfwKey>
+    void
+    update_key(KeyEvent<GlfwKey> * key_event) const
+    {
+        const bool is_press       = glfwGetKey(m_glfw_window, GlfwKey) == GLFW_PRESS;
+        const auto prev_key_event = key_event->m_event;
+        if ((prev_key_event == KeyEventEnum::Release) || (prev_key_event == KeyEventEnum::JustRelease))
+        {
+            if (is_press)
+            {
+                key_event->m_event = KeyEventEnum::JustPress;
+            }
+            else
+            {
+                key_event->m_event = KeyEventEnum::Release;
+            }
+        }
+        else if ((prev_key_event == KeyEventEnum::JustPress) || (prev_key_event == KeyEventEnum::Hold))
+        {
+            if (is_press)
+            {
+                key_event->m_event = KeyEventEnum::Hold;
+            }
+            else
+            {
+                key_event->m_event = KeyEventEnum::JustRelease;
+            }
+        }
+        else
+        {
+            key_event->m_event = KeyEventEnum::Release;
+        }
+    }
+
     void
     update()
     {
         m_stop_watch.tick();
+
+        UPDATE_KEY_EVENT(A);
+        UPDATE_KEY_EVENT(B);
+        UPDATE_KEY_EVENT(C);
+        UPDATE_KEY_EVENT(D);
+        UPDATE_KEY_EVENT(E);
+        UPDATE_KEY_EVENT(F);
+        UPDATE_KEY_EVENT(G);
+        UPDATE_KEY_EVENT(H);
+        UPDATE_KEY_EVENT(I);
+        UPDATE_KEY_EVENT(J);
+        UPDATE_KEY_EVENT(K);
+        UPDATE_KEY_EVENT(L);
+        UPDATE_KEY_EVENT(M);
+        UPDATE_KEY_EVENT(N);
+        UPDATE_KEY_EVENT(O);
+        UPDATE_KEY_EVENT(P);
+        UPDATE_KEY_EVENT(Q);
+        UPDATE_KEY_EVENT(R);
+        UPDATE_KEY_EVENT(S);
+        UPDATE_KEY_EVENT(T);
+        UPDATE_KEY_EVENT(U);
+        UPDATE_KEY_EVENT(V);
+        UPDATE_KEY_EVENT(W);
+        UPDATE_KEY_EVENT(X);
+        UPDATE_KEY_EVENT(Y);
+        UPDATE_KEY_EVENT(Z);
+        UPDATE_KEY_EVENT(0);
+        UPDATE_KEY_EVENT(1);
+        UPDATE_KEY_EVENT(2);
+        UPDATE_KEY_EVENT(3);
+        UPDATE_KEY_EVENT(4);
+        UPDATE_KEY_EVENT(5);
+        UPDATE_KEY_EVENT(6);
+        UPDATE_KEY_EVENT(7);
+        UPDATE_KEY_EVENT(8);
+        UPDATE_KEY_EVENT(9);
+
+
         if (m_stop_watch.m_just_updated)
         {
             std::string title =
