@@ -183,12 +183,6 @@ sample_light(const uint geometry_id, const uint primitive_id, const half2 uv)
 }
 
 float
-sqr(float x)
-{
-    return x * x;
-}
-
-float
 length2(const float3 x)
 {
     return dot(x, x);
@@ -285,7 +279,7 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
         u_textures[material.m_roughness_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).r;
 
     StandardMaterialInfo material_info;
-    material_info.init(float3(1.0f, 1.0f, 1.0f), spec_refl, roughness);
+    material_info.init(float3(1.0f, 1.0f, 1.0f), spec_refl, 0.01f);
 
     const Onb    onb                = Onb_create(vattrib.m_gnormal);
     const float3 local_incident_dir = onb.to_local(-payload.m_inout_dir);
@@ -380,7 +374,7 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
     payload.m_importance *= diff_refl / M_PI;
     payload.m_inout_dir = onb.to_global(local_outgoing_dir);
     payload.m_hit_pos   = vattrib.m_position;
-    payload.m_radiance += nee_contrib + diff_refl * 0.001f;
+    payload.m_radiance += (nee_contrib + diff_refl * 0.001f) * 0.0001f + vattrib.m_position;
 }
 
 SHADER_TYPE("closesthit")
