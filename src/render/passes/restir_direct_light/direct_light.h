@@ -266,7 +266,8 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
     uint64_t rng_inc = payload.m_rng.get_inc(u_params.m_rng_stream_id);
 
     const float3 barycentrics = float3((1.0f - attrib.uv.x - attrib.uv.y), attrib.uv.x, attrib.uv.y);
-    const VertexAttributes vattrib = get_vertex_attributes(GeometryIndex(), PrimitiveIndex(), barycentrics);
+    VertexAttributes vattrib = get_vertex_attributes(GeometryIndex(), PrimitiveIndex(), barycentrics);
+    vattrib.m_position       = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
     // fetch pbr material info
     const uint material_id = u_material_ids.m_ids[GeometryIndex() / 4][GeometryIndex() % 4];
@@ -374,7 +375,7 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
     payload.m_importance *= diff_refl / M_PI;
     payload.m_inout_dir = onb.to_global(local_outgoing_dir);
     payload.m_hit_pos   = vattrib.m_position;
-    payload.m_radiance += (nee_contrib + diff_refl * 0.001f) * 0.0001f + vattrib.m_position;
+    payload.m_radiance += (nee_contrib + diff_refl * 0.001f);
 }
 
 SHADER_TYPE("closesthit")

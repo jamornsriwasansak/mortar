@@ -493,12 +493,11 @@ struct Renderer
                 cmds.bind_vertex_buffer(params.m_asset_pool->m_vertex_buffers[0].m_buffer, sizeof(CompactVertex));
                 cmds.bind_index_buffer(params.m_asset_pool->m_index_buffers[0].m_buffer, Gp::IndexType::Uint32);
                 cmds.draw_instanced(3, 1, 0, 0);
-
             }
             cmds.end_render_pass();
 
             // render imgui onto swapchain
-            // cmds.render_imgui(*ctx.m_imgui_render_pass, ctx.m_image_index);
+            cmds.render_imgui(*ctx.m_imgui_render_pass, ctx.m_image_index);
 
             // transition
             cmds.transition_texture(*ctx.m_swapchain_texture,

@@ -21,25 +21,6 @@ struct ImGuiRenderPass
 
     ImGuiRenderPass() {}
 
-    vk::UniqueImageView
-    create_image_view(const vk::Device device, const vk::Image image, const vk::Format format)
-    {
-        vk::ImageViewCreateInfo image_view_ci;
-        image_view_ci.setImage(image);
-        image_view_ci.setViewType(vk::ImageViewType::e2D);
-        image_view_ci.setFormat(format);
-        image_view_ci.components.setR(vk::ComponentSwizzle::eIdentity);
-        image_view_ci.components.setG(vk::ComponentSwizzle::eIdentity);
-        image_view_ci.components.setB(vk::ComponentSwizzle::eIdentity);
-        image_view_ci.components.setA(vk::ComponentSwizzle::eIdentity);
-        image_view_ci.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
-        image_view_ci.subresourceRange.setBaseMipLevel(0);
-        image_view_ci.subresourceRange.setLevelCount(1);
-        image_view_ci.subresourceRange.setBaseArrayLayer(0);
-        image_view_ci.subresourceRange.setLayerCount(1);
-        return device.createImageViewUnique(image_view_ci);
-    }
-
     ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain, const size_t num_flights)
     {
         m_resolution = swapchain.m_resolution;
@@ -80,24 +61,11 @@ struct ImGuiRenderPass
         info.setPDependencies(&dependency);
         m_vk_render_pass = device->m_vk_ldevice->createRenderPassUnique(info);
 
-        auto swapchain_images = device->m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain);
-        for (uint32_t i = 0; i < swapchain.m_num_images; i++)
+        ImGuiIO & io = ImGui::GetIO();
+
+        if (io.BackendPlatformUserData == NULL)
         {
-            vk::ImageView       image_views[1];
-            vk::UniqueImageView image_view =
-                create_image_view(device->m_vk_ldevice.get(), swapchain_images[i], swapchain.m_vk_format);
-            image_views[0] = image_view.get();
-
-            vk::FramebufferCreateInfo framebuffer_ci = {};
-            framebuffer_ci.setRenderPass(m_vk_render_pass.get());
-            framebuffer_ci.setAttachmentCount(1);
-            framebuffer_ci.setPAttachments(&(image_views[0]));
-            framebuffer_ci.width  = m_resolution.x;
-            framebuffer_ci.height = m_resolution.y;
-            framebuffer_ci.layers = 1;
-
-            m_vk_framebuffers.push_back(device->m_vk_ldevice->createFramebufferUnique(framebuffer_ci));
-            m_vk_image_views.push_back(std::move(image_view));
+            ImGui_ImplGlfw_InitForVulkan(window.m_glfw_window, true);
         }
 
         // create descriptor pool
@@ -117,7 +85,6 @@ struct ImGuiRenderPass
         pool_ci.setMaxSets(100);
         m_descriptor_pool = device->m_vk_ldevice->createDescriptorPoolUnique(pool_ci);
 
-        ImGui_ImplGlfw_InitForVulkan(window.m_glfw_window, true);
         ImGui_ImplVulkan_InitInfo init_info = {};
         init_info.Instance                  = device->m_vk_instance;
         init_info.PhysicalDevice            = device->m_vk_pdevice;
@@ -134,6 +101,53 @@ struct ImGuiRenderPass
 
         device->one_time_command_submit(
             [&](vk::CommandBuffer cmd_buf) { ImGui_ImplVulkan_CreateFontsTexture(cmd_buf); });
+
+        init_or_resize_framebuffer(device, swapchain);
+    }
+
+    vk::UniqueImageView
+    create_image_view(const vk::Device device, const vk::Image image, const vk::Format format)
+    {
+        vk::ImageViewCreateInfo image_view_ci;
+        image_view_ci.setImage(image);
+        image_view_ci.setViewType(vk::ImageViewType::e2D);
+        image_view_ci.setFormat(format);
+        image_view_ci.components.setR(vk::ComponentSwizzle::eIdentity);
+        image_view_ci.components.setG(vk::ComponentSwizzle::eIdentity);
+        image_view_ci.components.setB(vk::ComponentSwizzle::eIdentity);
+        image_view_ci.components.setA(vk::ComponentSwizzle::eIdentity);
+        image_view_ci.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
+        image_view_ci.subresourceRange.setBaseMipLevel(0);
+        image_view_ci.subresourceRange.setLevelCount(1);
+        image_view_ci.subresourceRange.setBaseArrayLayer(0);
+        image_view_ci.subresourceRange.setLayerCount(1);
+        return device.createImageViewUnique(image_view_ci);
+    }
+
+    void
+    init_or_resize_framebuffer(const Device * device, const Swapchain & swapchain)
+    {
+        auto swapchain_images = device->m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain);
+        m_vk_framebuffers.clear();
+        m_vk_image_views.clear();
+        for (uint32_t i = 0; i < swapchain.m_num_images; i++)
+        {
+            vk::ImageView       image_views[1];
+            vk::UniqueImageView image_view =
+                create_image_view(device->m_vk_ldevice.get(), swapchain_images[i], swapchain.m_vk_format);
+            image_views[0] = image_view.get();
+
+            vk::FramebufferCreateInfo framebuffer_ci = {};
+            framebuffer_ci.setRenderPass(m_vk_render_pass.get());
+            framebuffer_ci.setAttachmentCount(1);
+            framebuffer_ci.setPAttachments(&(image_views[0]));
+            framebuffer_ci.width  = m_resolution.x;
+            framebuffer_ci.height = m_resolution.y;
+            framebuffer_ci.layers = 1;
+
+            m_vk_framebuffers.push_back(device->m_vk_ldevice->createFramebufferUnique(framebuffer_ci));
+            m_vk_image_views.push_back(std::move(image_view));
+        }
     }
 
     void

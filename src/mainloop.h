@@ -124,8 +124,6 @@ struct MainLoop
                                       float4(0.0f, 0.0f, 0.0f, 0.0f),
                                       "dummy_texture");
 
-        m_asset_browser.init();
-
         // setup dear imgui
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -135,19 +133,29 @@ struct MainLoop
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto/Roboto-Medium.ttf", 15);
         m_imgui_render_pass = Gp::ImGuiRenderPass(m_device, *m_window, m_swapchain, m_num_flights);
+
+        m_asset_browser.init();
     }
 
     void
     loop(const size_t i_flight)
     {
         GlfwHandler::Inst().poll_events();
+
+        int2 current_resolution = m_window->get_resolution();
+        if (current_resolution.y == 0)
+        {
+            return;
+        }
+
         m_camera.update(m_window, std::min(m_window->m_stop_watch.m_average_frame_time * 0.01f, 1.0f));
 
         // wait for resource in this flight to be ready
         m_flight_fences[i_flight].wait();
 
         bool reload_shader = false;
-        if (m_window->m_R.m_event == KeyEventEnum::JustPress)
+        if (m_window->m_R.m_event == KeyEventEnum::JustPress &&
+            m_window->m_LEFT_CONTROL.m_event == KeyEventEnum::Hold)
         {
             reload_shader = true;
             for (size_t i = 0; i < m_num_flights; i++)
@@ -202,6 +210,7 @@ struct MainLoop
             }
 
             init_or_resize_swapchain();
+            m_imgui_render_pass.init_or_resize_framebuffer(m_device, m_swapchain);
             m_renderer.init_or_resize_resolution(m_device, m_window->get_resolution(), m_swapchain_textures);
             m_renderer.init_shaders(m_device, false);
         }

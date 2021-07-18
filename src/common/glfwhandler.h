@@ -132,6 +132,7 @@ struct Window
     DECL_KEY_EVENT(7);
     DECL_KEY_EVENT(8);
     DECL_KEY_EVENT(9);
+    DECL_KEY_EVENT(LEFT_CONTROL);
 
     GLFWwindow *                  m_glfw_window = nullptr;
     std::string                   m_title;
@@ -291,7 +292,7 @@ struct Window
         UPDATE_KEY_EVENT(7);
         UPDATE_KEY_EVENT(8);
         UPDATE_KEY_EVENT(9);
-
+        UPDATE_KEY_EVENT(LEFT_CONTROL);
 
         if (m_stop_watch.m_just_updated)
         {
