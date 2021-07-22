@@ -195,11 +195,18 @@ struct MainLoop
         render_params.m_is_static_mesh_dirty = false;
         render_params.m_fps_camera           = &m_camera;
         render_params.m_is_shaders_dirty     = reload_shader;
+        render_params.m_should_imgui_drawn   = false;
 
-        m_imgui_render_pass.new_frame();
-        m_asset_browser.loop();
+        if (render_params.m_should_imgui_drawn)
+        {
+            m_imgui_render_pass.new_frame();
+        }
+        // m_asset_browser.loop();
         m_renderer.loop(ctx, render_params);
-        m_imgui_render_pass.end_frame();
+        if (render_params.m_should_imgui_drawn)
+        {
+            m_imgui_render_pass.end_frame();
+        }
 
         if (!m_swapchain.present(&m_image_presentable_semaphore[i_flight]))
         {
@@ -229,7 +236,7 @@ struct MainLoop
         int white_tex_id =
             m_asset_pool.add_constant_texture(std::array<uint8_t, 4>{ static_cast<uint8_t>(255),
                                                                       static_cast<uint8_t>(255),
-                                                                      static_cast<uint8_t>(200),
+                                                                      static_cast<uint8_t>(255),
                                                                       static_cast<uint8_t>(255) });
 
         StandardEmissive standard_emissive;

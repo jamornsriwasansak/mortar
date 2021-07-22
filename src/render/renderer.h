@@ -15,6 +15,7 @@ struct RenderParams
     std::vector<StandardObject> * m_static_objects;
     bool                          m_is_static_mesh_dirty = true;
     bool                          m_is_shaders_dirty     = false;
+    bool                          m_should_imgui_drawn   = true;
 };
 
 struct Renderer
@@ -497,7 +498,10 @@ struct Renderer
             cmds.end_render_pass();
 
             // render imgui onto swapchain
-            cmds.render_imgui(*ctx.m_imgui_render_pass, ctx.m_image_index);
+            if (params.m_should_imgui_drawn)
+            {
+                cmds.render_imgui(*ctx.m_imgui_render_pass, ctx.m_image_index);
+            }
 
             // transition
             cmds.transition_texture(*ctx.m_swapchain_texture,
