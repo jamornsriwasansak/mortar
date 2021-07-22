@@ -240,6 +240,8 @@ struct AssetPool
                         const bool                    load_as_a_single_mesh = false,
                         const bool                    load_material         = true)
     {
+        StopWatch sw;
+        sw.reset();
         // load scene into assimp
         Assimp::Importer importer;
         const aiScene *  scene =
@@ -250,6 +252,13 @@ struct AssetPool
         {
             Logger::Error<true>(__FUNCTION__ " cannot import mesh from path ", path.string());
         }
+        Logger::Info(__FUNCTION__,
+                     " assimp loaded : ",
+                     path.string(),
+                     ", elapse : ",
+                     sw.time_milli_sec(),
+                     "ms");
+        sw.reset();
 
         // load all materials
         std::vector<size_t> standard_material_id_from_ai_material(scene->mNumMaterials);
@@ -285,6 +294,13 @@ struct AssetPool
             }
             result.push_back(object);
         }
+
+        Logger::Info(__FUNCTION__,
+                     " repacking data from : ",
+                     path.string(),
+                     ", elapse : ",
+                     sw.time_milli_sec(),
+                     "ms");
 
         return result;
     }
