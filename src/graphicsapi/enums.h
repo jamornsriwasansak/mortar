@@ -391,3 +391,24 @@ struct EnumHelper
         }
     }
 };
+
+
+namespace Dxa
+{
+enum class CommandQueueType : uint8_t
+{
+    Graphics = D3D12_COMMAND_LIST_TYPE_DIRECT,
+    Compute  = D3D12_COMMAND_LIST_TYPE_COMPUTE,
+    Transfer = D3D12_COMMAND_LIST_TYPE_COPY
+};
+}
+
+namespace Vka
+{
+enum class CommandQueueType : uint8_t
+{
+    Graphics = VK_QUEUE_GRAPHICS_BIT,
+    Compute  = VK_QUEUE_COMPUTE_BIT,
+    Transfer = VK_QUEUE_TRANSFER_BIT
+};
+}

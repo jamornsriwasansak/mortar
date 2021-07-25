@@ -4,40 +4,11 @@
 #include "render/common/compact_vertex.h"
 #include "render/common/standard_emissive_ref.h"
 #include "render/common/standard_material_ref.h"
+#include "scene.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <stb_image.h>
-
-struct StandardMesh
-{
-    size_t m_vertex_buffer_id;
-    size_t m_index_buffer_id;
-    size_t m_vertex_buffer_offset;
-    size_t m_index_buffer_offset;
-    size_t m_num_vertices;
-    size_t m_num_indices;
-};
-
-struct StandardObject
-{
-    int m_mesh_id     = -1;
-    int m_material_id = -1;
-    int m_emissive_id = -1;
-};
-
-struct VertexBuffer
-{
-    Gp::Buffer m_buffer;
-    size_t     m_num_vertices;
-};
-
-struct IndexBuffer
-{
-    Gp::Buffer    m_buffer;
-    size_t        m_num_indices;
-    Gp::IndexType m_type;
-};
 
 struct AssetPool
 {
@@ -47,6 +18,9 @@ struct AssetPool
         SpecularReflectance,
         SpecularRoughness
     };
+
+    using VertexBuffer = SharedVertexBuffer;
+    using IndexBuffer  = SharedIndexBuffer;
 
     // pool
     std::vector<VertexBuffer>               m_vertex_buffers;
@@ -134,8 +108,6 @@ struct AssetPool
             }
         }
 
-        m_staging_buffer_manager->submit_all_pending_upload();
-
         VertexBuffer vb;
         vb.m_buffer       = Gp::Buffer(m_device,
                                  Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer,
@@ -156,6 +128,8 @@ struct AssetPool
                                  "indexbuffer:" + path.string());
         ib.m_num_indices = indices.size();
         ib.m_type        = Gp::IndexType::Uint32;
+
+        m_staging_buffer_manager->submit_all_pending_upload();
 
         m_vertex_buffers.push_back(std::move(vb));
         m_index_buffers.push_back(std::move(ib));

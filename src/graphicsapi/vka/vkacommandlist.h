@@ -13,6 +13,34 @@
 
 namespace Vka
 {
+
+struct BufferCopyInfo
+{
+    vk::BufferCopy vk_copy_region;
+
+    BufferCopyInfo() {}
+
+    void
+    set_size(const size_t size)
+    {
+        vk_copy_region.setSize(size);
+    }
+
+    void
+    set_src_offset(const size_t src_offset)
+    {
+        vk_copy_region.setSrcOffset(src_offset);
+    }
+
+    void
+    set_dst_offset(const size_t dst_offset)
+    {
+        vk_copy_region.setDstOffset(dst_offset);
+    }
+};
+static_assert(sizeof(vk::BufferCopy) == sizeof(BufferCopyInfo),
+              "sizeof(vk::BufferCopy) == sizeof(BufferCopyInfo)");
+
 struct CommandList
 {
     vk::Queue         m_vk_queue          = {};
@@ -210,7 +238,15 @@ struct CommandList
         }
         submit_info.setPCommandBuffers(&m_vk_command_buffer);
         submit_info.setCommandBufferCount(1);
-        m_vk_queue.submit({ submit_info }, fence->m_vk_fence.get());
+
+        if (fence)
+        {
+            m_vk_queue.submit({ submit_info }, fence->m_vk_fence.get());
+        }
+        else
+        {
+            m_vk_queue.submit({ submit_info });
+        }
     }
 
     void
@@ -260,6 +296,38 @@ struct CommandList
                                          width,
                                          height,
                                          depth);
+    }
+
+    void
+    update_buffer_subresources(const Buffer &    dst_buffer,
+                               const size_t      dst_offset,
+                               const std::byte * src_data,
+                               const size_t      src_data_size,
+                               const Buffer &    staging_buffer)
+    {
+        // map data
+        void * mapped_stage = staging_buffer.m_vma_buffer_bundle->m_vma_alloc_info.pMappedData;
+        if (mapped_stage == nullptr)
+        {
+            VkResult result = vmaMapMemory(staging_buffer.m_vma_buffer_bundle->m_vma_allocator,
+                                           staging_buffer.m_vma_buffer_bundle->m_vma_allocation,
+                                           &mapped_stage);
+            assert(result == VK_SUCCESS);
+        }
+        assert(mapped_stage != nullptr);
+
+        // copy
+        std::memcpy(mapped_stage, src_data, src_data_size);
+        vmaUnmapMemory(staging_buffer.m_vma_buffer_bundle->m_vma_allocator,
+                       staging_buffer.m_vma_buffer_bundle->m_vma_allocation);
+
+        vk::BufferCopy copy_region = {};
+        copy_region.setSize(src_data_size);
+        copy_region.setSrcOffset(0);
+        copy_region.setDstOffset(dst_offset);
+        m_vk_command_buffer.copyBuffer(staging_buffer.m_vma_buffer_bundle->m_vk_buffer,
+                                       dst_buffer.m_vma_buffer_bundle->m_vk_buffer,
+                                       { copy_region });
     }
 };
 } // namespace Vka

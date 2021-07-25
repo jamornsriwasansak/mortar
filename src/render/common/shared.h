@@ -31,4 +31,8 @@
 #define SHADER_TYPE(name) [shader(name)]
 #endif 
 
+#ifdef __cplusplus
+#else
+#endif
+
 #endif //SHAREDCOMMON_H

@@ -6,11 +6,13 @@
 #include "passes/restir_direct_light/direct_light_params.h"
 #include "passes/restir_direct_light/reservior.h"
 #include "rendercontext.h"
+#include "scene.h"
 
 struct RenderParams
 {
     int2                          m_resolution = { 0, 0 };
     AssetPool *                   m_asset_pool = nullptr;
+    Scene *                       m_scene      = nullptr;
     FpsCamera *                   m_fps_camera = nullptr;
     std::vector<StandardObject> * m_static_objects;
     bool                          m_is_static_mesh_dirty = true;
@@ -30,6 +32,9 @@ struct Renderer
     std::array<Gp::Texture, 2>           m_rt_results;
     std::array<Gp::Buffer, 2>            m_prev_frame_reserviors;
     Gp::Sampler                          m_sampler;
+
+    using IndexBuffer  = SharedIndexBuffer;
+    using VertexBuffer = SharedVertexBuffer;
 
     Gp::Buffer m_cb_camera_params;
     Gp::Buffer m_cb_directlight_params;

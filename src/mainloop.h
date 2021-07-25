@@ -17,7 +17,9 @@ struct MainLoop
     Gp::Swapchain                   m_swapchain;
     std::vector<Gp::Texture>        m_swapchain_textures;
     std::vector<Gp::Fence>          m_flight_fences;
-    std::vector<Gp::CommandPool>    m_graphics_command_pool;
+    std::vector<Gp::CommandPool>    m_graphics_command_pools;
+    std::vector<Gp::CommandPool>    m_compute_command_pools;
+    std::vector<Gp::CommandPool>    m_transfer_command_pools;
     std::vector<Gp::DescriptorPool> m_descriptor_pools;
     std::vector<Gp::Semaphore>      m_image_ready_semaphores;
     std::vector<Gp::Semaphore>      m_image_presentable_semaphore;
@@ -25,10 +27,12 @@ struct MainLoop
     size_t                          m_num_flights      = 0;
 
     Gp::StagingBufferManager m_staging_buffer_manager;
-    AssetPool                m_asset_pool;
-    FpsCamera                m_camera;
-    Renderer                 m_renderer;
-    int2                     m_swapchain_resolution = int2(0, 0);
+    // TODO:: replace asset pool completely with scene
+    AssetPool m_asset_pool;
+    Scene     m_scene;
+    FpsCamera m_camera;
+    Renderer  m_renderer;
+    int2      m_swapchain_resolution = int2(0, 0);
 
     std::vector<StandardObject> m_static_objects;
 
@@ -50,6 +54,7 @@ struct MainLoop
                              float3(0, 1, 0),
                              radians(60.0f),
                              float(resolution.x) / float(resolution.y));
+        m_scene               = Scene(*device);
     }
 
     void
@@ -86,15 +91,19 @@ struct MainLoop
         }
 
         // create command pool and descriptor pool
-        m_graphics_command_pool.resize(m_num_flights);
+        m_graphics_command_pools.resize(m_num_flights);
+        m_compute_command_pools.resize(m_num_flights);
+        m_transfer_command_pools.resize(m_num_flights);
         m_descriptor_pools.resize(m_num_flights);
         m_image_ready_semaphores.resize(m_num_flights);
         m_image_presentable_semaphore.resize(m_num_flights);
         for (size_t i = 0; i < m_num_flights; i++)
         {
-            m_graphics_command_pool[i]       = Gp::CommandPool(m_device);
-            m_descriptor_pools[i]            = Gp::DescriptorPool(m_device);
-            m_image_ready_semaphores[i]      = Gp::Semaphore(m_device);
+            m_graphics_command_pools[i] = Gp::CommandPool(m_device, Gp::CommandQueueType::Graphics);
+            m_compute_command_pools[i]  = Gp::CommandPool(m_device, Gp::CommandQueueType::Compute);
+            m_transfer_command_pools[i] = Gp::CommandPool(m_device, Gp::CommandQueueType::Transfer);
+            m_descriptor_pools[i]       = Gp::DescriptorPool(m_device);
+            m_image_ready_semaphores[i] = Gp::Semaphore(m_device);
             m_image_presentable_semaphore[i] = Gp::Semaphore(m_device);
         }
 
@@ -166,7 +175,7 @@ struct MainLoop
 
         // reset all resource
         m_flight_fences[i_flight].reset();
-        m_graphics_command_pool[i_flight].reset();
+        m_graphics_command_pools[i_flight].reset();
         m_descriptor_pools[i_flight].reset();
 
         // update image index
@@ -175,7 +184,7 @@ struct MainLoop
         // setup context
         RenderContext ctx;
         ctx.m_device                      = m_device;
-        ctx.m_graphics_command_pool       = &m_graphics_command_pool[i_flight];
+        ctx.m_graphics_command_pool       = &m_graphics_command_pools[i_flight];
         ctx.m_descriptor_pool             = &m_descriptor_pools[i_flight];
         ctx.m_image_ready_semaphore       = &m_image_ready_semaphores[i_flight];
         ctx.m_image_presentable_semaphore = &m_image_presentable_semaphore[i_flight];
@@ -191,6 +200,7 @@ struct MainLoop
         RenderParams render_params;
         render_params.m_resolution           = m_swapchain_resolution;
         render_params.m_asset_pool           = &m_asset_pool;
+        render_params.m_scene                = &m_scene;
         render_params.m_static_objects       = &m_static_objects;
         render_params.m_is_static_mesh_dirty = false;
         render_params.m_fps_camera           = &m_camera;
@@ -248,6 +258,8 @@ struct MainLoop
             m_asset_pool.add_standard_meshes("scenes/cube/cube.obj", false, false);
         box_mesh[0].m_emissive_id = emissive_id;
         m_static_objects.insert(m_static_objects.end(), box_mesh.begin(), box_mesh.end());
+
+        m_scene.add_models("scenes/sponza/sponza.obj", m_staging_buffer_manager);
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");
 

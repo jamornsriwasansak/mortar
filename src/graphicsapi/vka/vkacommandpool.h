@@ -17,11 +17,25 @@ struct CommandPool
 
     CommandPool() {}
 
-    CommandPool(const Device * device) : m_vk_ldevice(device->m_vk_ldevice.get())
+    CommandPool(const Device * device, const CommandQueueType command_queue_type)
+    : m_vk_ldevice(device->m_vk_ldevice.get())
     {
-        // TODO:: support other type of queue
         vk::CommandPoolCreateInfo command_pool_ci;
-        command_pool_ci.setQueueFamilyIndex(device->m_family_indices.m_graphics);
+        switch (command_queue_type)
+        {
+        case CommandQueueType::Graphics:
+            command_pool_ci.setQueueFamilyIndex(device->m_family_indices.m_graphics);
+            break;
+        case CommandQueueType::Compute:
+            command_pool_ci.setQueueFamilyIndex(device->m_family_indices.m_compute);
+            break;
+        case CommandQueueType::Transfer:
+            command_pool_ci.setQueueFamilyIndex(device->m_family_indices.m_transfer);
+            break;
+        default:
+            Logger::Critical<true>(__FUNCTION__, " reach end switch case for command_queue_type");
+            break;
+        }
         m_vk_cmd_pool = device->m_vk_ldevice->createCommandPoolUnique(command_pool_ci);
         m_vk_queue    = device->m_vk_graphics_queue;
     }
