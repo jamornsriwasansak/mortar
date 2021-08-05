@@ -91,7 +91,7 @@ struct Scene
 
     Scene(const Gp::Device & device)
     {
-        m_graphics_pool = Gp::CommandPool(&device, Gp::CommandQueueType::Graphics);
+        m_graphics_pool = Gp::CommandPool(&device, Gp::CommandQueueType::Transfer);
     }
 
     void

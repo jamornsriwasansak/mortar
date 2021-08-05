@@ -12,7 +12,7 @@ struct Fence
 
     Fence() {}
 
-    Fence(Device *                                               device,
+    Fence(const Device *                                         device,
           /*TODO:: const bool is_signaled,*/ const std::string & name = "")
     : m_vk_ldevice(device->m_vk_ldevice.get())
     {

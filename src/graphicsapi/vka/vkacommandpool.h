@@ -25,19 +25,21 @@ struct CommandPool
         {
         case CommandQueueType::Graphics:
             command_pool_ci.setQueueFamilyIndex(device->m_family_indices.m_graphics);
+            m_vk_queue = device->m_vk_graphics_queue;
             break;
         case CommandQueueType::Compute:
             command_pool_ci.setQueueFamilyIndex(device->m_family_indices.m_compute);
+            m_vk_queue = device->m_vk_compute_queue;
             break;
         case CommandQueueType::Transfer:
             command_pool_ci.setQueueFamilyIndex(device->m_family_indices.m_transfer);
+            m_vk_queue = device->m_vk_transfer_queue;
             break;
         default:
             Logger::Critical<true>(__FUNCTION__, " reach end switch case for command_queue_type");
             break;
         }
         m_vk_cmd_pool = device->m_vk_ldevice->createCommandPoolUnique(command_pool_ci);
-        m_vk_queue    = device->m_vk_graphics_queue;
     }
 
     CommandList
