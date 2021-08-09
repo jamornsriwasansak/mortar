@@ -306,7 +306,23 @@ enum class IndexType : uint8_t
     Uint16 = DXGI_FORMAT_R16_UINT,
     Uint32 = DXGI_FORMAT_R32_UINT
 };
+
+inline size_t
+GetSizeInBytes(IndexType it)
+{
+    switch (it)
+    {
+    case IndexType::Uint8:
+        return sizeof(uint8_t);
+    case IndexType::Uint16:
+        return sizeof(uint16_t);
+    case IndexType::Uint32:
+        return sizeof(uint32_t);
+    default:
+        return 0;
+    }
 }
+} // namespace Dxa
 
 namespace Vka
 {
@@ -317,7 +333,23 @@ enum class IndexType : uint32_t
     Uint16 = VK_INDEX_TYPE_UINT16,
     Uint32 = VK_INDEX_TYPE_UINT32
 };
+
+inline size_t
+GetSizeInBytes(IndexType it)
+{
+    switch (it)
+    {
+    case IndexType::Uint8:
+        return sizeof(uint8_t);
+    case IndexType::Uint16:
+        return sizeof(uint16_t);
+    case IndexType::Uint32:
+        return sizeof(uint32_t);
+    default:
+        return 0;
+    }
 }
+} // namespace Vka
 
 /*
  * Ray Tracing Accel

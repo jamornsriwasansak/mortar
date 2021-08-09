@@ -199,7 +199,6 @@ struct Renderer
                 desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
                 desc.set_index_buffer(index_buffer.m_buffer,
                                       mesh.m_num_indices,
-                                      sizeof(uint32_t),
                                       index_buffer.m_type,
                                       mesh.m_index_buffer_offset);
                 desc.set_vertex_buffer(vertex_buffer.m_buffer,
@@ -225,7 +224,6 @@ struct Renderer
                 desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
                 desc.set_index_buffer(index_buffer.m_buffer,
                                       mesh.m_num_indices,
-                                      sizeof(uint32_t),
                                       index_buffer.m_type,
                                       mesh.m_index_buffer_offset);
                 desc.set_vertex_buffer(vertex_buffer.m_buffer,

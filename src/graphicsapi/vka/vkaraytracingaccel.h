@@ -32,10 +32,10 @@ struct RayTracingGeometryDesc
     RayTracingGeometryDesc &
     set_index_buffer(const Buffer &  buffer,
                      const size_t    num_indices,
-                     const size_t    stride_in_bytes,
                      const IndexType index_type,
                      const size_t    starting_index = 0)
     {
+        const size_t stride_in_bytes = GetSizeInBytes(index_type);
         m_geometry_trimesh_desc.setIndexData(buffer.m_device_address + starting_index * stride_in_bytes);
         m_geometry_trimesh_desc.setIndexType(vk::IndexType(index_type));
 
@@ -64,7 +64,7 @@ struct RayTracingBlas
     RayTracingBlas(const Device *                 device,
                    const RayTracingGeometryDesc * geometry_descs,
                    const size_t                   num_geometries,
-                   StagingBufferManager *         buf_manager,
+                   StagingBufferManager *         buf_manager, // TODO:: get rid of staging buffer manager
                    const std::string &            name = "")
     {
         std::vector<vk::AccelerationStructureGeometryDataKHR>   tri_geometry_datas(num_geometries);
@@ -130,6 +130,8 @@ struct RayTracingBlas
 
         buf_manager->m_vk_command_buffer.buildAccelerationStructuresKHR({ build_info },
                                                                         { build_ranges.data() });
+
+        // TODO:: do compaction if Flag is ePreferFastTrace
     }
 };
 

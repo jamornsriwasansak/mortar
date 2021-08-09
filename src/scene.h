@@ -58,53 +58,76 @@ struct SharedModel
     size_t m_ref_count            = -1;
 };
 
-struct Model
+struct Geometry
 {
-    uint32_t           m_vbuf_offset  = 0;
-    uint32_t           m_ibuf_offset  = 0;
-    uint32_t           m_num_vertices = 0;
-    uint32_t           m_num_indices  = 0;
-    Gp::RayTracingBlas m_rt_blas      = {};
+    uint32_t m_vbuf_offset  = 0;
+    uint32_t m_ibuf_offset  = 0;
+    uint32_t m_num_vertices = 0;
+    uint32_t m_num_indices  = 0;
+    bool     m_is_static    = true;
 };
 
 struct Scene
 {
     FpsCamera m_camera;
 
-    Gp::Buffer m_g_vbuf_position;
-    Gp::Buffer m_g_vbuf_compact_info;
-    Gp::Buffer m_g_ibuf;
+    const Gp::Device * m_device = nullptr;
+    Gp::Buffer         m_g_vbuf_position;
+    Gp::Buffer         m_g_vbuf_compact_info;
+    Gp::Buffer         m_g_ibuf;
+    Gp::IndexType      m_g_ibuf_index_type = Gp::IndexType::Uint16;
 
-    // TODO:: remove the pointer and work on vbuf & ibuf mem manager
-    // size_t m_g_vbuf_pointer;
-    // size_t m_g_ibuf_pointer;
-    size_t m_g_vbuf_max_vertices = 0;
-    size_t m_g_ibuf_max_indices  = 0;
+    size_t m_g_vbuf_num_vertices = 0;
+    size_t m_g_ibuf_num_indices  = 0;
+    size_t m_g_num_meshes        = 0;
 
     std::array<SharedTexture, EngineSetting::MaxNumBindlessTextures>     m_textures;
     std::array<StandardMaterial, EngineSetting::MaxNumStandardMaterials> m_materials;
-    std::array<Model, EngineSetting::MaxNumModels>                       m_models;
+    std::array<Geometry, EngineSetting::MaxNumGeometries>                m_geometries;
+    Gp::RayTracingBlas                                                   m_rt_static_meshes_blas;
 
     Gp::CommandPool m_graphics_pool;
 
     Scene() {}
 
-    Scene(const Gp::Device & device)
+    Scene(const Gp::Device & device) : m_device(&device)
     {
-        m_graphics_pool = Gp::CommandPool(&device, Gp::CommandQueueType::Transfer);
+        m_graphics_pool       = Gp::CommandPool(&device, Gp::CommandQueueType::Transfer);
+        m_g_vbuf_position     = Gp::Buffer(m_device,
+                                       Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer |
+                                           Gp::BufferUsageEnum::TransferDst,
+                                       Gp::MemoryUsageEnum::GpuOnly,
+                                       sizeof(float3) * EngineSetting::MaxNumVertices,
+                                       nullptr,
+                                       nullptr,
+                                       "scene_m_g_vbuf_position");
+        m_g_vbuf_compact_info = Gp::Buffer(m_device,
+                                           Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer |
+                                               Gp::BufferUsageEnum::TransferDst,
+                                           Gp::MemoryUsageEnum::GpuOnly,
+                                           sizeof(CompactVertex) * EngineSetting::MaxNumVertices,
+                                           nullptr,
+                                           nullptr,
+                                           "scene_m_g_vbuf_compact_info");
+        m_g_ibuf              = Gp::Buffer(m_device,
+                              Gp::BufferUsageEnum::IndexBuffer | Gp::BufferUsageEnum::StorageBuffer |
+                                  Gp::BufferUsageEnum::TransferDst,
+                              Gp::MemoryUsageEnum::GpuOnly,
+                              Gp::GetSizeInBytes(m_g_ibuf_index_type) * EngineSetting::MaxNumIndices,
+                              nullptr,
+                              nullptr,
+                              "scene_m_g_ibuf");
     }
 
     void
     add_models(const std::filesystem::path & path, Gp::StagingBufferManager & staging_buffer_manager)
     {
-        assert(m_g_vbuf_max_vertices == 0);
-        assert(m_g_ibuf_max_indices == 0);
-
         Assimp::Importer importer;
         const aiScene *  scene =
             importer.ReadFile(path.string(),
                               aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
                                   aiProcess_JoinIdenticalVertices | aiProcess_RemoveRedundantMaterials);
+
         set_gbuf_with_assimp_scene(scene, staging_buffer_manager, path.string());
     }
 
@@ -207,6 +230,46 @@ struct Scene
         return -1;
     }
 
+    void
+    build_static_models_blas(Gp::StagingBufferManager & staging_buffer_manager)
+    {
+        // count number of static models
+        size_t num_static_geoms = 0;
+        for (size_t i_geom = 0; i_geom < m_geometries.size(); i_geom++)
+        {
+            if (m_geometries[i_geom].m_num_indices > 0 && m_geometries[i_geom].m_is_static)
+            {
+                num_static_geoms += 1;
+            }
+        }
+
+        // create vector of description
+        std::vector<Gp::RayTracingGeometryDesc> static_mesh_descs(num_static_geoms);
+        for (size_t i_model = 0, i_static_mesh = 0; i_model < m_geometries.size(); i_model++)
+        {
+            const Geometry & model = m_geometries[i_model];
+            if (model.m_num_indices > 0 && model.m_is_static)
+            {
+                Gp::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
+                geom_desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
+                geom_desc.set_index_buffer(m_g_ibuf, model.m_num_indices, m_g_ibuf_index_type, model.m_ibuf_offset);
+                geom_desc.set_vertex_buffer(m_g_vbuf_position,
+                                            model.m_num_vertices,
+                                            sizeof(float3),
+                                            Gp::FormatEnum::R32G32B32_SFloat,
+                                            model.m_vbuf_offset);
+            }
+        }
+
+        // build blas
+        m_rt_static_meshes_blas = Gp::RayTracingBlas(m_device,
+                                                     static_mesh_descs.data(),
+                                                     static_mesh_descs.size(),
+                                                     &staging_buffer_manager,
+                                                     "global_blas");
+        staging_buffer_manager.submit_all_pending_upload();
+    }
+
 private:
     void
     set_gbuf_with_assimp_scene(const aiScene *            scene,
@@ -280,51 +343,35 @@ private:
             index_buffer_offset  = round_up(index_buffer_offset, 32);
         }
 
-        m_g_vbuf_position     = Gp::Buffer(staging_buffer_manager.m_device,
-                                       Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer |
-                                           Gp::BufferUsageEnum::TransferDst,
-                                       Gp::MemoryUsageEnum::GpuOnly,
-                                       vb_positions.size() * sizeof(vb_positions[0]),
-                                       nullptr,
-                                       nullptr,
-                                       "vertexbuffer_" + name);
-        m_g_vbuf_compact_info = Gp::Buffer(staging_buffer_manager.m_device,
-                                           Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer |
-                                               Gp::BufferUsageEnum::TransferDst,
-                                           Gp::MemoryUsageEnum::GpuOnly,
-                                           vb_compact_info.size() * sizeof(vb_compact_info[0]),
-                                           nullptr,
-                                           nullptr,
-                                           "vertexbuffer_" + name);
-        m_g_ibuf              = Gp::Buffer(staging_buffer_manager.m_device,
-                              Gp::BufferUsageEnum::IndexBuffer | Gp::BufferUsageEnum::StorageBuffer |
-                                  Gp::BufferUsageEnum::TransferDst,
-                              Gp::MemoryUsageEnum::GpuOnly,
-                              ib.size() * sizeof(ib[0]),
-                              nullptr,
-                              nullptr,
-                              "indexbuffer_" + name);
+        Gp::CommandList cmd_list = m_graphics_pool.get_command_list();
 
+        Gp::Fence tmp_fence(staging_buffer_manager.m_device);
+        tmp_fence.reset();
         Gp::Buffer staging_buffer(staging_buffer_manager.m_device,
                                   Gp::BufferUsageEnum::TransferSrc,
                                   Gp::MemoryUsageEnum::CpuOnly,
                                   vb_positions.size() * sizeof(vb_positions[0]));
-
-        Gp::CommandList cmd_list = m_graphics_pool.get_command_list();
+        Gp::Buffer staging_buffer2(staging_buffer_manager.m_device,
+                                   Gp::BufferUsageEnum::TransferSrc,
+                                   Gp::MemoryUsageEnum::CpuOnly,
+                                   ib.size() * sizeof(ib[0]));
         cmd_list.begin();
         cmd_list.update_buffer_subresources(m_g_vbuf_position,
-                                            0,
+                                            m_g_vbuf_num_vertices * sizeof(float3),
                                             reinterpret_cast<std::byte *>(vb_positions.data()),
                                             vb_positions.size() * sizeof(vb_positions[0]),
                                             staging_buffer);
+        cmd_list.update_buffer_subresources(m_g_ibuf,
+                                            m_g_ibuf_num_indices * Gp::GetSizeInBytes(m_g_ibuf_index_type),
+                                            reinterpret_cast<std::byte *>(ib.data()),
+                                            ib.size() * sizeof(ib[0]),
+                                            staging_buffer2);
         cmd_list.end();
-        cmd_list.submit(nullptr);
+        cmd_list.submit(&tmp_fence);
+        tmp_fence.wait();
 
-        m_g_vbuf_max_vertices = total_num_vertices;
-        m_g_ibuf_max_indices  = total_num_indices;
-
-        vertex_buffer_offset = 0;
-        index_buffer_offset  = 0;
+        vertex_buffer_offset = m_g_vbuf_num_vertices;
+        index_buffer_offset  = m_g_ibuf_num_indices;
         for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
         {
             // all information
@@ -332,16 +379,21 @@ private:
             const uint32_t num_vertices = static_cast<uint32_t>(aimesh->mNumVertices);
             const uint32_t num_faces    = static_cast<uint32_t>(aimesh->mNumFaces);
 
-            Model & model        = m_models[i_mesh];
+            Geometry & model     = m_geometries[m_g_num_meshes + i_mesh];
             model.m_vbuf_offset  = vertex_buffer_offset;
             model.m_ibuf_offset  = index_buffer_offset;
             model.m_num_indices  = num_faces * 3;
             model.m_num_vertices = num_vertices;
+            model.m_is_static    = true;
 
             vertex_buffer_offset += aimesh->mNumVertices;
             index_buffer_offset += aimesh->mNumFaces * 3;
             vertex_buffer_offset = round_up(vertex_buffer_offset, 32);
             index_buffer_offset  = round_up(index_buffer_offset, 32);
         }
+
+        m_g_vbuf_num_vertices += total_num_vertices;
+        m_g_ibuf_num_indices += total_num_indices;
+        m_g_num_meshes += num_meshes;
     }
 };
