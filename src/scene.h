@@ -41,23 +41,6 @@ struct SharedIndexBuffer
     size_t        m_ref_count   = -1;
 };
 
-struct SharedTexture
-{
-    Gp::Texture m_texture;
-    size_t      m_ref_count = -1;
-};
-
-struct SharedModel
-{
-    size_t m_vertex_buffer_id     = -1;
-    size_t m_index_buffer_id      = -1;
-    size_t m_vertex_buffer_offset = 0;
-    size_t m_index_buffer_offset  = 0;
-    size_t m_num_vertices         = 0;
-    size_t m_num_indices          = 0;
-    size_t m_ref_count            = -1;
-};
-
 struct Geometry
 {
     uint32_t m_vbuf_offset  = 0;
@@ -69,6 +52,13 @@ struct Geometry
 
 struct Scene
 {
+    enum class LoadStandardParamEnum
+    {
+        DiffuseReflectance,
+        SpecularReflectance,
+        SpecularRoughness
+    };
+
     FpsCamera m_camera;
 
     const Gp::Device * m_device = nullptr;
@@ -79,12 +69,15 @@ struct Scene
 
     size_t m_g_vbuf_num_vertices = 0;
     size_t m_g_ibuf_num_indices  = 0;
-    size_t m_g_num_meshes        = 0;
 
-    std::array<SharedTexture, EngineSetting::MaxNumBindlessTextures>     m_textures;
+    std::array<Gp::Texture, EngineSetting::MaxNumBindlessTextures>       m_textures;
+    size_t                                                               m_num_textures = 0;
     std::array<StandardMaterial, EngineSetting::MaxNumStandardMaterials> m_materials;
+    size_t                                                               m_num_materials = 0;
     std::array<Geometry, EngineSetting::MaxNumGeometries>                m_geometries;
-    Gp::RayTracingBlas                                                   m_rt_static_meshes_blas;
+    size_t                                                               m_num_geometries = 0;
+
+    Gp::RayTracingBlas m_rt_static_meshes_blas;
 
     Gp::CommandPool m_graphics_pool;
 
@@ -98,29 +91,23 @@ struct Scene
                                            Gp::BufferUsageEnum::TransferDst,
                                        Gp::MemoryUsageEnum::GpuOnly,
                                        sizeof(float3) * EngineSetting::MaxNumVertices,
-                                       nullptr,
-                                       nullptr,
                                        "scene_m_g_vbuf_position");
         m_g_vbuf_compact_info = Gp::Buffer(m_device,
                                            Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer |
                                                Gp::BufferUsageEnum::TransferDst,
                                            Gp::MemoryUsageEnum::GpuOnly,
                                            sizeof(CompactVertex) * EngineSetting::MaxNumVertices,
-                                           nullptr,
-                                           nullptr,
                                            "scene_m_g_vbuf_compact_info");
         m_g_ibuf              = Gp::Buffer(m_device,
                               Gp::BufferUsageEnum::IndexBuffer | Gp::BufferUsageEnum::StorageBuffer |
                                   Gp::BufferUsageEnum::TransferDst,
                               Gp::MemoryUsageEnum::GpuOnly,
                               Gp::GetSizeInBytes(m_g_ibuf_index_type) * EngineSetting::MaxNumIndices,
-                              nullptr,
-                              nullptr,
                               "scene_m_g_ibuf");
     }
 
     void
-    add_models(const std::filesystem::path & path, Gp::StagingBufferManager & staging_buffer_manager)
+    add_scene_object(const std::filesystem::path & path, Gp::StagingBufferManager & staging_buffer_manager)
     {
         Assimp::Importer importer;
         const aiScene *  scene =
@@ -128,153 +115,21 @@ struct Scene
                               aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
                                   aiProcess_JoinIdenticalVertices | aiProcess_RemoveRedundantMaterials);
 
-        set_gbuf_with_assimp_scene(scene, staging_buffer_manager, path.string());
+        // add geometries
+        const std::array<size_t, 2> geometries_range =
+            add_geometries(scene, staging_buffer_manager, path.string());
+
+        // add materials
+        for (size_t i_geom = geometries_range[0], i_mesh = 0; i_mesh < scene->mNumMeshes; i_geom++, i_mesh++)
+        {
+            const size_t mat_index = scene->mMeshes[i_mesh]->mMaterialIndex;
+            m_materials[i_geom] =
+                add_required_textures(path, *scene->mMaterials[mat_index], staging_buffer_manager);
+        }
     }
 
-    template <size_t NumChannels>
-    size_t
-    add_constant_texture(const std::array<uint8_t, NumChannels> & v, Gp::StagingBufferManager & staging_buffer_manager)
-    {
-        // find empty texture slot
-        size_t e = 0;
-        for (e = 0; e < m_textures.size(); e++)
-        {
-            if (m_textures[e].m_ref_count == -1)
-            {
-                break;
-            }
-        }
-        assert(e != m_textures.size());
-        if (e == m_textures.size())
-        {
-            return -1;
-        }
-
-        // load using stbi
-        static_assert(NumChannels == 4 || NumChannels == 1, "num channels must be 4 or 1");
-        Gp::FormatEnum format_enum = v.size() == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
-        Gp::Texture texture(staging_buffer_manager.m_device,
-                            Gp::TextureUsageEnum::Sampled,
-                            Gp::TextureStateEnum::FragmentShaderVisible,
-                            format_enum,
-                            int2(1, 1),
-                            reinterpret_cast<const std::byte *>(v.data()),
-                            staging_buffer_manager,
-                            float4(),
-                            "");
-        staging_buffer_manager.submit_all_pending_upload();
-
-        // add to list in manager
-        m_textures[e].m_texture   = std::move(texture);
-        m_textures[e].m_ref_count = 0;
-        return e;
-    }
-
-    size_t
-    add_texture(const std::filesystem::path & path, const size_t desired_channel, Gp::StagingBufferManager & staging_buffer_manager)
-    {
-        // find empty texture slot
-        size_t e = 0;
-        for (e = 0; e < m_textures.size(); e++)
-        {
-            if (m_textures[e].m_ref_count == -1)
-            {
-                break;
-            }
-        }
-        assert(e != m_textures.size());
-        if (e == m_textures.size())
-        {
-            return -1;
-        }
-
-        const std::string filepath_str = path.string();
-
-        // load using stbi
-        int2 resolution;
-        stbi_set_flip_vertically_on_load(true);
-        void * image = stbi_load(filepath_str.c_str(), &resolution.x, &resolution.y, nullptr, desired_channel);
-        std::byte * image_bytes = reinterpret_cast<std::byte *>(image);
-        assert(desired_channel == 4 || desired_channel == 1);
-        Gp::FormatEnum format_enum =
-            desired_channel == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
-        Gp::Texture texture(staging_buffer_manager.m_device,
-                            Gp::TextureUsageEnum::Sampled,
-                            Gp::TextureStateEnum::FragmentShaderVisible,
-                            format_enum,
-                            resolution,
-                            image_bytes,
-                            &staging_buffer_manager,
-                            float4(),
-                            filepath_str);
-        staging_buffer_manager.submit_all_pending_upload();
-        stbi_image_free(image);
-
-        m_textures[e].m_texture   = std::move(texture);
-        m_textures[e].m_ref_count = 0;
-        return e;
-    }
-
-    void
-    remove_texture(const size_t texture_id)
-    {
-        SharedTexture & stex = m_textures[texture_id];
-        assert(stex.m_ref_count == 0);
-        stex.m_texture   = Gp::Texture();
-        stex.m_ref_count = -1;
-    }
-
-    size_t
-    add_material()
-    {
-        return -1;
-    }
-
-    void
-    build_static_models_blas(Gp::StagingBufferManager & staging_buffer_manager)
-    {
-        // count number of static models
-        size_t num_static_geoms = 0;
-        for (size_t i_geom = 0; i_geom < m_geometries.size(); i_geom++)
-        {
-            if (m_geometries[i_geom].m_num_indices > 0 && m_geometries[i_geom].m_is_static)
-            {
-                num_static_geoms += 1;
-            }
-        }
-
-        // create vector of description
-        std::vector<Gp::RayTracingGeometryDesc> static_mesh_descs(num_static_geoms);
-        for (size_t i_model = 0, i_static_mesh = 0; i_model < m_geometries.size(); i_model++)
-        {
-            const Geometry & model = m_geometries[i_model];
-            if (model.m_num_indices > 0 && model.m_is_static)
-            {
-                Gp::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
-                geom_desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
-                geom_desc.set_index_buffer(m_g_ibuf, model.m_num_indices, m_g_ibuf_index_type, model.m_ibuf_offset);
-                geom_desc.set_vertex_buffer(m_g_vbuf_position,
-                                            model.m_num_vertices,
-                                            sizeof(float3),
-                                            Gp::FormatEnum::R32G32B32_SFloat,
-                                            model.m_vbuf_offset);
-            }
-        }
-
-        // build blas
-        m_rt_static_meshes_blas = Gp::RayTracingBlas(m_device,
-                                                     static_mesh_descs.data(),
-                                                     static_mesh_descs.size(),
-                                                     &staging_buffer_manager,
-                                                     "global_blas");
-        staging_buffer_manager.submit_all_pending_upload();
-    }
-
-private:
-    void
-    set_gbuf_with_assimp_scene(const aiScene *            scene,
-                               Gp::StagingBufferManager & staging_buffer_manager,
-                               const std::string &        name)
+    std::array<size_t, 2>
+    add_geometries(const aiScene * scene, Gp::StagingBufferManager & staging_buffer_manager, const std::string & name)
     {
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
@@ -347,11 +202,11 @@ private:
 
         Gp::Fence tmp_fence(staging_buffer_manager.m_device);
         tmp_fence.reset();
-        Gp::Buffer staging_buffer(staging_buffer_manager.m_device,
+        Gp::Buffer staging_buffer(m_device,
                                   Gp::BufferUsageEnum::TransferSrc,
                                   Gp::MemoryUsageEnum::CpuOnly,
                                   vb_positions.size() * sizeof(vb_positions[0]));
-        Gp::Buffer staging_buffer2(staging_buffer_manager.m_device,
+        Gp::Buffer staging_buffer2(m_device,
                                    Gp::BufferUsageEnum::TransferSrc,
                                    Gp::MemoryUsageEnum::CpuOnly,
                                    ib.size() * sizeof(ib[0]));
@@ -379,7 +234,7 @@ private:
             const uint32_t num_vertices = static_cast<uint32_t>(aimesh->mNumVertices);
             const uint32_t num_faces    = static_cast<uint32_t>(aimesh->mNumFaces);
 
-            Geometry & model     = m_geometries[m_g_num_meshes + i_mesh];
+            Geometry & model     = m_geometries[m_num_geometries + i_mesh];
             model.m_vbuf_offset  = vertex_buffer_offset;
             model.m_ibuf_offset  = index_buffer_offset;
             model.m_num_indices  = num_faces * 3;
@@ -392,8 +247,208 @@ private:
             index_buffer_offset  = round_up(index_buffer_offset, 32);
         }
 
+        auto result = std::array<size_t, 2>{ num_meshes, m_num_geometries + num_meshes };
+
         m_g_vbuf_num_vertices += total_num_vertices;
         m_g_ibuf_num_indices += total_num_indices;
-        m_g_num_meshes += num_meshes;
+        m_num_geometries += num_meshes;
+
+        return result;
+    }
+
+    template <size_t NumChannels>
+    size_t
+    add_texture(const std::array<uint8_t, NumChannels> & v, Gp::StagingBufferManager & staging_buffer_manager)
+    {
+        // find empty texture slot
+        size_t e = 0;
+        for (e = 0; e < m_textures.size(); e++)
+        {
+            if (m_textures[e].is_empty())
+            {
+                break;
+            }
+        }
+        assert(e != m_textures.size());
+        if (e == m_textures.size())
+        {
+            return -1;
+        }
+
+        // load using stbi
+        static_assert(NumChannels == 4 || NumChannels == 1, "num channels must be 4 or 1");
+        Gp::FormatEnum format_enum = v.size() == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
+        Gp::Texture texture(staging_buffer_manager.m_device,
+                            Gp::TextureUsageEnum::Sampled,
+                            Gp::TextureStateEnum::FragmentShaderVisible,
+                            format_enum,
+                            int2(1, 1),
+                            reinterpret_cast<const std::byte *>(v.data()),
+                            &staging_buffer_manager,
+                            float4(),
+                            "");
+        staging_buffer_manager.submit_all_pending_upload();
+
+        // add to list in manager
+        m_textures[e] = std::move(texture);
+        return e;
+    }
+
+    size_t
+    add_texture(const std::filesystem::path & path, const size_t desired_channel, Gp::StagingBufferManager & staging_buffer_manager)
+    {
+        // find empty texture slot
+        size_t e = 0;
+        for (e = 0; e < m_textures.size(); e++)
+        {
+            if (m_textures[e].is_empty())
+            {
+                break;
+            }
+        }
+        assert(e != m_textures.size());
+        if (e == m_textures.size())
+        {
+            return -1;
+        }
+
+        const std::string filepath_str = path.string();
+
+        // load using stbi
+        int2 resolution;
+        stbi_set_flip_vertically_on_load(true);
+        void * image = stbi_load(filepath_str.c_str(), &resolution.x, &resolution.y, nullptr, desired_channel);
+        assert(image);
+        std::byte * image_bytes = reinterpret_cast<std::byte *>(image);
+        assert(desired_channel == 4 || desired_channel == 1);
+        Gp::FormatEnum format_enum =
+            desired_channel == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
+        Gp::Texture texture(staging_buffer_manager.m_device,
+                            Gp::TextureUsageEnum::Sampled,
+                            Gp::TextureStateEnum::FragmentShaderVisible,
+                            format_enum,
+                            resolution,
+                            image_bytes,
+                            &staging_buffer_manager,
+                            float4(),
+                            filepath_str);
+        staging_buffer_manager.submit_all_pending_upload();
+        stbi_image_free(image);
+
+        m_textures[e] = std::move(texture);
+        return e;
+    }
+
+    StandardMaterial
+    add_required_textures(const std::filesystem::path & path,
+                          const aiMaterial &            material,
+                          Gp::StagingBufferManager &    staging_buffer_manager)
+    {
+        StandardMaterial standard_material;
+        standard_material.m_diffuse_tex_id =
+            add_texture(path, material, LoadStandardParamEnum::DiffuseReflectance, staging_buffer_manager);
+        standard_material.m_specular_tex_id =
+            add_texture(path, material, LoadStandardParamEnum::SpecularReflectance, staging_buffer_manager);
+        standard_material.m_roughness_tex_id =
+            add_texture(path, material, LoadStandardParamEnum::SpecularRoughness, staging_buffer_manager);
+        return standard_material;
+    }
+
+    size_t
+    add_texture(const std::filesystem::path & path,
+                const aiMaterial &            material,
+                const LoadStandardParamEnum   standard_param,
+                Gp::StagingBufferManager &    staging_buffer_manager)
+    {
+        aiTextureType ai_tex_type         = aiTextureType::aiTextureType_NONE;
+        const char *  ai_mat_key          = nullptr;
+        int           num_desired_channel = 0;
+        if (standard_param == LoadStandardParamEnum::DiffuseReflectance)
+        {
+            ai_tex_type         = aiTextureType::aiTextureType_DIFFUSE;
+            ai_mat_key          = AI_MATKEY_COLOR_DIFFUSE;
+            num_desired_channel = 4;
+        }
+        else if (standard_param == LoadStandardParamEnum::SpecularReflectance)
+        {
+            ai_tex_type         = aiTextureType::aiTextureType_SPECULAR;
+            ai_mat_key          = AI_MATKEY_COLOR_DIFFUSE;
+            num_desired_channel = 4;
+        }
+        else if (standard_param == LoadStandardParamEnum::SpecularRoughness)
+        {
+            ai_tex_type         = aiTextureType::aiTextureType_SHININESS;
+            ai_mat_key          = AI_MATKEY_COLOR_DIFFUSE;
+            num_desired_channel = 1;
+        }
+
+        aiString  tex_name;
+        aiColor4D color;
+        if (material.GetTexture(ai_tex_type, 0, &tex_name) == aiReturn_SUCCESS)
+        {
+            const std::filesystem::path tex_path = path.parent_path() / std::string(tex_name.C_Str());
+            return add_texture(tex_path, num_desired_channel, staging_buffer_manager);
+        }
+        else if (aiGetMaterialColor(&material, ai_mat_key, 0, 0, &color) == aiReturn_SUCCESS)
+        {
+            if (num_desired_channel == 1)
+            {
+                uint8_t r = static_cast<uint8_t>(color.r * 256);
+                return add_texture(std::array<uint8_t, 1>{ r }, staging_buffer_manager);
+            }
+            else if (num_desired_channel == 4)
+            {
+                uint8_t r = static_cast<uint8_t>(color.r * 256);
+                uint8_t g = static_cast<uint8_t>(color.g * 256);
+                uint8_t b = static_cast<uint8_t>(color.b * 256);
+                uint8_t a = static_cast<uint8_t>(color.a * 256);
+                return add_texture(std::array<uint8_t, 4>{ r, g, b, a }, staging_buffer_manager);
+            }
+        }
+
+        // should not reach this point
+        assert(false);
+
+        return static_cast<size_t>(0);
+    };
+
+    void
+    build_static_models_blas(Gp::StagingBufferManager & staging_buffer_manager)
+    {
+        // count number of static models
+        size_t num_static_geoms = 0;
+        for (size_t i_geom = 0; i_geom < m_geometries.size(); i_geom++)
+        {
+            if (m_geometries[i_geom].m_num_indices > 0 && m_geometries[i_geom].m_is_static)
+            {
+                num_static_geoms += 1;
+            }
+        }
+
+        // create vector of description
+        std::vector<Gp::RayTracingGeometryDesc> static_mesh_descs(num_static_geoms);
+        for (size_t i_model = 0, i_static_mesh = 0; i_model < m_geometries.size(); i_model++)
+        {
+            const Geometry & model = m_geometries[i_model];
+            if (model.m_num_indices > 0 && model.m_is_static)
+            {
+                Gp::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
+                geom_desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
+                geom_desc.set_index_buffer(m_g_ibuf, model.m_num_indices, m_g_ibuf_index_type, model.m_ibuf_offset);
+                geom_desc.set_vertex_buffer(m_g_vbuf_position,
+                                            model.m_num_vertices,
+                                            sizeof(float3),
+                                            Gp::FormatEnum::R32G32B32_SFloat,
+                                            model.m_vbuf_offset);
+            }
+        }
+
+        // build blas
+        m_rt_static_meshes_blas = Gp::RayTracingBlas(m_device,
+                                                     static_mesh_descs.data(),
+                                                     static_mesh_descs.size(),
+                                                     &staging_buffer_manager,
+                                                     "global_blas");
+        staging_buffer_manager.submit_all_pending_upload();
     }
 };

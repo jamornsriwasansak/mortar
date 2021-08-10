@@ -28,7 +28,7 @@ struct Texture
     };
 
     int3                  m_resolution;
-    vk::Image             m_vk_image;
+    vk::Image             m_vk_image = {};
     vk::UniqueImageView   m_vk_image_view;
     vk::UniqueFramebuffer m_vk_framebuffer;
     vk::ImageLayout       m_vk_image_layout;
@@ -200,6 +200,12 @@ struct Texture
 
         m_resolution      = int3(resolution, 0);
         m_vk_image_layout = initial_layout;
+    }
+
+    bool
+    is_empty() const
+    {
+        return !m_vk_image;
     }
 
     vk::ImageLayout
