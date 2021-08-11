@@ -268,7 +268,7 @@ GetSizeInBytes(const FormatEnum & format_enum)
     switch (format_enum)
     {
     case FormatEnum::R32G32B32_SFloat:
-        return sizeof(float) * 4;
+        return sizeof(float) * 3;
     case FormatEnum::R32G32B32A32_SFloat:
         return sizeof(float) * 4;
     default:
@@ -299,7 +299,7 @@ GetSizeInBytes(const FormatEnum & format_enum)
     switch (format_enum)
     {
     case FormatEnum::R32G32B32_SFloat:
-        return sizeof(float) * 4;
+        return sizeof(float) * 3;
     case FormatEnum::R32G32B32A32_SFloat:
         return sizeof(float) * 4;
     default:
