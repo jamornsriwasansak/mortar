@@ -16,13 +16,13 @@ struct RayTracingGeometryDesc
 
     RayTracingGeometryDesc &
     set_vertex_buffer(const Buffer &   buffer,
-                      const size_t     num_vertices,
-                      const size_t     stride_in_bytes,
+                      const size_t     offset_in_bytes,
                       const FormatEnum vk_format,
-                      const size_t     starting_index = 0)
+                      const size_t     stride_in_bytes,
+                      const size_t     num_vertices)
     {
         assert(num_vertices > 0);
-        m_geometry_trimesh_desc.setVertexData(buffer.m_device_address + starting_index * stride_in_bytes);
+        m_geometry_trimesh_desc.setVertexData(buffer.m_device_address + offset_in_bytes);
         m_geometry_trimesh_desc.setVertexFormat(vk::Format(vk_format));
         m_geometry_trimesh_desc.setMaxVertex(static_cast<uint32_t>(num_vertices));
         m_geometry_trimesh_desc.setVertexStride(static_cast<uint32_t>(stride_in_bytes));
@@ -30,15 +30,10 @@ struct RayTracingGeometryDesc
     }
 
     RayTracingGeometryDesc &
-    set_index_buffer(const Buffer &  buffer,
-                     const size_t    num_indices,
-                     const IndexType index_type,
-                     const size_t    starting_index = 0)
+    set_index_buffer(const Buffer & buffer, const size_t offset_in_bytes, const IndexType index_type, const size_t num_indices)
     {
-        const size_t stride_in_bytes = GetSizeInBytes(index_type);
-        m_geometry_trimesh_desc.setIndexData(buffer.m_device_address + starting_index * stride_in_bytes);
+        m_geometry_trimesh_desc.setIndexData(buffer.m_device_address + offset_in_bytes);
         m_geometry_trimesh_desc.setIndexType(vk::IndexType(index_type));
-
         m_build_range.setFirstVertex(0);
         m_build_range.setPrimitiveOffset(0);
         m_build_range.setPrimitiveCount(static_cast<uint32_t>(num_indices / 3));
@@ -52,6 +47,12 @@ struct RayTracingGeometryDesc
         m_geometry_flag = vk::GeometryFlagBitsKHR(flag);
         return *this;
     }
+
+    RayTracingGeometryDesc &
+    set_transform_matrix4x3(const Buffer & buffer, const size_t offset_in_bytes)
+    {
+        m_geometry_trimesh_desc.setTransformData(buffer.m_device_address + offset_in_bytes);
+    }
 };
 
 struct RayTracingBlas
@@ -64,8 +65,8 @@ struct RayTracingBlas
     RayTracingBlas(const Device *                 device,
                    const RayTracingGeometryDesc * geometry_descs,
                    const size_t                   num_geometries,
-                   StagingBufferManager *         buf_manager, // TODO:: get rid of staging buffer manager
-                   const std::string &            name = "")
+                   StagingBufferManager * buf_manager, // TODO:: get rid of staging buffer manager
+                   const std::string &    name = "")
     {
         std::vector<vk::AccelerationStructureGeometryDataKHR>   tri_geometry_datas(num_geometries);
         std::vector<vk::AccelerationStructureGeometryKHR>       geometries(num_geometries);

@@ -100,7 +100,8 @@ struct Renderer
         // raster pipeline
         try
         {
-            m_raster_pipeline = [&]() {
+            m_raster_pipeline = [&]()
+            {
                 std::filesystem::path shader_path = "../src/render/passes/beauty/";
                 Gp::ShaderSrc         vertexShaderSrc2(Gp::ShaderStageEnum::Vertex);
                 vertexShaderSrc2.m_entry     = "VsMain";
@@ -118,7 +119,8 @@ struct Renderer
             }();
 
             // raytracing pipeline
-            m_rt_pipeline = [&]() {
+            m_rt_pipeline = [&]()
+            {
                 std::filesystem::path shader_path = "../src/render/passes/restir_direct_light/";
 
                 // create pipeline for ssao
@@ -198,14 +200,14 @@ struct Renderer
                 Gp::RayTracingGeometryDesc desc;
                 desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
                 desc.set_index_buffer(index_buffer.m_buffer,
-                                      mesh.m_num_indices,
+                                      mesh.m_index_buffer_offset * Gp::GetSizeInBytes(index_buffer.m_type),
                                       index_buffer.m_type,
-                                      mesh.m_index_buffer_offset);
+                                      mesh.m_num_indices);
                 desc.set_vertex_buffer(vertex_buffer.m_buffer,
-                                       mesh.m_num_vertices,
-                                       sizeof(CompactVertex),
+                                       mesh.m_vertex_buffer_offset * sizeof(CompactVertex),
                                        Gp::FormatEnum::R32G32B32_SFloat,
-                                       mesh.m_vertex_buffer_offset);
+                                       sizeof(CompactVertex),
+                                       mesh.m_num_vertices);
                 static_nonemissive_mesh_descs.emplace_back(desc);
 
                 // setup material id
@@ -223,14 +225,14 @@ struct Renderer
                 Gp::RayTracingGeometryDesc desc;
                 desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
                 desc.set_index_buffer(index_buffer.m_buffer,
-                                      mesh.m_num_indices,
+                                      mesh.m_index_buffer_offset * Gp::GetSizeInBytes(index_buffer.m_type),
                                       index_buffer.m_type,
-                                      mesh.m_index_buffer_offset);
+                                      mesh.m_num_indices);
                 desc.set_vertex_buffer(vertex_buffer.m_buffer,
-                                       mesh.m_num_vertices,
-                                       sizeof(CompactVertex),
+                                       mesh.m_vertex_buffer_offset * sizeof(CompactVertex),
                                        Gp::FormatEnum::R32G32B32_SFloat,
-                                       mesh.m_vertex_buffer_offset);
+                                       sizeof(CompactVertex),
+                                       mesh.m_num_vertices);
                 static_emissive_mesh_descs.emplace_back(desc);
 
                 // setup num triangles

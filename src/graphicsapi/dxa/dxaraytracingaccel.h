@@ -10,17 +10,17 @@ struct RayTracingGeometryDesc
 {
     D3D12_RAYTRACING_GEOMETRY_DESC m_geometry_desc;
 
-    RayTracingGeometryDesc() : m_geometry_desc({}) { m_geometry_desc.Triangles.Transform3x4 = 0; }
+    RayTracingGeometryDesc() : m_geometry_desc({}) {}
 
     RayTracingGeometryDesc &
     set_vertex_buffer(const Buffer &   buffer,
-                      const size_t     num_vertices,
-                      const size_t     stride_in_bytes,
+                      const size_t     offset_in_bytes,
                       const FormatEnum dxgi_format,
-                      const size_t     starting_index = 0)
+                      const size_t     stride_in_bytes,
+                      const size_t     num_vertices)
     {
         m_geometry_desc.Triangles.VertexBuffer.StartAddress =
-            buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + starting_index * stride_in_bytes;
+            buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + offset_in_bytes;
         m_geometry_desc.Triangles.VertexBuffer.StrideInBytes = static_cast<UINT>(stride_in_bytes);
         m_geometry_desc.Triangles.VertexCount                = static_cast<UINT>(num_vertices);
         m_geometry_desc.Triangles.VertexFormat = static_cast<DXGI_FORMAT>(dxgi_format);
@@ -28,14 +28,10 @@ struct RayTracingGeometryDesc
     }
 
     RayTracingGeometryDesc &
-    set_index_buffer(const Buffer &  buffer,
-                     const size_t    num_indices,
-                     const size_t    stride_in_bytes,
-                     const IndexType dxgi_format,
-                     const size_t    starting_index = 0)
+    set_index_buffer(const Buffer & buffer, const size_t offset_in_bytes, const IndexType dxgi_format, const size_t num_indices)
     {
         m_geometry_desc.Triangles.IndexBuffer =
-            buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + starting_index * stride_in_bytes;
+            buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + offset_in_bytes;
         m_geometry_desc.Triangles.IndexCount  = static_cast<UINT>(num_indices);
         m_geometry_desc.Triangles.IndexFormat = static_cast<DXGI_FORMAT>(dxgi_format);
         return *this;
@@ -46,6 +42,13 @@ struct RayTracingGeometryDesc
     {
         m_geometry_desc.Flags = static_cast<D3D12_RAYTRACING_GEOMETRY_FLAGS>(flag);
         return *this;
+    }
+
+    RayTracingGeometryDesc &
+    set_transform_matrix4x3(const Buffer & buffer, const size_t offset_in_bytes)
+    {
+        m_geometry_desc.Triangles.Transform3x4 =
+            buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + offset_in_bytes;
     }
 };
 

@@ -261,7 +261,22 @@ enum class FormatEnum : uint8_t
     R32G32B32_SFloat    = DXGI_FORMAT_R32G32B32_FLOAT,
     R32G32B32A32_SFloat = DXGI_FORMAT_R32G32B32A32_FLOAT
 };
+
+inline size_t
+GetSizeInBytes(const FormatEnum & format_enum)
+{
+    switch (format_enum)
+    {
+    case FormatEnum::R32G32B32_SFloat:
+        return sizeof(float) * 4;
+    case FormatEnum::R32G32B32A32_SFloat:
+        return sizeof(float) * 4;
+    default:
+        assert(false); // unhandled case
+        return 0;
+    }
 }
+} // namespace Dxa
 
 namespace Vka
 {
@@ -277,7 +292,22 @@ enum class FormatEnum : uint32_t
     R32G32B32_SFloat    = VK_FORMAT_R32G32B32_SFLOAT,
     R32G32B32A32_SFloat = VK_FORMAT_R32G32B32A32_SFLOAT
 };
+
+inline size_t
+GetSizeInBytes(const FormatEnum & format_enum)
+{
+    switch (format_enum)
+    {
+    case FormatEnum::R32G32B32_SFloat:
+        return sizeof(float) * 4;
+    case FormatEnum::R32G32B32A32_SFloat:
+        return sizeof(float) * 4;
+    default:
+        assert(false); // unhandled case
+        return 0;
+    }
 }
+} // namespace Vka
 
 namespace Dxa
 {
@@ -322,6 +352,7 @@ GetSizeInBytes(IndexType it)
         return 0;
     }
 }
+
 } // namespace Dxa
 
 namespace Vka

@@ -41,6 +41,115 @@ struct SharedIndexBuffer
     size_t        m_ref_count   = -1;
 };
 
+// --------------------------------
+
+struct SceneGraphLeaf
+{
+    uint32_t         m_geometry_id       = -1;
+    StandardMaterial m_standard_material = {};
+    float4x4         m_recent_transform  = glm::identity<float4x4>();
+};
+
+struct SceneGraphNode
+{
+    SceneGraphNode * m_parent                                        = nullptr;
+    float4x4         m_transform                                     = glm::identity<float4x4>();
+    std::variant<SceneGraphLeaf, std::vector<SceneGraphNode>> m_info = {};
+
+    SceneGraphNode() {}
+
+    void
+    traverse(const std::function<void(const SceneGraphLeaf &)> & func) const
+    {
+        if (m_info.index() == 0)
+        {
+            const SceneGraphLeaf & leaf_info = std::get<0>(m_info);
+            func(leaf_info);
+            return;
+        }
+        else if (m_info.index() == 1)
+        {
+            const std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
+            for (size_t i = 0; i < childs.size(); i++)
+            {
+                childs[i].traverse(func);
+            }
+            return;
+        }
+        assert(false);
+    }
+
+    void
+    traverse(const std::function<void(SceneGraphLeaf &)> & func)
+    {
+        if (m_info.index() == 0)
+        {
+            SceneGraphLeaf & leaf_info = std::get<0>(m_info);
+            func(leaf_info);
+            return;
+        }
+        else if (m_info.index() == 1)
+        {
+            std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
+            for (size_t i = 0; i < childs.size(); i++)
+            {
+                childs[i].traverse(func);
+            }
+            return;
+        }
+        assert(false);
+    }
+
+    void
+    update_transform(const float4x4 & current_transform = glm::identity<float4x4>())
+    {
+        const float4x4 transform = m_transform * current_transform;
+        if (m_info.index() == 0)
+        {
+            SceneGraphLeaf & leaf_info   = std::get<0>(m_info);
+            leaf_info.m_recent_transform = transform;
+            return;
+        }
+        else if (m_info.index() == 1)
+        {
+            std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
+            for (size_t i = 0; i < childs.size(); i++)
+            {
+                childs[i].update_transform(transform);
+            }
+            return;
+        }
+        assert(false);
+    }
+
+    size_t
+    get_num_leaves(const std::function<bool(const SceneGraphLeaf &)> & func) const
+    {
+        if (m_info.index() == 0)
+        {
+            const SceneGraphLeaf & leaf_info = std::get<0>(m_info);
+            if (func(leaf_info))
+            {
+                return 1;
+            }
+            return 0;
+        }
+        else if (m_info.index() == 1)
+        {
+            const std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
+            size_t                              sum    = 0;
+            for (size_t i = 0; i < childs.size(); i++)
+            {
+                sum += childs[i].get_num_leaves(func);
+            }
+            return sum;
+        }
+
+        assert(false);
+        return 0;
+    }
+};
+
 struct Geometry
 {
     uint32_t m_vbuf_offset  = 0;
@@ -61,14 +170,14 @@ struct Scene
 
     FpsCamera m_camera;
 
-    const Gp::Device * m_device = nullptr;
-    Gp::Buffer         m_g_vbuf_position;
-    Gp::Buffer         m_g_vbuf_compact_info;
-    Gp::Buffer         m_g_ibuf;
-    Gp::IndexType      m_g_ibuf_index_type = Gp::IndexType::Uint16;
-
-    size_t m_g_vbuf_num_vertices = 0;
-    size_t m_g_ibuf_num_indices  = 0;
+    const Gp::Device * m_device               = nullptr;
+    Gp::Buffer         m_g_vbuf_position      = {};
+    Gp::Buffer         m_g_vbuf_compact_info  = {};
+    Gp::Buffer         m_g_ibuf               = {};
+    Gp::IndexType      m_g_ibuf_index_type    = Gp::IndexType::Uint16;
+    Gp::FormatEnum     m_g_vbuf_position_type = Gp::FormatEnum::R32G32B32_SFloat;
+    size_t             m_g_vbuf_num_vertices  = 0;
+    size_t             m_g_ibuf_num_indices   = 0;
 
     std::array<Gp::Texture, EngineSetting::MaxNumBindlessTextures>       m_textures;
     size_t                                                               m_num_textures = 0;
@@ -80,6 +189,8 @@ struct Scene
     Gp::RayTracingBlas m_rt_static_meshes_blas;
 
     Gp::CommandPool m_graphics_pool;
+
+    SceneGraphNode m_scene_graph_root;
 
     Scene() {}
 
@@ -107,25 +218,39 @@ struct Scene
     }
 
     void
-    add_scene_object(const std::filesystem::path & path, Gp::StagingBufferManager & staging_buffer_manager)
+    add_render_object(const std::filesystem::path & path, Gp::StagingBufferManager & staging_buffer_manager)
     {
         Assimp::Importer importer;
         const aiScene *  scene =
             importer.ReadFile(path.string(),
                               aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
                                   aiProcess_JoinIdenticalVertices | aiProcess_RemoveRedundantMaterials);
+        std::vector<SceneGraphNode> childs(scene->mNumMeshes);
 
         // add geometries
         const std::array<size_t, 2> geometries_range =
             add_geometries(scene, staging_buffer_manager, path.string());
 
         // add materials
-        for (size_t i_geom = geometries_range[0], i_mesh = 0; i_mesh < scene->mNumMeshes; i_geom++, i_mesh++)
+        for (size_t i_mat = 0; i_mat < scene->mNumMaterials; i_mat++)
         {
-            const size_t mat_index = scene->mMeshes[i_mesh]->mMaterialIndex;
-            m_materials[i_geom] =
-                add_required_textures(path, *scene->mMaterials[mat_index], staging_buffer_manager);
+            m_materials[i_mat + m_num_materials] =
+                add_required_textures(path, *scene->mMaterials[i_mat], staging_buffer_manager);
         }
+        m_num_materials += scene->mNumMaterials;
+
+        // add children in to scene graph
+        for (size_t i_child = 0; i_child < scene->mNumMeshes; i_child++)
+        {
+            SceneGraphLeaf leaf;
+            leaf.m_geometry_id          = geometries_range[0] + i_child;
+            leaf.m_standard_material    = m_materials[scene->mMeshes[i_child]->mMaterialIndex];
+            childs[i_child].m_info      = leaf;
+            childs[i_child].m_parent    = &m_scene_graph_root;
+            childs[i_child].m_transform = glm::identity<float4x4>();
+        }
+        m_scene_graph_root.m_info   = childs;
+        m_scene_graph_root.m_parent = nullptr;
     }
 
     std::array<size_t, 2>
@@ -247,7 +372,7 @@ struct Scene
             index_buffer_offset  = round_up(index_buffer_offset, 32);
         }
 
-        auto result = std::array<size_t, 2>{ num_meshes, m_num_geometries + num_meshes };
+        auto result = std::array<size_t, 2>{ m_num_geometries, m_num_geometries + num_meshes };
 
         m_g_vbuf_num_vertices += total_num_vertices;
         m_g_ibuf_num_indices += total_num_indices;
@@ -393,15 +518,15 @@ struct Scene
         {
             if (num_desired_channel == 1)
             {
-                uint8_t r = static_cast<uint8_t>(color.r * 256);
+                const uint8_t r = static_cast<uint8_t>(color.r * 256);
                 return add_texture(std::array<uint8_t, 1>{ r }, staging_buffer_manager);
             }
             else if (num_desired_channel == 4)
             {
-                uint8_t r = static_cast<uint8_t>(color.r * 256);
-                uint8_t g = static_cast<uint8_t>(color.g * 256);
-                uint8_t b = static_cast<uint8_t>(color.b * 256);
-                uint8_t a = static_cast<uint8_t>(color.a * 256);
+                const uint8_t r = static_cast<uint8_t>(color.r * 256);
+                const uint8_t g = static_cast<uint8_t>(color.g * 256);
+                const uint8_t b = static_cast<uint8_t>(color.b * 256);
+                const uint8_t a = static_cast<uint8_t>(color.a * 256);
                 return add_texture(std::array<uint8_t, 4>{ r, g, b, a }, staging_buffer_manager);
             }
         }
@@ -415,33 +540,40 @@ struct Scene
     void
     build_static_models_blas(Gp::StagingBufferManager & staging_buffer_manager)
     {
-        // count number of static models
-        size_t num_static_geoms = 0;
-        for (size_t i_geom = 0; i_geom < m_geometries.size(); i_geom++)
-        {
-            if (m_geometries[i_geom].m_num_indices > 0 && m_geometries[i_geom].m_is_static)
-            {
-                num_static_geoms += 1;
-            }
-        }
-
         // create vector of description
-        std::vector<Gp::RayTracingGeometryDesc> static_mesh_descs(num_static_geoms);
-        for (size_t i_model = 0, i_static_mesh = 0; i_model < m_geometries.size(); i_model++)
-        {
-            const Geometry & model = m_geometries[i_model];
-            if (model.m_num_indices > 0 && model.m_is_static)
+        const size_t num_static_geoms = m_scene_graph_root.get_num_leaves(
+            [&](const SceneGraphLeaf & leaf) -> bool
             {
-                Gp::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
-                geom_desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
-                geom_desc.set_index_buffer(m_g_ibuf, model.m_num_indices, m_g_ibuf_index_type, model.m_ibuf_offset);
-                geom_desc.set_vertex_buffer(m_g_vbuf_position,
-                                            model.m_num_vertices,
-                                            sizeof(float3),
-                                            Gp::FormatEnum::R32G32B32_SFloat,
-                                            model.m_vbuf_offset);
-            }
-        }
+                const Geometry & geometry = m_geometries[leaf.m_geometry_id];
+                if (geometry.m_num_indices > 0 && geometry.m_is_static)
+                {
+                    return geometry.m_is_static;
+                }
+            });
+
+        // populate vector of geometry descs
+        std::vector<Gp::RayTracingGeometryDesc> static_mesh_descs(num_static_geoms);
+        size_t                                  i_static_mesh = 0;
+        m_scene_graph_root.traverse(
+            [&](const SceneGraphLeaf & leaf_info)
+            {
+                const Geometry & geometry = m_geometries[leaf_info.m_geometry_id];
+                if (geometry.m_num_indices > 0 && geometry.m_is_static)
+                {
+                    Gp::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
+                    geom_desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
+                    geom_desc.set_index_buffer(m_g_ibuf,
+                                               geometry.m_ibuf_offset * Gp::GetSizeInBytes(m_g_ibuf_index_type),
+                                               m_g_ibuf_index_type,
+                                               geometry.m_num_indices);
+                    geom_desc.set_vertex_buffer(m_g_vbuf_position,
+                                                geometry.m_vbuf_offset * Gp::GetSizeInBytes(m_g_vbuf_position_type),
+                                                Gp::FormatEnum::R32G32B32_SFloat,
+                                                sizeof(float3),
+                                                geometry.m_num_vertices);
+                }
+            });
+        assert(i_static_mesh == num_static_geoms);
 
         // build blas
         m_rt_static_meshes_blas = Gp::RayTracingBlas(m_device,
