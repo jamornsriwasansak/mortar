@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../gpcommontypes/enums.h"
 #include "common/logger.h"
 #include "common/vmath.h"
-#include "graphicsapi/enums.h"
 #include "graphicsapi/shadersrc.h"
 
 #include <wrl/client.h>

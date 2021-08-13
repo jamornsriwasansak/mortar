@@ -2,7 +2,8 @@
 
 #include "common/glfwhandler.h"
 
-#include "../enums.h"
+#include "../gpcommontypes/enums.h"
+#include "../gpcommontypes/setting.h"
 #include "../shadersrc.h"
 #include "common/logger.h"
 #include "common/uniquehandle.h"
@@ -26,7 +27,4 @@
     } while (false)
 
 
-namespace Vka
-{
-using ShaderSrc = TShaderSrc<Vka::ShaderStageEnum>;
-} // namespace Vka
+namespace VKA_NAME { using ShaderSrc = TShaderSrc<VKA_NAME::ShaderStageEnum>; } // namespace VKA_NAME

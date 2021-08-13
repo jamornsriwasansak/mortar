@@ -3,7 +3,7 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct Semaphore
 {
@@ -17,4 +17,4 @@ struct Semaphore
         m_vk_semaphore = device->m_vk_ldevice->createSemaphoreUnique(semaphore_ci);
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

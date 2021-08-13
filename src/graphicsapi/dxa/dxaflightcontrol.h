@@ -4,7 +4,7 @@
 #include "dxacommon.h"
 #include "dxadevice.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct FlightControl
 {

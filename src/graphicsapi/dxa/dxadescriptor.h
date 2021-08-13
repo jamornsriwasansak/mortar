@@ -9,7 +9,7 @@
 #include "dxatexture.h"
 #include "dxilreflection.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct DescriptorSet
 {

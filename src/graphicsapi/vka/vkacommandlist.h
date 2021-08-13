@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../gpcommontypes/copyregion.h"
 #include "vkacommon.h"
 #include "vkadescriptor.h"
 #include "vkadevice.h"
@@ -11,7 +12,7 @@
 #include "vkasemaphore.h"
 #include "vkatexture.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 
 struct BufferCopyInfo
@@ -330,4 +331,4 @@ struct CommandList
                                        { copy_region });
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

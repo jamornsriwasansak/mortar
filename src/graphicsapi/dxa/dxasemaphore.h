@@ -3,7 +3,7 @@
 #include "common/uniquehandle.h"
 #include "dxacommon.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct Semaphore
 {

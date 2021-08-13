@@ -4,7 +4,7 @@
 #include "dxadevice.h"
 #include "dxasemaphore.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct Swapchain
 {

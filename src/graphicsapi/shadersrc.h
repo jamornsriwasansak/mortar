@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/file.h"
-#include "graphicsapi/enums.h"
+#include "gpcommontypes/enums.h"
 
 #include <filesystem>
 #include <string>

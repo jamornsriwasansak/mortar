@@ -11,7 +11,7 @@
 #include "vkasampler.h"
 #include "vkatexture.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct DescriptorSet
 {
@@ -257,4 +257,4 @@ struct DescriptorSet
         m_write_descriptor_set.clear();
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

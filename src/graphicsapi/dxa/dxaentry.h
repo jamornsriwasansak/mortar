@@ -1,7 +1,7 @@
 #pragma once
 #include "dxacommon.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct PhysicalDevice
 {
@@ -81,4 +81,4 @@ private:
         // debug1->SetEnableGPUBasedValidation(true);
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME

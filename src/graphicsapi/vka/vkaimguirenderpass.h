@@ -9,7 +9,7 @@
 #include "backends/imgui_impl_vulkan.h"
 #include "imgui.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct ImGuiRenderPass
 {
@@ -172,4 +172,4 @@ struct ImGuiRenderPass
         ImGui::DestroyContext();
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

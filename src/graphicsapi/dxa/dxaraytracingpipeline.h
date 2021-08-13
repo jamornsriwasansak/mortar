@@ -6,7 +6,7 @@
 #include "../shadercompiler/hlsldxccompiler.h"
 #include "../shadersrc.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct RayTracingPipelineConfig
 {
@@ -211,7 +211,7 @@ struct RayTracingPipeline
         // build global root signature
         {
             // prepare array for reflection
-            std::vector<std::pair<ComPtr<IDxcBlob>, Dxa::ShaderStageEnum>> shaders(
+            std::vector<std::pair<ComPtr<IDxcBlob>, DXA_NAME::ShaderStageEnum>> shaders(
                 rt_lib.m_shader_srcs.size());
             for (size_t i_shader = 0; i_shader < shaders.size(); i_shader++)
             {

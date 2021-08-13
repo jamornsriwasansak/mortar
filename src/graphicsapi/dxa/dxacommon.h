@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../enums.h"
+#include "../gpcommontypes/enums.h"
 #include "../shadersrc.h"
 #include "common/glfwhandler.h"
 #include "common/logger.h"
@@ -38,9 +38,9 @@
         }                                                                                \
     } while (false)
 
-namespace Dxa
+namespace DXA_NAME
 {
-using ShaderSrc = TShaderSrc<Dxa::ShaderStageEnum>;
+using ShaderSrc = TShaderSrc<DXA_NAME::ShaderStageEnum>;
 
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;

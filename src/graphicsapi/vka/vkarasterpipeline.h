@@ -7,7 +7,7 @@
 #include "../shadercompiler/hlsldxccompiler.h"
 #include "spirvreflection.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct RasterPipelineState
 {
@@ -199,4 +199,4 @@ struct RasterPipeline
         device->name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

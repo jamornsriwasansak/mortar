@@ -4,7 +4,7 @@
 #include "vkadevice.h"
 #include "vkastagingbuffermanager.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct Buffer
 {
@@ -191,4 +191,4 @@ struct Buffer
         }
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

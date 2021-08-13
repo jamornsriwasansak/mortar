@@ -7,7 +7,7 @@
 #include "NsightAftermathGpuCrashTracker.h"
 #endif
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct Device
 {

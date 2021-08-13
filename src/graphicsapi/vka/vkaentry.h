@@ -1,7 +1,7 @@
 #pragma once
 #include "vkacommon.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct PhysicalDevice
 {
@@ -245,4 +245,4 @@ private:
         return instance;
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

@@ -130,8 +130,8 @@ struct DxilReflection
     }
 
     ReflectionResult
-    reflect(const std::span<std::pair<ComPtr<IDxcBlob>, Dxa::ShaderStageEnum>> & blobs,
-            const std::vector<Dxa::ShaderSrc> &                                  shader_srcs) const
+    reflect(const std::span<std::pair<ComPtr<IDxcBlob>, DXA_NAME::ShaderStageEnum>> & blobs,
+            const std::vector<DXA_NAME::ShaderSrc> & shader_srcs) const
     {
         using Space     = size_t;
         using BindPoint = size_t;
@@ -146,8 +146,8 @@ struct DxilReflection
 
         for (size_t i_blob = 0; i_blob < blobs.size(); i_blob++)
         {
-            IDxcBlob *           blob  = blobs[i_blob].first.Get();
-            Dxa::ShaderStageEnum stage = blobs[i_blob].second;
+            IDxcBlob *                blob  = blobs[i_blob].first.Get();
+            DXA_NAME::ShaderStageEnum stage = blobs[i_blob].second;
 
             D3D12_LIBRARY_DESC         library_desc        = {};
             ID3D12LibraryReflection *  library_reflection  = nullptr;
@@ -156,10 +156,12 @@ struct DxilReflection
             D3D12_SHADER_DESC          shader_desc         = {};
             ID3D12ShaderReflection *   shader_reflection   = nullptr;
             UINT                       num_bound_resources = 0;
-            const bool                 is_library =
-                stage == Dxa::ShaderStageEnum::AnyHit || stage == Dxa::ShaderStageEnum::ClosestHit ||
-                stage == Dxa::ShaderStageEnum::Miss || stage == Dxa::ShaderStageEnum::RayGen ||
-                stage == Dxa::ShaderStageEnum::Intersection || stage == Dxa::ShaderStageEnum::Compute;
+            const bool                 is_library = stage == DXA_NAME::ShaderStageEnum::AnyHit ||
+                                    stage == DXA_NAME::ShaderStageEnum::ClosestHit ||
+                                    stage == DXA_NAME::ShaderStageEnum::Miss ||
+                                    stage == DXA_NAME::ShaderStageEnum::RayGen ||
+                                    stage == DXA_NAME::ShaderStageEnum::Intersection ||
+                                    stage == DXA_NAME::ShaderStageEnum::Compute;
 
             // get reflection info and description
             if (is_library)
@@ -204,7 +206,7 @@ struct DxilReflection
             }
 
             // if vertex shader, also create input element descriptions
-            if (stage == Dxa::ShaderStageEnum::Vertex)
+            if (stage == DXA_NAME::ShaderStageEnum::Vertex)
             {
                 result.m_vertex_input_element_descs.resize(shader_desc.InputParameters);
                 for (size_t i = 0; i < shader_desc.InputParameters; i++)
@@ -268,19 +270,19 @@ struct DxilReflection
 
 private:
     D3D12_SHADER_VISIBILITY
-    get_shader_visibility(const Dxa::ShaderStageEnum shader_stage) const
+    get_shader_visibility(const DXA_NAME::ShaderStageEnum shader_stage) const
     {
         switch (shader_stage)
         {
-        case Dxa::ShaderStageEnum::Vertex:
+        case DXA_NAME::ShaderStageEnum::Vertex:
             return D3D12_SHADER_VISIBILITY_VERTEX;
-        case Dxa::ShaderStageEnum::Fragment:
+        case DXA_NAME::ShaderStageEnum::Fragment:
             return D3D12_SHADER_VISIBILITY_PIXEL;
-        case Dxa::ShaderStageEnum::RayGen:
-        case Dxa::ShaderStageEnum::ClosestHit:
-        case Dxa::ShaderStageEnum::AnyHit:
-        case Dxa::ShaderStageEnum::Miss:
-        case Dxa::ShaderStageEnum::Intersection:
+        case DXA_NAME::ShaderStageEnum::RayGen:
+        case DXA_NAME::ShaderStageEnum::ClosestHit:
+        case DXA_NAME::ShaderStageEnum::AnyHit:
+        case DXA_NAME::ShaderStageEnum::Miss:
+        case DXA_NAME::ShaderStageEnum::Intersection:
             return D3D12_SHADER_VISIBILITY_ALL;
         default:
             Logger::Critical<true>(__FUNCTION__,
@@ -293,7 +295,7 @@ private:
     D3D12_ROOT_PARAMETER
     get_suitable_root_parameter(std::list<D3D12_DESCRIPTOR_RANGE> *  desc_ranges,
                                 const D3D12_SHADER_INPUT_BIND_DESC & binding_desc,
-                                const Dxa::ShaderStageEnum           shader_stage) const
+                                const DXA_NAME::ShaderStageEnum      shader_stage) const
     {
         // add root parameter
         CD3DX12_ROOT_PARAMETER root_parameter = {};

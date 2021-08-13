@@ -4,7 +4,7 @@
 #include "dxadevice.h"
 #include "dxastagingbuffermanager.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct Buffer
 {

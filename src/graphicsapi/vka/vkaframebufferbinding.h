@@ -4,7 +4,7 @@
 #include "vkadevice.h"
 #include "vkatexture.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct FramebufferBindings
 {
@@ -148,4 +148,4 @@ struct FramebufferBindings
         m_resolution     = resolution;
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

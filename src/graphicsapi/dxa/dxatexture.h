@@ -5,7 +5,7 @@
 #include "dxastagingbuffermanager.h"
 #include "dxaswapchain.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct Texture
 {
@@ -172,6 +172,12 @@ struct Texture
         }
 
         device->name_dx_object(resource, name);
+    }
+
+    bool
+    is_empty() const
+    {
+        return m_dx_resource == nullptr;
     }
 
     size_t

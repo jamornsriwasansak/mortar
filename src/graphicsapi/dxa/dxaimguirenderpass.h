@@ -10,7 +10,7 @@
 #include "imgui.h"
 #include <d3d12.h>
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct ImGuiRenderPass
 {

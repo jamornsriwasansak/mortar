@@ -4,7 +4,7 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct RayTracingGeometryDesc
 {
@@ -255,4 +255,4 @@ struct RayTracingTlas
         buf_manager->m_vk_command_buffer.buildAccelerationStructuresKHR({ build_info }, { &build_range });
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

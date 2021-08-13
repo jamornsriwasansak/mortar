@@ -3,7 +3,7 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct Fence
 {
@@ -41,4 +41,4 @@ struct Fence
         VKCK(m_vk_ldevice.resetFences(1, &m_vk_fence.get()));
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

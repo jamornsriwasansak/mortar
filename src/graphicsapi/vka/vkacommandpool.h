@@ -4,7 +4,7 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct CommandPool
 {
@@ -63,4 +63,4 @@ struct CommandPool
         m_cmd_buffer_index = 0;
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

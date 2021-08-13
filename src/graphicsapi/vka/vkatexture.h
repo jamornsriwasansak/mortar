@@ -5,7 +5,7 @@
 #include "vkastagingbuffermanager.h"
 #include "vkaswapchain.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct Texture
 {
@@ -366,4 +366,4 @@ struct Texture
                                        { img_mem_barrier });
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

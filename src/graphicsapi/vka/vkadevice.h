@@ -10,7 +10,7 @@
 
 #include "common/uniquehandle.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct Device
 {
@@ -471,4 +471,4 @@ private:
         return result;
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

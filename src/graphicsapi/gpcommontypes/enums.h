@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common/logger.h"
-
 #include "common/glfwhandler.h"
+#include "common/logger.h"
+#include "setting.h"
 //
 #include <DirectXMath.h>
 #include <directx/d3d12.h>
@@ -72,7 +72,7 @@ HasFlag(const EnumType & value, const EnumType & must_have_flag)
  * Shader Stage Enum
  */
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class ShaderStageEnum : uint16_t
 {
@@ -88,9 +88,9 @@ enum class ShaderStageEnum : uint16_t
     Miss         = 1 << 9
 };
 DEFINE_ENUM_FLAG_OPERATORS(ShaderStageEnum);
-} // namespace Dxa
+} // namespace DXA_NAME
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class ShaderStageEnum : uint32_t
 {
@@ -106,13 +106,13 @@ enum class ShaderStageEnum : uint32_t
     Miss         = VK_SHADER_STAGE_MISS_BIT_KHR
 };
 DEFINE_ENUM_FLAG_OPERATORS(ShaderStageEnum);
-} // namespace Vka
+} // namespace VKA_NAME
 
 /*
  * Memory Usage
  */
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class MemoryUsageEnum
 {
@@ -124,7 +124,7 @@ enum class MemoryUsageEnum
 };
 }
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class MemoryUsageEnum
 {
@@ -140,7 +140,7 @@ enum class MemoryUsageEnum
  * Buffer Usage
  */
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class BufferUsageEnum : uint32_t
 {
@@ -154,9 +154,9 @@ enum class BufferUsageEnum : uint32_t
     RayTracingAccelStructBuffer = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE
 };
 DEFINE_ENUM_FLAG_OPERATORS(BufferUsageEnum);
-} // namespace Dxa
+} // namespace DXA_NAME
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class BufferUsageEnum : uint32_t
 {
@@ -170,13 +170,13 @@ enum class BufferUsageEnum : uint32_t
     RayTracingAccelStructBuffer = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 };
 DEFINE_ENUM_FLAG_OPERATORS(BufferUsageEnum);
-} // namespace Vka
+} // namespace VKA_NAME
 
 /*
  * Texture Usage
  */
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class TextureUsageEnum : uint16_t
 {
@@ -189,9 +189,9 @@ enum class TextureUsageEnum : uint16_t
     TransferDst     = 0
 };
 DEFINE_ENUM_FLAG_OPERATORS(TextureUsageEnum);
-} // namespace Dxa
+} // namespace DXA_NAME
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class TextureUsageEnum : uint32_t
 {
@@ -204,13 +204,13 @@ enum class TextureUsageEnum : uint32_t
     TransferDst     = VK_IMAGE_USAGE_TRANSFER_DST_BIT
 };
 DEFINE_ENUM_FLAG_OPERATORS(TextureUsageEnum);
-} // namespace Vka
+} // namespace VKA_NAME
 
 /*
  * Texture Layout
  */
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class TextureStateEnum : uint16_t
 {
@@ -224,9 +224,9 @@ enum class TextureStateEnum : uint16_t
     TransferSrc              = D3D12_RESOURCE_STATE_COPY_SOURCE,
     TransferDst              = D3D12_RESOURCE_STATE_COPY_DEST
 };
-} // namespace Dxa
+} // namespace DXA_NAME
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class TextureStateEnum : uint32_t
 {
@@ -240,14 +240,14 @@ enum class TextureStateEnum : uint32_t
     TransferSrc              = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
     TransferDst              = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 };
-} // namespace Vka
+} // namespace VKA_NAME
 
 
 /*
  * Texture Format
  */
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class FormatEnum : uint8_t
 {
@@ -276,9 +276,9 @@ GetSizeInBytes(const FormatEnum & format_enum)
         return 0;
     }
 }
-} // namespace Dxa
+} // namespace DXA_NAME
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class FormatEnum : uint32_t
 {
@@ -307,9 +307,9 @@ GetSizeInBytes(const FormatEnum & format_enum)
         return 0;
     }
 }
-} // namespace Vka
+} // namespace VKA_NAME
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class RayTracingGeometryFlag : uint8_t
 {
@@ -318,7 +318,7 @@ enum class RayTracingGeometryFlag : uint8_t
 };
 }
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class RayTracingGeometryFlag : uint32_t
 {
@@ -327,7 +327,7 @@ enum class RayTracingGeometryFlag : uint32_t
 };
 }
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class IndexType : uint8_t
 {
@@ -338,7 +338,7 @@ enum class IndexType : uint8_t
 };
 
 inline size_t
-GetSizeInBytes(IndexType it)
+GetSizeInBytes(const IndexType it)
 {
     switch (it)
     {
@@ -353,9 +353,9 @@ GetSizeInBytes(IndexType it)
     }
 }
 
-} // namespace Dxa
+} // namespace DXA_NAME
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class IndexType : uint32_t
 {
@@ -366,7 +366,7 @@ enum class IndexType : uint32_t
 };
 
 inline size_t
-GetSizeInBytes(IndexType it)
+GetSizeInBytes(const IndexType it)
 {
     switch (it)
     {
@@ -380,13 +380,13 @@ GetSizeInBytes(IndexType it)
         return 0;
     }
 }
-} // namespace Vka
+} // namespace VKA_NAME
 
 /*
  * Ray Tracing Accel
  */
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class RayTracingAccelBuildFlag : uint8_t
 {
@@ -398,7 +398,7 @@ enum class RayTracingAccelBuildFlag : uint8_t
 };
 }
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class RayTracingAccelBuildFlag : uint32_t
 {
@@ -414,7 +414,7 @@ enum class RayTracingAccelBuildFlag : uint32_t
  * Attachment Load Op
  */
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class LoadOp : uint8_t
 {
@@ -424,7 +424,7 @@ enum class LoadOp : uint8_t
 };
 }
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class LoadOp : uint8_t
 {
@@ -456,7 +456,7 @@ struct EnumHelper
 };
 
 
-namespace Dxa
+namespace DXA_NAME
 {
 enum class CommandQueueType : uint8_t
 {
@@ -466,7 +466,7 @@ enum class CommandQueueType : uint8_t
 };
 }
 
-namespace Vka
+namespace VKA_NAME
 {
 enum class CommandQueueType : uint8_t
 {

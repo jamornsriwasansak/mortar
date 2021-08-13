@@ -7,7 +7,7 @@
 #include "../shadercompiler/hlsldxccompiler.h"
 #include "../shadersrc.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct RasterPipeline
 {

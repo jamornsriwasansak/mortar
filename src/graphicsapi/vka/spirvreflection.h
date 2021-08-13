@@ -1,6 +1,6 @@
 #pragma once
 
-#include "graphicsapi/enums.h"
+#include "../gpcommontypes/enums.h"
 #include "graphicsapi/shadersrc.h"
 
 #include <spirv_reflect.h>
@@ -44,7 +44,8 @@ struct SpirvReflector
         // and a map from (set, location) to descriptor_set
         for (size_t i_spirv_code = 0; i_spirv_code < spirv_codes.size(); i_spirv_code++)
         {
-            Logger::Info(__FUNCTION__ " reflecting shader " + shader_srcs[i_spirv_code].m_file_path.string() + " from stage ",
+            Logger::Info(__FUNCTION__ " reflecting shader " +
+                             shader_srcs[i_spirv_code].m_file_path.string() + " from stage ",
                          static_cast<int>(shader_srcs[i_spirv_code].m_shader_stage));
 
             vk::ShaderStageFlagBits shader_stage =
@@ -54,10 +55,15 @@ struct SpirvReflector
             spv_reflect::ShaderModule shader_module(spirv_codes[i_spirv_code]);
 
             // reflect push constants
-            reflect_push_constant_blocks(&result, shader_module, shader_srcs[i_spirv_code].m_file_path.string());
+            reflect_push_constant_blocks(&result,
+                                         shader_module,
+                                         shader_srcs[i_spirv_code].m_file_path.string());
 
             // reflect in map of descriptor set layout bindings
-            reflect_descriptor_set(&vk_bindings, shader_module, shader_stage, shader_srcs[i_spirv_code].m_file_path.string());
+            reflect_descriptor_set(&vk_bindings,
+                                   shader_module,
+                                   shader_stage,
+                                   shader_srcs[i_spirv_code].m_file_path.string());
 
             // reflect vertex shader
             if (shader_stage == vk::ShaderStageFlagBits::eVertex)
@@ -86,9 +92,11 @@ struct SpirvReflector
                 result.m_attachment_names.resize(num_color_attachments);
                 for (uint32_t i_color_attachment = 0; i_color_attachment < num_color_attachments; i_color_attachment++)
                 {
-                    result.m_attachment_formats[i_color_attachment] = static_cast<vk::Format>(attachments[i_color_attachment]->format);
-                    result.m_attachment_locations[i_color_attachment] = attachments[i_color_attachment]->location;
-                    result.m_attachment_names[i_color_attachment]     = attachments[i_color_attachment]->name;
+                    result.m_attachment_formats[i_color_attachment] =
+                        static_cast<vk::Format>(attachments[i_color_attachment]->format);
+                    result.m_attachment_locations[i_color_attachment] =
+                        attachments[i_color_attachment]->location;
+                    result.m_attachment_names[i_color_attachment] = attachments[i_color_attachment]->name;
                 }
             }
         }
@@ -154,7 +162,7 @@ private:
             auto & input_var = input_vars[i_var];
             if (input_var->built_in == -1)
             {
-                // we assume that the data is always packed 
+                // we assume that the data is always packed
                 vk::VertexInputAttributeDescription vertex_input_attrib;
                 vertex_input_attrib.setBinding(0u);
                 vertex_input_attrib.setLocation(input_var->location);

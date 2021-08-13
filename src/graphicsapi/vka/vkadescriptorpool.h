@@ -3,7 +3,7 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct DescriptorPool
 {
@@ -38,4 +38,4 @@ struct DescriptorPool
         m_device->m_vk_ldevice->resetDescriptorPool(m_vk_descriptor_pool.get());
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

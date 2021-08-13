@@ -3,7 +3,7 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct StagingBufferManager
 {
@@ -223,4 +223,4 @@ struct StagingBufferManager
         return &m_scratch_buffers.back().get();
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

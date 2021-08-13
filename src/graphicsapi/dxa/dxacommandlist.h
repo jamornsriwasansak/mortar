@@ -13,7 +13,7 @@
 #include "dxaswapchain.h"
 #include "dxatexture.h"
 
-namespace Dxa
+namespace DXA_NAME
 {
 struct CommandList
 {

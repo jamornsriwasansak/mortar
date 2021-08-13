@@ -4,7 +4,7 @@
 #include "vkadevice.h"
 #include "vkasemaphore.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct Swapchain
 {
@@ -179,4 +179,4 @@ private:
         return vk::PresentModeKHR();
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

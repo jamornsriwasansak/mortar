@@ -2,7 +2,7 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct Sampler
 {
@@ -31,4 +31,4 @@ struct Sampler
         m_vk_sampler = device->m_vk_ldevice->createSamplerUnique(sampler_ci);
     }
 };
-} // namespace Vka
+} // namespace VKA_NAME

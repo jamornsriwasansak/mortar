@@ -7,7 +7,7 @@
 #include "../shadersrc.h"
 #include "spirvreflection.h"
 
-namespace Vka
+namespace VKA_NAME
 {
 struct RayTracingPipelineConfig
 {
@@ -338,4 +338,4 @@ struct RayTracingShaderTable
     }
 };
 
-} // namespace Vka
+} // namespace VKA_NAME
