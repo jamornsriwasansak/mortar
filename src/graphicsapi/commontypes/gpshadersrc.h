@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/file.h"
-#include "gpcommontypes/enums.h"
+#include "gpenums.h"
 
 #include <filesystem>
 #include <string>

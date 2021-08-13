@@ -2,7 +2,7 @@
 
 #include "common/glfwhandler.h"
 #include "common/logger.h"
-#include "setting.h"
+#include "../setting.h"
 //
 #include <DirectXMath.h>
 #include <directx/d3d12.h>

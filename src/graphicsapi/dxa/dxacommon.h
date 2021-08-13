@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../gpcommontypes/enums.h"
-#include "../shadersrc.h"
+#include "../commontypes/gpenums.h"
+#include "../commontypes/gpshadersrc.h"
 #include "common/glfwhandler.h"
 #include "common/logger.h"
 //
@@ -141,4 +141,4 @@ struct DescriptorHeap
         m_dx_offset           = 0;
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME

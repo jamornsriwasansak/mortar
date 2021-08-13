@@ -3,8 +3,8 @@
 #include "dxacommon.h"
 #include "dxilreflection.h"
 
+#include "../commontypes/gpshadersrc.h"
 #include "../shadercompiler/hlsldxccompiler.h"
-#include "../shadersrc.h"
 
 namespace DXA_NAME
 {
@@ -141,8 +141,8 @@ struct RayTracingPipeline
             */
 
             // entry
-            ShaderEntry &     entry      = shader_entries[i];
             const ShaderSrc & shader_src = rt_lib.m_shader_srcs[i];
+            ShaderEntry &     entry      = shader_entries[i];
 
             const size_t      unique_id      = i;
             const std::string renamed_symbol = shader_src.m_entry + "_" + std::to_string(unique_id);
@@ -679,4 +679,4 @@ struct RayTracingShaderTable
         }
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME

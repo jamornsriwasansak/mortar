@@ -3,8 +3,8 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
+#include "../commontypes/gpshadersrc.h"
 #include "../shadercompiler/hlsldxccompiler.h"
-#include "../shadersrc.h"
 #include "spirvreflection.h"
 
 namespace VKA_NAME

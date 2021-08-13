@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../gpcommontypes/enums.h"
+#include "../commontypes/gpenums.h"
 #include "common/logger.h"
 #include "common/vmath.h"
-#include "graphicsapi/shadersrc.h"
+#include "../commontypes/gpshadersrc.h"
 
 #include <wrl/client.h>
 // dxcapi must be included after wrl/client

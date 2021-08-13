@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../gpcommontypes/enums.h"
-#include "graphicsapi/shadersrc.h"
+#include "../commontypes/gpenums.h"
+#include "../commontypes/gpshadersrc.h"
 
 #include <spirv_reflect.h>
 #include <vulkan/vulkan.hpp>
