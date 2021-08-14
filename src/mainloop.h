@@ -141,7 +141,7 @@ struct MainLoop
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto/Roboto-Medium.ttf", 15);
-        m_imgui_render_pass = Gp::ImGuiRenderPass(m_device, *m_window, m_swapchain, m_num_flights);
+        m_imgui_render_pass = Gp::ImGuiRenderPass(m_device, *m_window, m_swapchain);
 
         m_asset_browser.init();
     }

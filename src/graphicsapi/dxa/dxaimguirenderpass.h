@@ -18,7 +18,7 @@ struct ImGuiRenderPass
 
     ImGuiRenderPass() {}
 
-    ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain, const size_t num_flights)
+    ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain)
     {
         // create descriptor heap for imgui font
         D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};

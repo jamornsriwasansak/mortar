@@ -21,7 +21,7 @@ struct ImGuiRenderPass
 
     ImGuiRenderPass() {}
 
-    ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain, const size_t num_flights)
+    ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain)
     {
         m_resolution = swapchain.m_resolution;
 
@@ -94,8 +94,8 @@ struct ImGuiRenderPass
         init_info.PipelineCache             = VK_NULL_HANDLE;
         init_info.DescriptorPool            = m_descriptor_pool.get();
         init_info.Allocator                 = nullptr;
-        init_info.MinImageCount             = swapchain.m_num_images;
-        init_info.ImageCount                = swapchain.m_num_images;
+        init_info.MinImageCount             = static_cast<uint32_t>(swapchain.m_num_images);
+        init_info.ImageCount                = static_cast<uint32_t>(swapchain.m_num_images);
         init_info.CheckVkResultFn           = nullptr;
         ImGui_ImplVulkan_Init(&init_info, m_vk_render_pass.get());
 

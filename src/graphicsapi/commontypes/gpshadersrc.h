@@ -59,39 +59,3 @@ struct TShaderSrc
         }
     }
 };
-
-/*
-template <typename T>
-struct TGraphicsPipelineShaderSrc
-{
-    std::vector<TShaderSrc<T>> m_shader_srcs;
-
-    TGraphicsPipelineTShaderSrc() {}
-
-    TShaderSrc<T> &
-    get(const Dxa::ShaderStageEnum shader_stage)
-    {
-        for (auto & shader_src : m_shader_srcs)
-        {
-            if (shader_src.m_shader_stage == shader_stage)
-            {
-                return shader_src;
-            }
-        }
-        m_shader_srcs.push_back(TShaderSrc<T>(shader_stage));
-        return m_shader_srcs.back();
-    }
-
-    TShaderSrc<T> &
-    vs()
-    {
-        return get(T::Vertex);
-    }
-
-    TShaderSrc<T> &
-    fs()
-    {
-        return get(T::Fragment);
-    }
-};
-*/

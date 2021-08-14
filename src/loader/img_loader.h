@@ -16,7 +16,8 @@ struct ImgLoader
         // load using stbi
         int2 resolution;
         stbi_set_flip_vertically_on_load(true);
-        void * image = stbi_load(filepath_str.c_str(), &resolution.x, &resolution.y, nullptr, desired_channel);
+        void * image =
+            stbi_load(filepath_str.c_str(), &resolution.x, &resolution.y, nullptr, static_cast<int>(desired_channel));
         std::byte * image_bytes = reinterpret_cast<std::byte *>(image);
         assert(desired_channel == 4 || desired_channel == 1);
         Gp::FormatEnum format_enum =

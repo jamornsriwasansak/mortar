@@ -228,8 +228,7 @@ struct Scene
         std::vector<SceneGraphNode> childs(scene->mNumMeshes);
 
         // add geometries
-        const std::array<size_t, 2> geometries_range =
-            add_geometries(scene, staging_buffer_manager, path.string());
+        const std::array<size_t, 2> geometries_range = add_geometries(scene, staging_buffer_manager);
 
         // add materials
         for (size_t i_mat = 0; i_mat < scene->mNumMaterials; i_mat++)
@@ -243,7 +242,7 @@ struct Scene
         for (size_t i_child = 0; i_child < scene->mNumMeshes; i_child++)
         {
             SceneGraphLeaf leaf;
-            leaf.m_geometry_id          = geometries_range[0] + i_child;
+            leaf.m_geometry_id          = static_cast<uint32_t>(geometries_range[0] + i_child);
             leaf.m_standard_material    = m_materials[scene->mMeshes[i_child]->mMaterialIndex];
             childs[i_child].m_info      = leaf;
             childs[i_child].m_parent    = &m_scene_graph_root;
@@ -254,7 +253,7 @@ struct Scene
     }
 
     std::array<size_t, 2>
-    add_geometries(const aiScene * scene, Gp::StagingBufferManager & staging_buffer_manager, const std::string & name)
+    add_geometries(const aiScene * scene, Gp::StagingBufferManager & staging_buffer_manager)
     {
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
@@ -442,7 +441,8 @@ struct Scene
         // load using stbi
         int2 resolution;
         stbi_set_flip_vertically_on_load(true);
-        void * image = stbi_load(filepath_str.c_str(), &resolution.x, &resolution.y, nullptr, desired_channel);
+        void * image =
+            stbi_load(filepath_str.c_str(), &resolution.x, &resolution.y, nullptr, static_cast<int>(desired_channel));
         assert(image);
         std::byte * image_bytes = reinterpret_cast<std::byte *>(image);
         assert(desired_channel == 4 || desired_channel == 1);
@@ -541,9 +541,8 @@ struct Scene
     build_static_models_blas(Gp::StagingBufferManager & staging_buffer_manager)
     {
         // create vector of description
-        const size_t num_static_geoms = m_scene_graph_root.get_num_leaves(
-            [&](const SceneGraphLeaf & leaf) -> bool
-            {
+        const size_t num_static_geoms =
+            m_scene_graph_root.get_num_leaves([&](const SceneGraphLeaf & leaf) -> bool {
                 const Geometry & geometry = m_geometries[leaf.m_geometry_id];
                 if (geometry.m_num_indices > 0 && geometry.m_is_static)
                 {
@@ -554,25 +553,23 @@ struct Scene
         // populate vector of geometry descs
         std::vector<Gp::RayTracingGeometryDesc> static_mesh_descs(num_static_geoms);
         size_t                                  i_static_mesh = 0;
-        m_scene_graph_root.traverse(
-            [&](const SceneGraphLeaf & leaf_info)
+        m_scene_graph_root.traverse([&](const SceneGraphLeaf & leaf_info) {
+            const Geometry & geometry = m_geometries[leaf_info.m_geometry_id];
+            if (geometry.m_num_indices > 0 && geometry.m_is_static)
             {
-                const Geometry & geometry = m_geometries[leaf_info.m_geometry_id];
-                if (geometry.m_num_indices > 0 && geometry.m_is_static)
-                {
-                    Gp::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
-                    geom_desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
-                    geom_desc.set_index_buffer(m_g_ibuf,
-                                               geometry.m_ibuf_offset * Gp::GetSizeInBytes(m_g_ibuf_index_type),
-                                               m_g_ibuf_index_type,
-                                               geometry.m_num_indices);
-                    geom_desc.set_vertex_buffer(m_g_vbuf_position,
-                                                geometry.m_vbuf_offset * Gp::GetSizeInBytes(m_g_vbuf_position_type),
-                                                Gp::FormatEnum::R32G32B32_SFloat,
-                                                sizeof(float3),
-                                                geometry.m_num_vertices);
-                }
-            });
+                Gp::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
+                geom_desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
+                geom_desc.set_index_buffer(m_g_ibuf,
+                                           geometry.m_ibuf_offset * Gp::GetSizeInBytes(m_g_ibuf_index_type),
+                                           m_g_ibuf_index_type,
+                                           geometry.m_num_indices);
+                geom_desc.set_vertex_buffer(m_g_vbuf_position,
+                                            geometry.m_vbuf_offset * Gp::GetSizeInBytes(m_g_vbuf_position_type),
+                                            Gp::FormatEnum::R32G32B32_SFloat,
+                                            sizeof(float3),
+                                            geometry.m_num_vertices);
+            }
+        });
         assert(i_static_mesh == num_static_geoms);
 
         // build blas
