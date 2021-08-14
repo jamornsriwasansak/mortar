@@ -16,17 +16,107 @@ struct Buffer
 
     Buffer() {}
 
-    Buffer(const Device *               device,
+    Buffer(const Device *        device,
+           const BufferUsageEnum buffer_usage,
+           const MemoryUsageEnum memory_usage,
+           const size_t          buffer_size,
+           const std::string &   name = "")
+    : m_size_in_bytes(buffer_size), m_memory_usage(memory_usage), m_buffer_usage(buffer_usage)
+    {
+        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
+        if (HasFlag(buffer_usage, BufferUsageEnum::StorageBuffer))
+        {
+            flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+            assert(memory_usage == MemoryUsageEnum::GpuOnly);
+        }
+        if (HasFlag(buffer_usage, BufferUsageEnum::RayTracingAccelStructBuffer))
+        {
+            flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+            assert(memory_usage == MemoryUsageEnum::GpuOnly);
+        }
+
+        // constant buffer needs 256 bytes alignment
+        if ((buffer_usage & BufferUsageEnum::ConstantBuffer) == BufferUsageEnum::ConstantBuffer)
+        {
+            m_size_in_bytes = round_up(m_size_in_bytes, static_cast<size_t>(256));
+        }
+
+        // allocate memory for buffer using D3D12MA
+        D3D12MA::ALLOCATION_DESC alloc_desc = {};
+
+        if (HasFlag(buffer_usage, BufferUsageEnum::RayTracingAccelStructBuffer))
+        {
+            // TODO:: check once in a while if this is fixed.
+            // for some reasons, the amd's D3D12MA causes bug when using FLAG_NONE to create raytracing accel creation
+            alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+        }
+        else
+        {
+            alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+        }
+
+        switch (memory_usage)
+        {
+        case MemoryUsageEnum::None:
+            break;
+        case MemoryUsageEnum::CpuOnly:
+        case MemoryUsageEnum::CpuToGpu:
+            alloc_desc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+            break;
+        case MemoryUsageEnum::GpuOnly:
+            alloc_desc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+            break;
+        case MemoryUsageEnum::GpuToCpu:
+            alloc_desc.HeapType = D3D12_HEAP_TYPE_READBACK;
+            break;
+        default:
+            Logger::Critical<true>("Does not support MemoryUsageEnum : ", static_cast<int>(memory_usage));
+            break;
+        }
+
+        // setup state
+        D3D12_RESOURCE_STATES states = static_cast<D3D12_RESOURCE_STATES>(buffer_usage);
+
+        switch (memory_usage)
+        {
+        case MemoryUsageEnum::CpuOnly:
+        case MemoryUsageEnum::CpuToGpu:
+            states |= D3D12_RESOURCE_STATE_GENERIC_READ;
+            break;
+        default:
+            break;
+        }
+
+        // allocate resource
+        ID3D12Resource *      resource;
+        D3D12MA::Allocation * allocation  = nullptr;
+        CD3DX12_RESOURCE_DESC buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(m_size_in_bytes, flags);
+        DXCK(device->m_d3d12ma->CreateResource(&alloc_desc, &buffer_desc, states, nullptr, &allocation, IID_PPV_ARGS(&resource)));
+
+        // check if allocation has problem
+        if (allocation == nullptr)
+        {
+            Logger::Critical<true>(__FUNCTION__, " ", name.c_str(), " allocation is nullptr");
+        }
+
+        // set struct variable
+        m_allocation = D3D12MAHandle<D3D12MA::Allocation>(allocation);
+
+        // set name
+        device->name_dx_object(resource, name);
+    }
+
+    Buffer(const Device *         device,
            const BufferUsageEnum  buffer_usage_,
            const MemoryUsageEnum  memory_usage,
            const size_t           buffer_size,
-           const std::byte *      initial_data        = nullptr,
-           StagingBufferManager * initial_data_loader = nullptr,
-           const std::string &    name                = "")
+           const std::byte *      initial_data,
+           StagingBufferManager * initial_data_loader,
+           const std::string &    name = "")
     : m_size_in_bytes(buffer_size), m_memory_usage(memory_usage), m_buffer_usage(buffer_usage_)
     {
-        BufferUsageEnum buffer_usage = buffer_usage_;
-        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
+        BufferUsageEnum      buffer_usage = buffer_usage_;
+        D3D12_RESOURCE_FLAGS flags        = D3D12_RESOURCE_FLAG_NONE;
         if (HasFlag(buffer_usage, BufferUsageEnum::StorageBuffer))
         {
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
@@ -185,4 +275,4 @@ struct Buffer
         return GetRequiredIntermediateSize(m_allocation->GetResource(), 0, 1);
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME

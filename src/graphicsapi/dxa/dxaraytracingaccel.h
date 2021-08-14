@@ -60,7 +60,7 @@ struct RayTracingBlas
 
     RayTracingBlas() {}
 
-    RayTracingBlas(Device *                       device,
+    RayTracingBlas(const Device *                 device,
                    const RayTracingGeometryDesc * geometry_descs,
                    const size_t                   num_geometries,
                    StagingBufferManager *         resource_loader,
@@ -203,4 +203,4 @@ struct RayTracingTlas
         temp_resource_manager->m_dx_command_list->BuildRaytracingAccelerationStructure(&tlas_build_desc, 0, nullptr);
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME

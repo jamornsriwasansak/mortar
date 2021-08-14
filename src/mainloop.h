@@ -259,8 +259,8 @@ struct MainLoop
         box_mesh[0].m_emissive_id = emissive_id;
         m_static_objects.insert(m_static_objects.end(), box_mesh.begin(), box_mesh.end());
 
-        m_scene.add_render_object("scenes/sponza/sponza.obj", m_staging_buffer_manager);
-        //m_scene.add_render_object("scenes/cube/cube.obj", m_staging_buffer_manager);
+        m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/sponza/sponza.obj", m_staging_buffer_manager);
+        m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
         m_scene.build_static_models_blas(m_staging_buffer_manager);
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");

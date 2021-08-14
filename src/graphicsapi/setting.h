@@ -3,7 +3,7 @@
 #define VKA_NAME GpVka
 #define DXA_NAME GpDxa
 
-#if 1
+#if 0
 #undef VKA_NAME
 #define VKA_NAME Gp
 #else

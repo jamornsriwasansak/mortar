@@ -9,6 +9,7 @@ namespace DXA_NAME
 struct CommandPool
 {
     ComPtr<ID3D12CommandAllocator> m_dx_command_allocator;
+    ComPtr<ID3D12CommandQueue>     m_dx_command_queue;
     D3D12_COMMAND_LIST_TYPE        m_command_list_type;
     std::vector<CommandList>       m_pre_alloc_cmd_lists;
     size_t                         m_cmd_buffer_index = 0;
@@ -16,10 +17,25 @@ struct CommandPool
 
     CommandPool() {}
 
-    CommandPool(const Device * device, const CommandQueueType queue_type)
-    : m_device(device), m_command_list_type(static_cast<D3D12_COMMAND_LIST_TYPE>(queue_type))
+    CommandPool(const Device * device, const CommandQueueType command_queue_type)
+    : m_device(device), m_command_list_type(static_cast<D3D12_COMMAND_LIST_TYPE>(command_queue_type))
     {
         device->m_dx_device->CreateCommandAllocator(m_command_list_type, IID_PPV_ARGS(&m_dx_command_allocator));
+        switch (command_queue_type)
+        {
+        case CommandQueueType::Graphics:
+            m_dx_command_queue = device->m_dx_direct_queue;
+            break;
+        case CommandQueueType::Compute:
+            m_dx_command_queue = device->m_dx_compute_queue;
+            break;
+        case CommandQueueType::Transfer:
+            m_dx_command_queue = device->m_dx_copy_queue;
+            break;
+        default:
+            Logger::Critical<true>(__FUNCTION__, " reach end switch case for command_queue_type");
+            break;
+        }
     }
 
     CommandList
@@ -34,8 +50,7 @@ struct CommandPool
                                                           NULL,
                                                           IID_PPV_ARGS(&cmd_list)));
             // DXCK(cmd_list->Close());
-            ID3D12CommandQueue * cmd_queue = m_device->m_dx_direct_queue.Get();
-            m_pre_alloc_cmd_lists.emplace_back(cmd_queue, cmd_list);
+            m_pre_alloc_cmd_lists.emplace_back(m_dx_command_queue.Get(), cmd_list);
         }
         return m_pre_alloc_cmd_lists[m_cmd_buffer_index++];
     }

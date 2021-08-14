@@ -54,20 +54,39 @@ struct SceneGraphNode
 {
     SceneGraphNode * m_parent                                        = nullptr;
     float4x4         m_transform                                     = glm::identity<float4x4>();
+    bool             m_is_dirty                                      = true;
     std::variant<SceneGraphLeaf, std::vector<SceneGraphNode>> m_info = {};
 
-    SceneGraphNode() {}
+    SceneGraphNode(const bool as_leaf)
+    {
+        if (as_leaf)
+        {
+            m_info = SceneGraphLeaf();
+        }
+        else
+        {
+            m_info = std::vector<SceneGraphNode>();
+        }
+    }
+
+    SceneGraphNode() : SceneGraphNode(false) {}
+
+    bool
+    is_leaf() const
+    {
+        return m_info.index() == 0;
+    }
 
     void
     traverse(const std::function<void(const SceneGraphLeaf &)> & func) const
     {
-        if (m_info.index() == 0)
+        if (is_leaf())
         {
             const SceneGraphLeaf & leaf_info = std::get<0>(m_info);
             func(leaf_info);
             return;
         }
-        else if (m_info.index() == 1)
+        else
         {
             const std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
             for (size_t i = 0; i < childs.size(); i++)
@@ -82,13 +101,13 @@ struct SceneGraphNode
     void
     traverse(const std::function<void(SceneGraphLeaf &)> & func)
     {
-        if (m_info.index() == 0)
+        if (is_leaf())
         {
             SceneGraphLeaf & leaf_info = std::get<0>(m_info);
             func(leaf_info);
             return;
         }
-        else if (m_info.index() == 1)
+        else
         {
             std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
             for (size_t i = 0; i < childs.size(); i++)
@@ -104,13 +123,13 @@ struct SceneGraphNode
     update_transform(const float4x4 & current_transform = glm::identity<float4x4>())
     {
         const float4x4 transform = m_transform * current_transform;
-        if (m_info.index() == 0)
+        if (is_leaf())
         {
             SceneGraphLeaf & leaf_info   = std::get<0>(m_info);
             leaf_info.m_recent_transform = transform;
             return;
         }
-        else if (m_info.index() == 1)
+        else
         {
             std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
             for (size_t i = 0; i < childs.size(); i++)
@@ -125,7 +144,7 @@ struct SceneGraphNode
     size_t
     get_num_leaves(const std::function<bool(const SceneGraphLeaf &)> & func) const
     {
-        if (m_info.index() == 0)
+        if (is_leaf())
         {
             const SceneGraphLeaf & leaf_info = std::get<0>(m_info);
             if (func(leaf_info))
@@ -134,7 +153,7 @@ struct SceneGraphNode
             }
             return 0;
         }
-        else if (m_info.index() == 1)
+        else
         {
             const std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
             size_t                              sum    = 0;
@@ -144,7 +163,6 @@ struct SceneGraphNode
             }
             return sum;
         }
-
         assert(false);
         return 0;
     }
@@ -190,7 +208,7 @@ struct Scene
 
     Gp::CommandPool m_graphics_pool;
 
-    SceneGraphNode m_scene_graph_root;
+    SceneGraphNode m_scene_graph_root = SceneGraphNode(false);
 
     Scene() {}
 
@@ -198,34 +216,34 @@ struct Scene
     {
         m_graphics_pool       = Gp::CommandPool(&device, Gp::CommandQueueType::Transfer);
         m_g_vbuf_position     = Gp::Buffer(m_device,
-                                       Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer |
-                                           Gp::BufferUsageEnum::TransferDst,
+                                       Gp::BufferUsageEnum::TransferDst,
                                        Gp::MemoryUsageEnum::GpuOnly,
                                        sizeof(float3) * EngineSetting::MaxNumVertices,
                                        "scene_m_g_vbuf_position");
         m_g_vbuf_compact_info = Gp::Buffer(m_device,
-                                           Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer |
-                                               Gp::BufferUsageEnum::TransferDst,
+                                           Gp::BufferUsageEnum::TransferDst,
                                            Gp::MemoryUsageEnum::GpuOnly,
                                            sizeof(CompactVertex) * EngineSetting::MaxNumVertices,
                                            "scene_m_g_vbuf_compact_info");
         m_g_ibuf              = Gp::Buffer(m_device,
-                              Gp::BufferUsageEnum::IndexBuffer | Gp::BufferUsageEnum::StorageBuffer |
-                                  Gp::BufferUsageEnum::TransferDst,
+                              Gp::BufferUsageEnum::TransferDst,
                               Gp::MemoryUsageEnum::GpuOnly,
                               Gp::GetSizeInBytes(m_g_ibuf_index_type) * EngineSetting::MaxNumIndices,
                               "scene_m_g_ibuf");
     }
 
     void
-    add_render_object(const std::filesystem::path & path, Gp::StagingBufferManager & staging_buffer_manager)
+    add_render_object(SceneGraphNode * node, const std::filesystem::path & path, Gp::StagingBufferManager & staging_buffer_manager)
     {
         Assimp::Importer importer;
         const aiScene *  scene =
             importer.ReadFile(path.string(),
                               aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
                                   aiProcess_JoinIdenticalVertices | aiProcess_RemoveRedundantMaterials);
-        std::vector<SceneGraphNode> childs(scene->mNumMeshes);
+        assert(!node->is_leaf());
+        std::vector<SceneGraphNode> & childs = std::get<1>(node->m_info);
+        const size_t                  offset = childs.size();
+        childs.resize(offset + scene->mNumMeshes);
 
         // add geometries
         const std::array<size_t, 2> geometries_range = add_geometries(scene, staging_buffer_manager);
@@ -242,14 +260,12 @@ struct Scene
         for (size_t i_child = 0; i_child < scene->mNumMeshes; i_child++)
         {
             SceneGraphLeaf leaf;
-            leaf.m_geometry_id          = static_cast<uint32_t>(geometries_range[0] + i_child);
-            leaf.m_standard_material    = m_materials[scene->mMeshes[i_child]->mMaterialIndex];
-            childs[i_child].m_info      = leaf;
-            childs[i_child].m_parent    = &m_scene_graph_root;
-            childs[i_child].m_transform = glm::identity<float4x4>();
+            leaf.m_geometry_id              = static_cast<uint32_t>(geometries_range[0] + i_child);
+            leaf.m_standard_material        = m_materials[scene->mMeshes[i_child]->mMaterialIndex];
+            childs[offset + i_child].m_info = leaf;
+            childs[offset + i_child].m_parent    = node;
+            childs[offset + i_child].m_transform = glm::identity<float4x4>();
         }
-        m_scene_graph_root.m_info   = childs;
-        m_scene_graph_root.m_parent = nullptr;
     }
 
     std::array<size_t, 2>
@@ -335,6 +351,7 @@ struct Scene
                                    Gp::MemoryUsageEnum::CpuOnly,
                                    ib.size() * sizeof(ib[0]));
         cmd_list.begin();
+        /*
         cmd_list.update_buffer_subresources(m_g_vbuf_position,
                                             m_g_vbuf_num_vertices * sizeof(float3),
                                             reinterpret_cast<std::byte *>(vb_positions.data()),
@@ -344,7 +361,13 @@ struct Scene
                                             m_g_ibuf_num_indices * Gp::GetSizeInBytes(m_g_ibuf_index_type),
                                             reinterpret_cast<std::byte *>(ib.data()),
                                             ib.size() * sizeof(ib[0]),
-                                            staging_buffer2);
+                                            staging_buffer2);*/
+        cmd_list.m_dx_cmd_list->CopyBufferRegion(m_g_vbuf_position.m_allocation->GetResource(),
+                                                 m_g_vbuf_num_vertices * sizeof(float3),
+                                                 staging_buffer.m_allocation->GetResource(),
+                                                 0,
+                                                 ib.size() * sizeof(ib[0]));
+
         cmd_list.end();
         cmd_list.submit(&tmp_fence);
         tmp_fence.wait();
@@ -578,6 +601,7 @@ struct Scene
                                                      static_mesh_descs.size(),
                                                      &staging_buffer_manager,
                                                      "global_blas");
+
         staging_buffer_manager.submit_all_pending_upload();
     }
 };

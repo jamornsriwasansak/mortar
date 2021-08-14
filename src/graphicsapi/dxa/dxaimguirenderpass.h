@@ -39,6 +39,11 @@ struct ImGuiRenderPass
     }
 
     void
+    init_or_resize_framebuffer(const Device * device, const Swapchain & swapchain)
+    {
+    }
+
+    void
     new_frame() const
     {
         // Start the Dear ImGui frame
@@ -62,4 +67,4 @@ struct ImGuiRenderPass
         ImGui::DestroyContext();
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME
