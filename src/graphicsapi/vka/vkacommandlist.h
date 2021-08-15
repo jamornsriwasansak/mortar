@@ -139,6 +139,22 @@ struct CommandList
     }
 
     void
+    copy_buffer_region(const Buffer & dst_buffer,
+                       const size_t   dst_offset_in_bytes,
+                       const Buffer & src_buffer,
+                       const size_t   src_offset_in_bytes,
+                       const size_t   size_in_bytes)
+    {
+        vk::BufferCopy copy_region = {};
+        copy_region.setSize(size_in_bytes);
+        copy_region.setSrcOffset(src_offset_in_bytes);
+        copy_region.setDstOffset(dst_offset_in_bytes);
+        m_vk_command_buffer.copyBuffer(src_buffer.m_vma_buffer_bundle->m_vk_buffer,
+                                       dst_buffer.m_vma_buffer_bundle->m_vk_buffer,
+                                       { copy_region });
+    }
+
+    void
     draw_instanced(const uint32_t vertex_count_per_instance,
                    const uint32_t instance_count,
                    const uint32_t first_vertex,
@@ -299,7 +315,7 @@ struct CommandList
                                          depth);
     }
 
-    void
+    [[deprecated]] void
     update_buffer_subresources(const Buffer &    dst_buffer,
                                const size_t      dst_offset,
                                const std::byte * src_data,

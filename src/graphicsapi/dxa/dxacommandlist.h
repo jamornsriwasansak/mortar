@@ -233,6 +233,20 @@ struct CommandList
     }
 
     void
+    copy_buffer_region(const Buffer & dst_buffer,
+                       const size_t   dst_offset_in_bytes,
+                       const Buffer & src_buffer,
+                       const size_t   src_offset_in_bytes,
+                       const size_t   size_in_bytes)
+    {
+        m_dx_cmd_list->CopyBufferRegion(dst_buffer.m_allocation->GetResource(),
+                                        dst_offset_in_bytes,
+                                        src_buffer.m_allocation->GetResource(),
+                                        src_offset_in_bytes,
+                                        size_in_bytes);
+    }
+
+    void
     end_render_pass()
     {
     }
@@ -322,7 +336,7 @@ struct CommandList
     }
 
     void
-    submit(Fence * fence, Semaphore * semaphore_wait, Semaphore * semaphore_signal)
+    submit(Fence * fence, Semaphore * semaphore_wait = nullptr, Semaphore * semaphore_signal = nullptr)
     {
         ID3D12CommandList * const command_lists[] = { m_dx_cmd_list.Get() };
         if (semaphore_wait != nullptr)
@@ -387,27 +401,31 @@ struct CommandList
         m_dx_cmd_list->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size_in_bytes / 4), data, 0);
     }
 
-    void
-    update_subresources(const Buffer & buffer, const Buffer & staging_buffer, const void * ptr, const size_t size_in_bytes)
+    [[deprecated]] void
+    update_buffer_subresources(const Buffer &    dst_buffer,
+                               const size_t      dst_offset,
+                               const std::byte * src_data,
+                               const size_t      src_data_size_in_bytes,
+                               const Buffer &    staging_buffer)
     {
         assert(staging_buffer.m_memory_usage == MemoryUsageEnum::CpuOnly);
         D3D12_SUBRESOURCE_DATA subresource_data;
         {
-            subresource_data.pData      = reinterpret_cast<const BYTE *>(ptr);
-            subresource_data.RowPitch   = size_in_bytes;
-            subresource_data.SlicePitch = size_in_bytes;
+            subresource_data.pData      = reinterpret_cast<const BYTE *>(src_data);
+            subresource_data.RowPitch   = src_data_size_in_bytes;
+            subresource_data.SlicePitch = src_data_size_in_bytes;
         }
         [[maybe_unused]] UINT64 size = UpdateSubresources(m_dx_cmd_list.Get(),
-                                                          buffer.m_allocation->GetResource(),
+                                                          dst_buffer.m_allocation->GetResource(),
                                                           staging_buffer.m_allocation->GetResource(),
                                                           0,
                                                           0,
                                                           1,
                                                           &subresource_data);
-        assert(size == size_in_bytes);
+        assert(size == src_data_size_in_bytes);
     }
 
-    void
+    [[deprecated]] void
     update_subresources(const Texture & texture,
                         const Buffer &  staging_buffer,
                         const void *    ptr,
@@ -431,4 +449,4 @@ struct CommandList
         assert(size == size_in_bytes);
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME

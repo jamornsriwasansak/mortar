@@ -111,7 +111,7 @@ struct Device
     void
     name_dx_object(DxType & dx_type, const std::string & name = "") const
     {
-        if (enable_debug() && !name.empty())
+        if (!name.empty())
         {
             const std::wstring wname(name.begin(), name.end());
             dx_type->SetName(wname.c_str());

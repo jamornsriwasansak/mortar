@@ -201,7 +201,7 @@ struct Device
     name_vkhpp_object(const HppType & vk_object, const std::string & name = "") const
     {
         CType base_vk_object = vk_object;
-        if (enable_debug() && !name.empty())
+        if (!name.empty())
         {
             vk::DebugMarkerObjectNameInfoEXT name_info = {};
             name_info.setObjectType(vk_object.debugReportObjectType);

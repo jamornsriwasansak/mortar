@@ -350,24 +350,22 @@ struct Scene
                                    Gp::BufferUsageEnum::TransferSrc,
                                    Gp::MemoryUsageEnum::CpuOnly,
                                    ib.size() * sizeof(ib[0]));
-        cmd_list.begin();
-        /*
-        cmd_list.update_buffer_subresources(m_g_vbuf_position,
-                                            m_g_vbuf_num_vertices * sizeof(float3),
-                                            reinterpret_cast<std::byte *>(vb_positions.data()),
-                                            vb_positions.size() * sizeof(vb_positions[0]),
-                                            staging_buffer);
-        cmd_list.update_buffer_subresources(m_g_ibuf,
-                                            m_g_ibuf_num_indices * Gp::GetSizeInBytes(m_g_ibuf_index_type),
-                                            reinterpret_cast<std::byte *>(ib.data()),
-                                            ib.size() * sizeof(ib[0]),
-                                            staging_buffer2);*/
-        cmd_list.m_dx_cmd_list->CopyBufferRegion(m_g_vbuf_position.m_allocation->GetResource(),
-                                                 m_g_vbuf_num_vertices * sizeof(float3),
-                                                 staging_buffer.m_allocation->GetResource(),
-                                                 0,
-                                                 ib.size() * sizeof(ib[0]));
+        std::memcpy(staging_buffer.map(), vb_positions.data(), vb_positions.size() * sizeof(vb_positions[0]));
+        std::memcpy(staging_buffer2.map(), ib.data(), ib.size() * sizeof(ib[0]));
+        staging_buffer.unmap();
+        staging_buffer2.unmap();
 
+        cmd_list.begin();
+        cmd_list.copy_buffer_region(m_g_vbuf_position,
+                                    m_g_vbuf_num_vertices * sizeof(float3),
+                                    staging_buffer,
+                                    0,
+                                    vb_positions.size() * sizeof(vb_positions[0]));
+        cmd_list.copy_buffer_region(m_g_ibuf,
+                                    m_g_ibuf_num_indices * Gp::GetSizeInBytes(m_g_ibuf_index_type),
+                                    staging_buffer2,
+                                    0,
+                                    ib.size() * sizeof(ib[0]));
         cmd_list.end();
         cmd_list.submit(&tmp_fence);
         tmp_fence.wait();
