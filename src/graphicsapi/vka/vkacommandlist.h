@@ -314,37 +314,5 @@ struct CommandList
                                          height,
                                          depth);
     }
-
-    [[deprecated]] void
-    update_buffer_subresources(const Buffer &    dst_buffer,
-                               const size_t      dst_offset,
-                               const std::byte * src_data,
-                               const size_t      src_data_size,
-                               const Buffer &    staging_buffer)
-    {
-        // map data
-        void * mapped_stage = staging_buffer.m_vma_buffer_bundle->m_vma_alloc_info.pMappedData;
-        if (mapped_stage == nullptr)
-        {
-            VkResult result = vmaMapMemory(staging_buffer.m_vma_buffer_bundle->m_vma_allocator,
-                                           staging_buffer.m_vma_buffer_bundle->m_vma_allocation,
-                                           &mapped_stage);
-            assert(result == VK_SUCCESS);
-        }
-        assert(mapped_stage != nullptr);
-
-        // copy
-        std::memcpy(mapped_stage, src_data, src_data_size);
-        vmaUnmapMemory(staging_buffer.m_vma_buffer_bundle->m_vma_allocator,
-                       staging_buffer.m_vma_buffer_bundle->m_vma_allocation);
-
-        vk::BufferCopy copy_region = {};
-        copy_region.setSize(src_data_size);
-        copy_region.setSrcOffset(0);
-        copy_region.setDstOffset(dst_offset);
-        m_vk_command_buffer.copyBuffer(staging_buffer.m_vma_buffer_bundle->m_vk_buffer,
-                                       dst_buffer.m_vma_buffer_bundle->m_vk_buffer,
-                                       { copy_region });
-    }
 };
 } // namespace VKA_NAME

@@ -26,6 +26,8 @@ struct DescriptorSet
     };
 
     size_t m_set = std::numeric_limits<size_t>::max();
+
+    // TODO:: purge map and vector. use Ste::FsVector instead
     const std::map<std::tuple<D3D_SHADER_INPUT_TYPE, size_t, size_t>, DxilReflection::DescriptorInfo> * m_descriptor_info =
         nullptr;
     std::map<std::tuple<D3D_SHADER_INPUT_TYPE, size_t, size_t>, DescriptorHandle> m_handles;
@@ -35,11 +37,15 @@ struct DescriptorSet
     std::vector<RootSignatureLevelView> m_root_srvs;
 
     DescriptorPool * m_descriptor_pool = nullptr;
-    Device *         m_device          = nullptr;
+    const Device *   m_device          = nullptr;
+
+#ifndef NDEBUG
+    bool m_updated = false;
+#endif
 
     DescriptorSet() {}
 
-    DescriptorSet(Device *                             device,
+    DescriptorSet(const Device *                       device,
                   const RasterPipeline &               pipeline,
                   DescriptorPool *                     descriptor_pool,
                   const size_t                         i_set,
@@ -51,7 +57,7 @@ struct DescriptorSet
     {
     }
 
-    DescriptorSet(Device *                             device,
+    DescriptorSet(const Device *                       device,
                   const RayTracingPipeline &           pipeline,
                   DescriptorPool *                     descriptor_pool,
                   const size_t                         i_set,
@@ -341,16 +347,12 @@ struct DescriptorSet
         return *this;
     }
 
-
     void
     update()
     {
+#ifndef NDEBUG
+        m_updated = true;
+#endif
     }
 };
-
-struct DescriptorGroup
-{
-    const std::map<std::tuple<D3D_SHADER_INPUT_TYPE, size_t, size_t>, DxilReflection::DescriptorInfo> * m_descriptor_info;
-    std::vector<DescriptorSet> m_descriptor_set;
-};
-} // namespace Dxa
+} // namespace DXA_NAME

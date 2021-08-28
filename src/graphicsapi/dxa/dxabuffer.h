@@ -52,7 +52,8 @@ struct Buffer
         }
         else
         {
-            alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+            //alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+            alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
         }
 
         switch (memory_usage)
@@ -146,7 +147,8 @@ struct Buffer
         }
         else
         {
-            alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+            //alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+            alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
         }
 
         switch (memory_usage)

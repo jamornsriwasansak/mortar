@@ -139,10 +139,10 @@ struct RayTracingTlas
 
     RayTracingTlas() {}
 
-    RayTracingTlas(Device *                              device,
-                   const std::span<RayTracingInstance *> instances,
-                   StagingBufferManager *                temp_resource_manager,
-                   const std::string &                   name = "")
+    RayTracingTlas(const Device *                              device,
+                   const std::span<const RayTracingInstance *> instances,
+                   StagingBufferManager *                      temp_resource_manager,
+                   const std::string &                         name = "")
     {
         // copy description of instance into the buffer
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";

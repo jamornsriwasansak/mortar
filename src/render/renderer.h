@@ -1,24 +1,14 @@
 #pragma once
 
+#include "common/camera_params.h"
+#include "common/render_params.h"
 #include "graphicsapi/graphicsapi.h"
 #include "passes/restir_direct_light/bindless_object_table.h"
-#include "passes/restir_direct_light/camera_params.h"
 #include "passes/restir_direct_light/direct_light_params.h"
 #include "passes/restir_direct_light/reservior.h"
+#include "passes/rtvisualize/rtvisualize.h"
 #include "rendercontext.h"
 #include "scene.h"
-
-struct RenderParams
-{
-    int2                          m_resolution = { 0, 0 };
-    AssetPool *                   m_asset_pool = nullptr;
-    Scene *                       m_scene      = nullptr;
-    FpsCamera *                   m_fps_camera = nullptr;
-    std::vector<StandardObject> * m_static_objects;
-    bool                          m_is_static_mesh_dirty = true;
-    bool                          m_is_shaders_dirty     = false;
-    bool                          m_should_imgui_drawn   = true;
-};
 
 struct Renderer
 {
@@ -44,6 +34,8 @@ struct Renderer
     Gp::Buffer m_cb_bindless_object_table;
     Gp::Buffer m_cb_emissives;
 
+    RtVisualizePass m_pass_rt_visualize;
+
     Renderer() {}
 
     void
@@ -61,6 +53,8 @@ struct Renderer
 
         init_or_resize_resolution(device, resolution, swapchain_attachment);
         init_shaders(device, true);
+
+        m_pass_rt_visualize = RtVisualizePass(device);
     }
 
     void
@@ -100,8 +94,7 @@ struct Renderer
         // raster pipeline
         try
         {
-            m_raster_pipeline = [&]()
-            {
+            m_raster_pipeline = [&]() {
                 std::filesystem::path shader_path = "../src/render/passes/beauty/";
                 Gp::ShaderSrc         vertexShaderSrc2(Gp::ShaderStageEnum::Vertex);
                 vertexShaderSrc2.m_entry     = "VsMain";
@@ -119,8 +112,7 @@ struct Renderer
             }();
 
             // raytracing pipeline
-            m_rt_pipeline = [&]()
-            {
+            m_rt_pipeline = [&]() {
                 std::filesystem::path shader_path = "../src/render/passes/restir_direct_light/";
 
                 // create pipeline for ssao
@@ -158,6 +150,9 @@ struct Renderer
 
                 return Gp::RayTracingPipeline(device, rt_config, 16, 64, 2, "raytracing_pipeline");
             }();
+
+            // raytracing visualize pipeline
+
             m_rt_sbt = Gp::RayTracingShaderTable(device, m_rt_pipeline, "raytracing_shader_table");
         }
         catch (const std::exception & e)
@@ -255,7 +250,7 @@ struct Renderer
 
         Gp::RayTracingInstance non_emissive_instance(&m_rt_static_mesh_nonemissive_blas, 0);
         Gp::RayTracingInstance emissive_instance(&m_rt_static_mesh_emissive_blas, 1);
-        std::array<Gp::RayTracingInstance *, 2> instances{ &non_emissive_instance, &emissive_instance };
+        std::array<const Gp::RayTracingInstance *, 2> instances{ &non_emissive_instance, &emissive_instance };
 
         m_rt_tlas = Gp::RayTracingTlas(ctx.m_device,
                                        instances,
@@ -290,7 +285,7 @@ struct Renderer
                                         sizeof(uint32_t) * 100,
                                         reinterpret_cast<std::byte *>(num_triangles.data()),
                                         ctx.m_staging_buffer_manager,
-                                        "num_triangles");
+                                        "num_triangles_buffer");
 
         // bindless object table
         m_cb_bindless_object_table = Gp::Buffer(ctx.m_device,
@@ -299,7 +294,7 @@ struct Renderer
                                                 sizeof(BindlessObjectTable),
                                                 reinterpret_cast<std::byte *>(num_triangles.data()),
                                                 ctx.m_staging_buffer_manager,
-                                                "num_triangles");
+                                                "object_table");
 
         // emissive info buffer
         m_cb_emissives =

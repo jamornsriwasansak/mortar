@@ -261,7 +261,7 @@ struct MainLoop
 
         m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/sponza/sponza.obj", m_staging_buffer_manager);
         m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
-        m_scene.build_static_models_blas(m_staging_buffer_manager);
+        m_scene.build_accel_struct(m_staging_buffer_manager);
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");
 

@@ -8,17 +8,17 @@
 
 namespace DXA_NAME
 {
+struct RayTracingHitGroup
+{
+    std::optional<size_t> m_closest_hit_id;
+    std::optional<size_t> m_any_hit_id;
+    std::optional<size_t> m_intersect_id;
+};
+
 struct RayTracingPipelineConfig
 {
-    struct HitGroup
-    {
-        std::optional<size_t> m_closest_hit_id;
-        std::optional<size_t> m_any_hit_id;
-        std::optional<size_t> m_intersect_id;
-    };
-
-    std::vector<ShaderSrc> m_shader_srcs;
-    std::vector<HitGroup>  m_hit_groups;
+    std::vector<ShaderSrc>          m_shader_srcs;
+    std::vector<RayTracingHitGroup> m_hit_groups;
 
     RayTracingPipelineConfig() {}
 
@@ -30,12 +30,12 @@ struct RayTracingPipelineConfig
         return m_shader_srcs.size() - 1;
     }
 
-    size_t
+    [[deprecated]] size_t
     add_hit_group(const size_t closest_hit_id,
                   const size_t any_hit_id   = std::numeric_limits<size_t>::max(),
                   const size_t intersect_id = std::numeric_limits<size_t>::max())
     {
-        HitGroup hit_group;
+        RayTracingHitGroup hit_group;
         hit_group.m_closest_hit_id = closest_hit_id;
         if (any_hit_id != std::numeric_limits<size_t>::max())
         {
@@ -45,6 +45,13 @@ struct RayTracingPipelineConfig
         {
             hit_group.m_intersect_id = intersect_id;
         }
+        m_hit_groups.push_back(hit_group);
+        return m_hit_groups.size() - 1;
+    }
+
+    size_t
+    add_hit_group(const RayTracingHitGroup & hit_group)
+    {
         m_hit_groups.push_back(hit_group);
         return m_hit_groups.size() - 1;
     }
@@ -94,7 +101,7 @@ struct RayTracingPipeline
 
     RayTracingPipeline() {}
 
-    RayTracingPipeline(Device *                         device,
+    RayTracingPipeline(const Device *                   device,
                        const RayTracingPipelineConfig & rt_lib,
                        const size_t                     attribute_size,
                        const size_t                     payload_size,
@@ -260,7 +267,7 @@ struct RayTracingPipeline
     }
 
     void
-    init_pso(Device *                            device,
+    init_pso(const Device *                      device,
              const RayTracingPipelineConfig &    rt_lib,
              const std::vector<ShaderEntry> &    shader_entries,
              const std::vector<HitGroupRecord> & hit_group_records,
@@ -546,7 +553,7 @@ struct RayTracingPipeline
         m_hit_group_record_size = hit_group_record_size;
         m_num_raygens           = num_shader_entries(ShaderStageEnum::RayGen);
         m_num_misses            = num_shader_entries(ShaderStageEnum::Miss);
-        m_num_hit_groups        = num_shader_entries(ShaderStageEnum::ClosestHit);
+        m_num_hit_groups        = num_hit_groups;
 
         device->name_dx_object(m_dx_rt_pso, name);
     }
@@ -559,7 +566,7 @@ struct RayTracingShaderTable
 
     RayTracingShaderTable() {}
 
-    RayTracingShaderTable(Device *                   device,
+    RayTracingShaderTable(const Device *             device,
                           const RayTracingPipeline & pipeline,
                           const std::string &        name,
                           // TODO:: these gpu descriptor handle should be set in a different function

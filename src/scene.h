@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/camera.h"
+#include "common/ste/stevector.h"
 #include "graphicsapi/graphicsapi.h"
 #include "loader/img_loader.h"
 #include "render/common/engine_setting.h"
@@ -197,14 +198,14 @@ struct Scene
     size_t             m_g_vbuf_num_vertices  = 0;
     size_t             m_g_ibuf_num_indices   = 0;
 
-    std::array<Gp::Texture, EngineSetting::MaxNumBindlessTextures>       m_textures;
-    size_t                                                               m_num_textures = 0;
+    Ste::FsVector<Gp::Texture, EngineSetting::MaxNumBindlessTextures>    m_textures;
     std::array<StandardMaterial, EngineSetting::MaxNumStandardMaterials> m_materials;
     size_t                                                               m_num_materials = 0;
     std::array<Geometry, EngineSetting::MaxNumGeometries>                m_geometries;
     size_t                                                               m_num_geometries = 0;
 
     Gp::RayTracingBlas m_rt_static_meshes_blas;
+    Gp::RayTracingTlas m_rt_tlas;
 
     Gp::CommandPool m_graphics_pool;
 
@@ -407,15 +408,15 @@ struct Scene
     {
         // find empty texture slot
         size_t e = 0;
-        for (e = 0; e < m_textures.size(); e++)
+        for (e = 0; e < m_textures.max_size(); e++)
         {
             if (m_textures[e].is_empty())
             {
                 break;
             }
         }
-        assert(e != m_textures.size());
-        if (e == m_textures.size())
+        assert(e != m_textures.max_size());
+        if (e == m_textures.max_size())
         {
             return -1;
         }
@@ -444,15 +445,15 @@ struct Scene
     {
         // find empty texture slot
         size_t e = 0;
-        for (e = 0; e < m_textures.size(); e++)
+        for (e = 0; e < m_textures.max_size(); e++)
         {
             if (m_textures[e].is_empty())
             {
                 break;
             }
         }
-        assert(e != m_textures.size());
-        if (e == m_textures.size())
+        assert(e != m_textures.max_size());
+        if (e == m_textures.max_size())
         {
             return -1;
         }
@@ -481,7 +482,7 @@ struct Scene
         staging_buffer_manager.submit_all_pending_upload();
         stbi_image_free(image);
 
-        m_textures[e] = std::move(texture);
+        m_textures.emplace_back(std::move(texture));
         return e;
     }
 
@@ -600,6 +601,22 @@ struct Scene
                                                      &staging_buffer_manager,
                                                      "global_blas");
 
+        staging_buffer_manager.submit_all_pending_upload();
+    }
+
+    void
+    build_accel_struct(Gp::StagingBufferManager & staging_buffer_manager)
+    {
+        // build blas
+        build_static_models_blas(staging_buffer_manager);
+
+        // build tlas
+        std::array<const Gp::RayTracingInstance *, 1> instances;
+        Gp::RayTracingInstance static_meshes_instance(&m_rt_static_meshes_blas, 0);
+        instances[0] = &static_meshes_instance;
+
+        m_rt_tlas =
+            Gp::RayTracingTlas(m_device, instances, &staging_buffer_manager, "ray_tracing_tlas");
         staging_buffer_manager.submit_all_pending_upload();
     }
 };

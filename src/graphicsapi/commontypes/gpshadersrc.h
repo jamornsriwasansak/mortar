@@ -19,9 +19,9 @@ struct TShaderSrc
     TShaderSrc() {}
 
     TShaderSrc(const ShaderStageEnum         shader_stage,
-               const std::filesystem::path & path   = "",
-               const std::string &           source = "")
-    : m_shader_stage(shader_stage), m_file_path(path), m_source(source)
+               const std::filesystem::path & path  = "",
+               const std::string &           entry = "")
+    : m_shader_stage(shader_stage), m_file_path(path), m_entry(entry)
     {
     }
 
