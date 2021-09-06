@@ -10,16 +10,24 @@ hue(float H)
 }
 
 half3
-hsv_to_rgb(const half3 hsv)
+rgb_from_hsv(const half3 hsv)
 {
     return half3(((hue(hsv.x) - 1) * hsv.y + 1) * hsv.z);
 }
 
-float3
-get_color(const int primitive_index)
+half3
+color_from_uint(uint v)
 {
-    float h = float(primitive_index % 256) / 256.0f;
-    return hsv_to_rgb(half3(h, 1.0f, 1.0f));
+    v ^= v >> 17;
+    v *= 0xed5ad4bbU;
+    v ^= v >> 11;
+    v *= 0xac4c1b51U;
+    v ^= v >> 15;
+    v *= 0x31848babU;
+    v ^= v >> 14;
+    half h = half(v % 256) / 256.0h;
+    half3 p = normalize(rgb_from_hsv(half3(h, 1.0h, 1.0h)));
+    return p * 0.7h + 0.3h;
 }
 
 #endif

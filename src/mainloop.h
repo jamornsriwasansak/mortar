@@ -157,8 +157,6 @@ struct MainLoop
             return;
         }
 
-        m_camera.update(m_window, std::min(m_window->m_stop_watch.m_average_frame_time * 0.01f, 1.0f));
-
         // wait for resource in this flight to be ready
         m_flight_fences[i_flight].wait();
 
@@ -205,12 +203,17 @@ struct MainLoop
         render_params.m_is_static_mesh_dirty = false;
         render_params.m_fps_camera           = &m_camera;
         render_params.m_is_shaders_dirty     = reload_shader;
-        render_params.m_should_imgui_drawn   = false;
+        render_params.m_should_imgui_drawn   = true;
 
         if (render_params.m_should_imgui_drawn)
         {
             m_imgui_render_pass.new_frame();
         }
+
+        const bool is_imgui_used =
+            ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused() || ImGui::IsAnyItemHovered();
+        m_camera.update(m_window, std::min(m_window->m_stop_watch.m_average_frame_time * 0.01f, 1.0f), !is_imgui_used);
+
         // m_asset_browser.loop();
         m_renderer.loop(ctx, render_params);
         if (render_params.m_should_imgui_drawn)
@@ -261,7 +264,7 @@ struct MainLoop
 
         m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/sponza/sponza.obj", m_staging_buffer_manager);
         m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
-        m_scene.build_accel_struct(m_staging_buffer_manager);
+        m_scene.build_or_update(m_staging_buffer_manager);
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");
 

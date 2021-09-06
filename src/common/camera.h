@@ -37,20 +37,24 @@ struct FpsCamera
     }
 
     void
-    update(Window * window, const float frame_time)
+    update(Window * window, const float frame_time, const bool allow_input)
     {
         // handle movement
         float forward = 0.0f;
         float right   = 0.0f;
         float up      = 0.0f;
+        float boost   = 0.0f;
 
-        forward += glfwGetKey(window->m_glfw_window, GLFW_KEY_W) == GLFW_PRESS ? 1.0f : 0.0f;
-        forward += glfwGetKey(window->m_glfw_window, GLFW_KEY_S) == GLFW_PRESS ? -1.0f : 0.0f;
-        right += glfwGetKey(window->m_glfw_window, GLFW_KEY_D) == GLFW_PRESS ? 1.0f : 0.0f;
-        right += glfwGetKey(window->m_glfw_window, GLFW_KEY_A) == GLFW_PRESS ? -1.0f : 0.0f;
-        up += glfwGetKey(window->m_glfw_window, GLFW_KEY_SPACE) == GLFW_PRESS ? 1.0f : 0.0f;
-        up += glfwGetKey(window->m_glfw_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ? -1.0f : 0.0f;
-        float boost = glfwGetKey(window->m_glfw_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
+        if (allow_input)
+        {
+            forward += glfwGetKey(window->m_glfw_window, GLFW_KEY_W) == GLFW_PRESS ? 1.0f : 0.0f;
+            forward += glfwGetKey(window->m_glfw_window, GLFW_KEY_S) == GLFW_PRESS ? -1.0f : 0.0f;
+            right += glfwGetKey(window->m_glfw_window, GLFW_KEY_D) == GLFW_PRESS ? 1.0f : 0.0f;
+            right += glfwGetKey(window->m_glfw_window, GLFW_KEY_A) == GLFW_PRESS ? -1.0f : 0.0f;
+            up += glfwGetKey(window->m_glfw_window, GLFW_KEY_SPACE) == GLFW_PRESS ? 1.0f : 0.0f;
+            up += glfwGetKey(window->m_glfw_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ? -1.0f : 0.0f;
+            boost = glfwGetKey(window->m_glfw_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
+        }
 
         move_forward(forward * m_move_speed * frame_time * boost);
         move_right(right * m_move_speed * frame_time * boost);
@@ -60,7 +64,7 @@ struct FpsCamera
         double2 cursor_pos;
         double2 cursor_move(0.0, 0.0);
         glfwGetCursorPos(window->m_glfw_window, &cursor_pos.x, &cursor_pos.y);
-        if (glfwGetMouseButton(window->m_glfw_window, GLFW_MOUSE_BUTTON_1))
+        if (allow_input && glfwGetMouseButton(window->m_glfw_window, GLFW_MOUSE_BUTTON_1))
         {
             cursor_move = cursor_pos - m_prev_cursor_pos;
             rotate(m_rotate_speed * float2(cursor_move) / float2(window->get_resolution()));

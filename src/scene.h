@@ -197,17 +197,16 @@ struct Scene
     Gp::FormatEnum     m_g_vbuf_position_type = Gp::FormatEnum::R32G32B32_SFloat;
     size_t             m_g_vbuf_num_vertices  = 0;
     size_t             m_g_ibuf_num_indices   = 0;
+    Gp::Buffer         m_g_materials_buffer   = {};
 
-    Ste::FsVector<Gp::Texture, EngineSetting::MaxNumBindlessTextures>    m_textures;
-    std::array<StandardMaterial, EngineSetting::MaxNumStandardMaterials> m_materials;
-    size_t                                                               m_num_materials = 0;
-    std::array<Geometry, EngineSetting::MaxNumGeometries>                m_geometries;
-    size_t                                                               m_num_geometries = 0;
+    Ste::FsVector<Gp::Texture, EngineSetting::MaxNumBindlessTextures> m_textures;
+    std::array<Geometry, EngineSetting::MaxNumGeometries>             m_geometries;
+    size_t                                                            m_num_geometries = 0;
 
     Gp::RayTracingBlas m_rt_static_meshes_blas;
     Gp::RayTracingTlas m_rt_tlas;
 
-    Gp::CommandPool m_graphics_pool;
+    Gp::CommandPool m_transfer_cmd_pool;
 
     SceneGraphNode m_scene_graph_root = SceneGraphNode(false);
 
@@ -215,7 +214,7 @@ struct Scene
 
     Scene(const Gp::Device & device) : m_device(&device)
     {
-        m_graphics_pool       = Gp::CommandPool(&device, Gp::CommandQueueType::Transfer);
+        m_transfer_cmd_pool   = Gp::CommandPool(&device, Gp::CommandQueueType::Transfer);
         m_g_vbuf_position     = Gp::Buffer(m_device,
                                        Gp::BufferUsageEnum::TransferDst,
                                        Gp::MemoryUsageEnum::GpuOnly,
@@ -250,19 +249,18 @@ struct Scene
         const std::array<size_t, 2> geometries_range = add_geometries(scene, staging_buffer_manager);
 
         // add materials
+        std::vector<StandardMaterial> materials(scene->mNumMaterials);
         for (size_t i_mat = 0; i_mat < scene->mNumMaterials; i_mat++)
         {
-            m_materials[i_mat + m_num_materials] =
-                add_required_textures(path, *scene->mMaterials[i_mat], staging_buffer_manager);
+            materials[i_mat] = add_required_textures(path, *scene->mMaterials[i_mat], staging_buffer_manager);
         }
-        m_num_materials += scene->mNumMaterials;
 
         // add children in to scene graph
         for (size_t i_child = 0; i_child < scene->mNumMeshes; i_child++)
         {
             SceneGraphLeaf leaf;
             leaf.m_geometry_id              = static_cast<uint32_t>(geometries_range[0] + i_child);
-            leaf.m_standard_material        = m_materials[scene->mMeshes[i_child]->mMaterialIndex];
+            leaf.m_standard_material        = materials[scene->mMeshes[i_child]->mMaterialIndex];
             childs[offset + i_child].m_info = leaf;
             childs[offset + i_child].m_parent    = node;
             childs[offset + i_child].m_transform = glm::identity<float4x4>();
@@ -339,7 +337,7 @@ struct Scene
             index_buffer_offset  = round_up(index_buffer_offset, 32);
         }
 
-        Gp::CommandList cmd_list = m_graphics_pool.get_command_list();
+        Gp::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
 
         Gp::Fence tmp_fence(staging_buffer_manager.m_device);
         tmp_fence.reset();
@@ -406,21 +404,6 @@ struct Scene
     size_t
     add_texture(const std::array<uint8_t, NumChannels> & v, Gp::StagingBufferManager & staging_buffer_manager)
     {
-        // find empty texture slot
-        size_t e = 0;
-        for (e = 0; e < m_textures.max_size(); e++)
-        {
-            if (m_textures[e].is_empty())
-            {
-                break;
-            }
-        }
-        assert(e != m_textures.max_size());
-        if (e == m_textures.max_size())
-        {
-            return -1;
-        }
-
         // load using stbi
         static_assert(NumChannels == 4 || NumChannels == 1, "num channels must be 4 or 1");
         Gp::FormatEnum format_enum = v.size() == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
@@ -435,29 +418,14 @@ struct Scene
                             "");
         staging_buffer_manager.submit_all_pending_upload();
 
-        // add to list in manager
-        m_textures[e] = std::move(texture);
-        return e;
+        // emplace back
+        m_textures.emplace_back(std::move(texture));
+        return m_textures.length() - 1;
     }
 
     size_t
     add_texture(const std::filesystem::path & path, const size_t desired_channel, Gp::StagingBufferManager & staging_buffer_manager)
     {
-        // find empty texture slot
-        size_t e = 0;
-        for (e = 0; e < m_textures.max_size(); e++)
-        {
-            if (m_textures[e].is_empty())
-            {
-                break;
-            }
-        }
-        assert(e != m_textures.max_size());
-        if (e == m_textures.max_size())
-        {
-            return -1;
-        }
-
         const std::string filepath_str = path.string();
 
         // load using stbi
@@ -482,8 +450,9 @@ struct Scene
         staging_buffer_manager.submit_all_pending_upload();
         stbi_image_free(image);
 
+        // emplace back
         m_textures.emplace_back(std::move(texture));
-        return e;
+        return m_textures.length() - 1;
     }
 
     StandardMaterial
@@ -605,7 +574,7 @@ struct Scene
     }
 
     void
-    build_accel_struct(Gp::StagingBufferManager & staging_buffer_manager)
+    build_or_update(Gp::StagingBufferManager & staging_buffer_manager)
     {
         // build blas
         build_static_models_blas(staging_buffer_manager);
@@ -618,5 +587,18 @@ struct Scene
         m_rt_tlas =
             Gp::RayTracingTlas(m_device, instances, &staging_buffer_manager, "ray_tracing_tlas");
         staging_buffer_manager.submit_all_pending_upload();
+
+        // build buffer of materials
+        m_g_materials_buffer    = Gp::Buffer(m_device,
+                                          Gp::BufferUsageEnum::ConstantBuffer,
+                                          Gp::MemoryUsageEnum::CpuOnly,
+                                          sizeof(StandardMaterial) * 100,
+                                          "g_material_buffer");
+        StandardMaterial * smat = static_cast<StandardMaterial *>(m_g_materials_buffer.map());
+        m_scene_graph_root.traverse([&](const SceneGraphLeaf & leaf_info) {
+            *smat = leaf_info.m_standard_material;
+            smat++;
+        });
+        m_g_materials_buffer.unmap();
     }
 };

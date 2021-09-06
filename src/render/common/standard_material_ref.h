@@ -3,9 +3,9 @@
 
 struct StandardMaterial
 {
-    int m_diffuse_tex_id;
-    int m_specular_tex_id;
-    int m_roughness_tex_id;
-    int m_padding;
+    int32_t m_diffuse_tex_id;
+    int32_t m_specular_tex_id;
+    int32_t m_roughness_tex_id;
+    int32_t m_padding;
 };
 #endif

@@ -54,7 +54,7 @@ struct Renderer
         init_or_resize_resolution(device, resolution, swapchain_attachment);
         init_shaders(device, true);
 
-        m_pass_rt_visualize = RtVisualizePass(device);
+        m_pass_rt_visualize = RtVisualizePass(*device);
     }
 
     void
@@ -335,6 +335,7 @@ struct Renderer
         if (params.m_is_shaders_dirty)
         {
             init_shaders(device, false);
+            m_pass_rt_visualize.init_or_reload_shader(*device);
         }
 
         DirectLightParams dl_params;
@@ -464,9 +465,13 @@ struct Renderer
         }
 
         bool x = true;
+
         // ray tracing pass
         cmds.bind_raytrace_descriptor_set(ray_descriptor_sets);
-        cmds.trace_rays(m_rt_sbt, params.m_resolution.x, params.m_resolution.y);
+        //cmds.trace_rays(m_rt_sbt, params.m_resolution.x, params.m_resolution.y);
+
+        m_pass_rt_visualize.run(cmds, ctx, params, m_rt_tlas, m_rt_results[ctx.m_flight_index % 2], params.m_resolution);
+
         {
             // transition
             cmds.transition_texture(m_rt_results[ctx.m_flight_index % 2],

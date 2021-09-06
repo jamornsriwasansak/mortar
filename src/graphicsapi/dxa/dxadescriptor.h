@@ -46,6 +46,16 @@ struct DescriptorSet
     DescriptorSet() {}
 
     DescriptorSet(const Device *                       device,
+                  DescriptorPool *                     descriptor_pool,
+                  const size_t                         i_set,
+                  [[maybe_unused]] const std::string & name = "")
+    : m_device(device),
+      m_set(i_set),
+      m_descriptor_pool(descriptor_pool)
+    {
+    }
+
+    DescriptorSet(const Device *                       device,
                   const RasterPipeline &               pipeline,
                   DescriptorPool *                     descriptor_pool,
                   const size_t                         i_set,
