@@ -3,7 +3,7 @@
 #include "vkacommon.h"
 #include "vkadevice.h"
 
-#include "../commontypes/gpshadersrc.h"
+#include "rhi/commontypes/rhishadersrc.h"
 #include "../shadercompiler/hlsldxccompiler.h"
 #include "spirvreflection.h"
 

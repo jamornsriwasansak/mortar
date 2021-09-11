@@ -2,7 +2,7 @@
 
 #include "common/camera_params.h"
 #include "common/render_params.h"
-#include "graphicsapi/graphicsapi.h"
+#include "rhi/rhi.h"
 #include "passes/restir_direct_light/bindless_object_table.h"
 #include "passes/restir_direct_light/direct_light_params.h"
 #include "passes/restir_direct_light/reservior.h"
@@ -12,43 +12,43 @@
 
 struct Renderer
 {
-    Gp::RasterPipeline                   m_raster_pipeline;
-    Gp::RayTracingPipeline               m_rt_pipeline;
-    Gp::RayTracingShaderTable            m_rt_sbt;
-    Gp::RayTracingBlas                   m_rt_static_mesh_nonemissive_blas;
-    Gp::RayTracingBlas                   m_rt_static_mesh_emissive_blas;
-    Gp::RayTracingTlas                   m_rt_tlas;
-    std::vector<Gp::FramebufferBindings> m_raster_fbindings;
-    std::array<Gp::Texture, 2>           m_rt_results;
-    std::array<Gp::Buffer, 2>            m_prev_frame_reserviors;
-    Gp::Sampler                          m_sampler;
+    Rhi::RasterPipeline                   m_raster_pipeline;
+    Rhi::RayTracingPipeline               m_rt_pipeline;
+    Rhi::RayTracingShaderTable            m_rt_sbt;
+    Rhi::RayTracingBlas                   m_rt_static_mesh_nonemissive_blas;
+    Rhi::RayTracingBlas                   m_rt_static_mesh_emissive_blas;
+    Rhi::RayTracingTlas                   m_rt_tlas;
+    std::vector<Rhi::FramebufferBindings> m_raster_fbindings;
+    std::array<Rhi::Texture, 2>           m_rt_results;
+    std::array<Rhi::Buffer, 2>            m_prev_frame_reserviors;
+    Rhi::Sampler                          m_sampler;
 
     using IndexBuffer  = SharedIndexBuffer;
     using VertexBuffer = SharedVertexBuffer;
 
-    Gp::Buffer m_cb_camera_params;
-    Gp::Buffer m_cb_directlight_params;
-    Gp::Buffer m_cb_materials;
-    Gp::Buffer m_cb_material_id;
-    Gp::Buffer m_cb_num_triangles;
-    Gp::Buffer m_cb_bindless_object_table;
-    Gp::Buffer m_cb_emissives;
+    Rhi::Buffer m_cb_camera_params;
+    Rhi::Buffer m_cb_directlight_params;
+    Rhi::Buffer m_cb_materials;
+    Rhi::Buffer m_cb_material_id;
+    Rhi::Buffer m_cb_num_triangles;
+    Rhi::Buffer m_cb_bindless_object_table;
+    Rhi::Buffer m_cb_emissives;
 
     RtVisualizePass m_pass_rt_visualize;
 
     Renderer() {}
 
     void
-    init(Gp::Device * device, const int2 resolution, const std::vector<Gp::Texture> & swapchain_attachment)
+    init(Rhi::Device * device, const int2 resolution, const std::vector<Rhi::Texture> & swapchain_attachment)
     {
-        m_sampler = Gp::Sampler(device);
+        m_sampler = Rhi::Sampler(device);
 
         // create camera params buffer
         m_cb_camera_params =
-            Gp::Buffer(device, Gp::BufferUsageEnum::ConstantBuffer, Gp::MemoryUsageEnum::CpuToGpu, sizeof(CameraParams));
-        m_cb_directlight_params = Gp::Buffer(device,
-                                             Gp::BufferUsageEnum::ConstantBuffer,
-                                             Gp::MemoryUsageEnum::CpuToGpu,
+            Rhi::Buffer(device, Rhi::BufferUsageEnum::ConstantBuffer, Rhi::MemoryUsageEnum::CpuToGpu, sizeof(CameraParams));
+        m_cb_directlight_params = Rhi::Buffer(device,
+                                             Rhi::BufferUsageEnum::ConstantBuffer,
+                                             Rhi::MemoryUsageEnum::CpuToGpu,
                                              sizeof(DirectLightParams));
 
         init_or_resize_resolution(device, resolution, swapchain_attachment);
@@ -58,29 +58,29 @@ struct Renderer
     }
 
     void
-    init_or_resize_resolution(Gp::Device * device, const int2 resolution, const std::vector<Gp::Texture> & swapchain_attachment)
+    init_or_resize_resolution(Rhi::Device * device, const int2 resolution, const std::vector<Rhi::Texture> & swapchain_attachment)
     {
         m_raster_fbindings.resize(swapchain_attachment.size());
         for (size_t i = 0; i < swapchain_attachment.size(); i++)
         {
-            m_raster_fbindings[i] = Gp::FramebufferBindings(device, { &swapchain_attachment[i] });
+            m_raster_fbindings[i] = Rhi::FramebufferBindings(device, { &swapchain_attachment[i] });
         }
 
         for (size_t i = 0; i < 2; i++)
         {
-            m_rt_results[i]            = Gp::Texture(device,
-                                          Gp::TextureUsageEnum::StorageImage | Gp::TextureUsageEnum::ColorAttachment |
-                                              Gp::TextureUsageEnum::Sampled,
-                                          Gp::TextureStateEnum::NonFragmentShaderVisible,
-                                          Gp::FormatEnum::R32G32B32A32_SFloat,
+            m_rt_results[i]            = Rhi::Texture(device,
+                                          Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment |
+                                              Rhi::TextureUsageEnum::Sampled,
+                                          Rhi::TextureStateEnum::NonFragmentShaderVisible,
+                                          Rhi::FormatEnum::R32G32B32A32_SFloat,
                                           resolution,
                                           nullptr,
                                           nullptr,
                                           float4(0.0f, 0.0f, 0.0f, 0.0f),
                                           "ray_tracing_result");
-            m_prev_frame_reserviors[i] = Gp::Buffer(device,
-                                                    Gp::BufferUsageEnum::StorageBuffer,
-                                                    Gp::MemoryUsageEnum::GpuOnly,
+            m_prev_frame_reserviors[i] = Rhi::Buffer(device,
+                                                    Rhi::BufferUsageEnum::StorageBuffer,
+                                                    Rhi::MemoryUsageEnum::GpuOnly,
                                                     sizeof(Reservior) * resolution.x * resolution.y,
                                                     nullptr,
                                                     nullptr,
@@ -89,26 +89,26 @@ struct Renderer
     }
 
     void
-    init_shaders(Gp::Device * device, const bool is_first_time)
+    init_shaders(Rhi::Device * device, const bool is_first_time)
     {
         // raster pipeline
         try
         {
             m_raster_pipeline = [&]() {
                 std::filesystem::path shader_path = "../src/render/passes/beauty/";
-                Gp::ShaderSrc         vertexShaderSrc2(Gp::ShaderStageEnum::Vertex);
+                Rhi::ShaderSrc         vertexShaderSrc2(Rhi::ShaderStageEnum::Vertex);
                 vertexShaderSrc2.m_entry     = "VsMain";
                 vertexShaderSrc2.m_file_path = shader_path / "beauty.hlsl";
 
-                Gp::ShaderSrc fragmentShaderSrc2(Gp::ShaderStageEnum::Fragment);
+                Rhi::ShaderSrc fragmentShaderSrc2(Rhi::ShaderStageEnum::Fragment);
                 fragmentShaderSrc2.m_entry     = "FsMain";
                 fragmentShaderSrc2.m_file_path = shader_path / "beauty.hlsl";
 
-                std::vector<Gp::ShaderSrc> ssao_shader_srcs;
+                std::vector<Rhi::ShaderSrc> ssao_shader_srcs;
                 ssao_shader_srcs.push_back(vertexShaderSrc2);
                 ssao_shader_srcs.push_back(fragmentShaderSrc2);
 
-                return Gp::RasterPipeline(device, ssao_shader_srcs, m_raster_fbindings[0]);
+                return Rhi::RasterPipeline(device, ssao_shader_srcs, m_raster_fbindings[0]);
             }();
 
             // raytracing pipeline
@@ -116,27 +116,27 @@ struct Renderer
                 std::filesystem::path shader_path = "../src/render/passes/restir_direct_light/";
 
                 // create pipeline for ssao
-                Gp::ShaderSrc raygen_shader(Gp::ShaderStageEnum::RayGen);
+                Rhi::ShaderSrc raygen_shader(Rhi::ShaderStageEnum::RayGen);
                 raygen_shader.m_entry     = "RayGen";
                 raygen_shader.m_file_path = shader_path / "direct_light.h";
 
-                Gp::ShaderSrc standard_hit_shader(Gp::ShaderStageEnum::ClosestHit);
+                Rhi::ShaderSrc standard_hit_shader(Rhi::ShaderStageEnum::ClosestHit);
                 standard_hit_shader.m_entry     = "ClosestHit";
                 standard_hit_shader.m_file_path = shader_path / "direct_light.h";
 
-                Gp::ShaderSrc emissive_hit_shader(Gp::ShaderStageEnum::ClosestHit);
+                Rhi::ShaderSrc emissive_hit_shader(Rhi::ShaderStageEnum::ClosestHit);
                 emissive_hit_shader.m_entry     = "EmissiveClosestHit";
                 emissive_hit_shader.m_file_path = shader_path / "direct_light.h";
 
-                Gp::ShaderSrc miss_shader(Gp::ShaderStageEnum::Miss);
+                Rhi::ShaderSrc miss_shader(Rhi::ShaderStageEnum::Miss);
                 miss_shader.m_entry     = "Miss";
                 miss_shader.m_file_path = shader_path / "direct_light.h";
 
-                Gp::ShaderSrc shadow_miss_shader(Gp::ShaderStageEnum::Miss);
+                Rhi::ShaderSrc shadow_miss_shader(Rhi::ShaderStageEnum::Miss);
                 shadow_miss_shader.m_entry     = "ShadowMiss";
                 shadow_miss_shader.m_file_path = shader_path / "direct_light.h";
 
-                Gp::RayTracingPipelineConfig rt_config;
+                Rhi::RayTracingPipelineConfig rt_config;
 
                 [[maybe_unused]] size_t raygen_id = rt_config.add_shader(raygen_shader);
                 [[maybe_unused]] size_t miss_id   = rt_config.add_shader(miss_shader);
@@ -148,12 +148,12 @@ struct Renderer
                 size_t emissive_closesthit_id = rt_config.add_shader(emissive_hit_shader);
                 [[maybe_unused]] size_t emisive_hitgroup_id = rt_config.add_hit_group(emissive_closesthit_id);
 
-                return Gp::RayTracingPipeline(device, rt_config, 16, 64, 2, "raytracing_pipeline");
+                return Rhi::RayTracingPipeline(device, rt_config, 16, 64, 2, "raytracing_pipeline");
             }();
 
             // raytracing visualize pipeline
 
-            m_rt_sbt = Gp::RayTracingShaderTable(device, m_rt_pipeline, "raytracing_shader_table");
+            m_rt_sbt = Rhi::RayTracingShaderTable(device, m_rt_pipeline, "raytracing_shader_table");
         }
         catch (const std::exception & e)
         {
@@ -174,8 +174,8 @@ struct Renderer
     void
     update_static_mesh(const RenderContext & ctx, const RenderParams & params)
     {
-        std::vector<Gp::RayTracingGeometryDesc> static_nonemissive_mesh_descs;
-        std::vector<Gp::RayTracingGeometryDesc> static_emissive_mesh_descs;
+        std::vector<Rhi::RayTracingGeometryDesc> static_nonemissive_mesh_descs;
+        std::vector<Rhi::RayTracingGeometryDesc> static_emissive_mesh_descs;
         std::vector<uint32_t>                   num_triangles;
         std::vector<uint32_t>                   mat_ids;
 
@@ -192,15 +192,15 @@ struct Renderer
                 const VertexBuffer & vertex_buffer =
                     params.m_asset_pool->m_vertex_buffers[mesh.m_index_buffer_id];
 
-                Gp::RayTracingGeometryDesc desc;
-                desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
+                Rhi::RayTracingGeometryDesc desc;
+                desc.set_flag(Rhi::RayTracingGeometryFlag::Opaque);
                 desc.set_index_buffer(index_buffer.m_buffer,
-                                      mesh.m_index_buffer_offset * Gp::GetSizeInBytes(index_buffer.m_type),
+                                      mesh.m_index_buffer_offset * Rhi::GetSizeInBytes(index_buffer.m_type),
                                       index_buffer.m_type,
                                       mesh.m_num_indices);
                 desc.set_vertex_buffer(vertex_buffer.m_buffer,
                                        mesh.m_vertex_buffer_offset * sizeof(CompactVertex),
-                                       Gp::FormatEnum::R32G32B32_SFloat,
+                                       Rhi::FormatEnum::R32G32B32_SFloat,
                                        sizeof(CompactVertex),
                                        mesh.m_num_vertices);
                 static_nonemissive_mesh_descs.emplace_back(desc);
@@ -217,15 +217,15 @@ struct Renderer
                 const VertexBuffer & vertex_buffer =
                     params.m_asset_pool->m_vertex_buffers[mesh.m_index_buffer_id];
 
-                Gp::RayTracingGeometryDesc desc;
-                desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
+                Rhi::RayTracingGeometryDesc desc;
+                desc.set_flag(Rhi::RayTracingGeometryFlag::Opaque);
                 desc.set_index_buffer(index_buffer.m_buffer,
-                                      mesh.m_index_buffer_offset * Gp::GetSizeInBytes(index_buffer.m_type),
+                                      mesh.m_index_buffer_offset * Rhi::GetSizeInBytes(index_buffer.m_type),
                                       index_buffer.m_type,
                                       mesh.m_num_indices);
                 desc.set_vertex_buffer(vertex_buffer.m_buffer,
                                        mesh.m_vertex_buffer_offset * sizeof(CompactVertex),
-                                       Gp::FormatEnum::R32G32B32_SFloat,
+                                       Rhi::FormatEnum::R32G32B32_SFloat,
                                        sizeof(CompactVertex),
                                        mesh.m_num_vertices);
                 static_emissive_mesh_descs.emplace_back(desc);
@@ -236,23 +236,23 @@ struct Renderer
         }
 
         m_rt_static_mesh_nonemissive_blas =
-            Gp::RayTracingBlas(ctx.m_device,
+            Rhi::RayTracingBlas(ctx.m_device,
                                static_nonemissive_mesh_descs.data(),
                                static_nonemissive_mesh_descs.size(),
                                ctx.m_staging_buffer_manager,
                                "ray_tracing_staitc_nonemissive_blas");
-        m_rt_static_mesh_emissive_blas = Gp::RayTracingBlas(ctx.m_device,
+        m_rt_static_mesh_emissive_blas = Rhi::RayTracingBlas(ctx.m_device,
                                                             static_emissive_mesh_descs.data(),
                                                             static_emissive_mesh_descs.size(),
                                                             ctx.m_staging_buffer_manager,
                                                             "ray_tracing_static_emissive_blas");
         ctx.m_staging_buffer_manager->submit_all_pending_upload();
 
-        Gp::RayTracingInstance non_emissive_instance(&m_rt_static_mesh_nonemissive_blas, 0);
-        Gp::RayTracingInstance emissive_instance(&m_rt_static_mesh_emissive_blas, 1);
-        std::array<const Gp::RayTracingInstance *, 2> instances{ &non_emissive_instance, &emissive_instance };
+        Rhi::RayTracingInstance non_emissive_instance(&m_rt_static_mesh_nonemissive_blas, 0);
+        Rhi::RayTracingInstance emissive_instance(&m_rt_static_mesh_emissive_blas, 1);
+        std::array<const Rhi::RayTracingInstance *, 2> instances{ &non_emissive_instance, &emissive_instance };
 
-        m_rt_tlas = Gp::RayTracingTlas(ctx.m_device,
+        m_rt_tlas = Rhi::RayTracingTlas(ctx.m_device,
                                        instances,
                                        ctx.m_staging_buffer_manager,
                                        "ray_tracing_tlas");
@@ -260,9 +260,9 @@ struct Renderer
         // TODO:: the following buffers should be GPU only and updated iff the info is dirty
         // create material buffer
         m_cb_materials =
-            Gp::Buffer(ctx.m_device,
-                       Gp::BufferUsageEnum::ConstantBuffer,
-                       Gp::MemoryUsageEnum::GpuOnly,
+            Rhi::Buffer(ctx.m_device,
+                       Rhi::BufferUsageEnum::ConstantBuffer,
+                       Rhi::MemoryUsageEnum::GpuOnly,
                        sizeof(StandardMaterial) * 100,
                        reinterpret_cast<std::byte *>(params.m_asset_pool->m_standard_materials.data()),
                        ctx.m_staging_buffer_manager,
@@ -270,27 +270,27 @@ struct Renderer
         ctx.m_staging_buffer_manager->submit_all_pending_upload();
 
         // create material id buffer
-        m_cb_material_id = Gp::Buffer(ctx.m_device,
-                                      Gp::BufferUsageEnum::ConstantBuffer,
-                                      Gp::MemoryUsageEnum::GpuOnly,
+        m_cb_material_id = Rhi::Buffer(ctx.m_device,
+                                      Rhi::BufferUsageEnum::ConstantBuffer,
+                                      Rhi::MemoryUsageEnum::GpuOnly,
                                       sizeof(uint32_t) * 100,
                                       reinterpret_cast<std::byte *>(mat_ids.data()),
                                       ctx.m_staging_buffer_manager,
                                       "material_id");
 
         // create num triangles buffer
-        m_cb_num_triangles = Gp::Buffer(ctx.m_device,
-                                        Gp::BufferUsageEnum::ConstantBuffer,
-                                        Gp::MemoryUsageEnum::GpuOnly,
+        m_cb_num_triangles = Rhi::Buffer(ctx.m_device,
+                                        Rhi::BufferUsageEnum::ConstantBuffer,
+                                        Rhi::MemoryUsageEnum::GpuOnly,
                                         sizeof(uint32_t) * 100,
                                         reinterpret_cast<std::byte *>(num_triangles.data()),
                                         ctx.m_staging_buffer_manager,
                                         "num_triangles_buffer");
 
         // bindless object table
-        m_cb_bindless_object_table = Gp::Buffer(ctx.m_device,
-                                                Gp::BufferUsageEnum::ConstantBuffer,
-                                                Gp::MemoryUsageEnum::CpuOnly,
+        m_cb_bindless_object_table = Rhi::Buffer(ctx.m_device,
+                                                Rhi::BufferUsageEnum::ConstantBuffer,
+                                                Rhi::MemoryUsageEnum::CpuOnly,
                                                 sizeof(BindlessObjectTable),
                                                 reinterpret_cast<std::byte *>(num_triangles.data()),
                                                 ctx.m_staging_buffer_manager,
@@ -298,9 +298,9 @@ struct Renderer
 
         // emissive info buffer
         m_cb_emissives =
-            Gp::Buffer(ctx.m_device,
-                       Gp::BufferUsageEnum::StorageBuffer,
-                       Gp::MemoryUsageEnum::GpuOnly,
+            Rhi::Buffer(ctx.m_device,
+                       Rhi::BufferUsageEnum::StorageBuffer,
+                       Rhi::MemoryUsageEnum::GpuOnly,
                        sizeof(StandardEmissive) * 100,
                        reinterpret_cast<std::byte *>(params.m_asset_pool->m_standard_emissives.data()),
                        ctx.m_staging_buffer_manager,
@@ -324,8 +324,8 @@ struct Renderer
     void
     loop(const RenderContext & ctx, const RenderParams & params)
     {
-        Gp::Device *    device = ctx.m_device;
-        Gp::CommandList cmds   = ctx.m_graphics_command_pool->get_command_list();
+        Rhi::Device *    device = ctx.m_device;
+        Rhi::CommandList cmds   = ctx.m_graphics_command_pool->get_command_list();
 
         if (params.m_is_static_mesh_dirty || notinit)
         {
@@ -349,15 +349,15 @@ struct Renderer
         cmds.bind_raytrace_pipeline(m_rt_pipeline);
 
         // set ray desc
-        std::array<Gp::DescriptorSet, 4> ray_descriptor_sets;
+        std::array<Rhi::DescriptorSet, 4> ray_descriptor_sets;
         ray_descriptor_sets[0] =
-            Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 0, "rt_desc_set0");
+            Rhi::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 0, "rt_desc_set0");
         ray_descriptor_sets[1] =
-            Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 1, "rt_desc_set1");
+            Rhi::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 1, "rt_desc_set1");
         ray_descriptor_sets[2] =
-            Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 2, "rt_desc_set2");
+            Rhi::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 2, "rt_desc_set2");
         ray_descriptor_sets[3] =
-            Gp::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 3, "rt_desc_set3");
+            Rhi::DescriptorSet(device, m_rt_pipeline, ctx.m_descriptor_pool, 3, "rt_desc_set3");
 
         // set camera uniform
         auto         transform = params.m_fps_camera->get_camera_props();
@@ -475,11 +475,11 @@ struct Renderer
         {
             // transition
             cmds.transition_texture(m_rt_results[ctx.m_flight_index % 2],
-                                    Gp::TextureStateEnum::NonFragmentShaderVisible,
-                                    Gp::TextureStateEnum::FragmentShaderVisible);
+                                    Rhi::TextureStateEnum::NonFragmentShaderVisible,
+                                    Rhi::TextureStateEnum::FragmentShaderVisible);
             cmds.transition_texture(*ctx.m_swapchain_texture,
-                                    Gp::TextureStateEnum::Present,
-                                    Gp::TextureStateEnum::ColorAttachment);
+                                    Rhi::TextureStateEnum::Present,
+                                    Rhi::TextureStateEnum::ColorAttachment);
 
             // draw result
             cmds.begin_render_pass(m_raster_fbindings[ctx.m_image_index]);
@@ -487,8 +487,8 @@ struct Renderer
                 cmds.bind_raster_pipeline(m_raster_pipeline);
 
                 // set ssao params
-                std::array<Gp::DescriptorSet, 1> beauty_desc_sets;
-                beauty_desc_sets[0] = Gp::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
+                std::array<Rhi::DescriptorSet, 1> beauty_desc_sets;
+                beauty_desc_sets[0] = Rhi::DescriptorSet(device, m_raster_pipeline, ctx.m_descriptor_pool, 0);
                 beauty_desc_sets[0]
                     .set_t_texture(0, m_rt_results[ctx.m_flight_index % 2])
                     .set_s_sampler(0, m_sampler)
@@ -497,7 +497,7 @@ struct Renderer
                 // raster
                 cmds.bind_graphics_descriptor_set(beauty_desc_sets);
                 cmds.bind_vertex_buffer(params.m_asset_pool->m_vertex_buffers[0].m_buffer, sizeof(CompactVertex));
-                cmds.bind_index_buffer(params.m_asset_pool->m_index_buffers[0].m_buffer, Gp::IndexType::Uint32);
+                cmds.bind_index_buffer(params.m_asset_pool->m_index_buffers[0].m_buffer, Rhi::IndexType::Uint32);
                 cmds.draw_instanced(3, 1, 0, 0);
             }
             cmds.end_render_pass();
@@ -510,11 +510,11 @@ struct Renderer
 
             // transition
             cmds.transition_texture(*ctx.m_swapchain_texture,
-                                    Gp::TextureStateEnum::ColorAttachment,
-                                    Gp::TextureStateEnum::Present);
+                                    Rhi::TextureStateEnum::ColorAttachment,
+                                    Rhi::TextureStateEnum::Present);
             cmds.transition_texture(m_rt_results[ctx.m_flight_index % 2],
-                                    Gp::TextureStateEnum::FragmentShaderVisible,
-                                    Gp::TextureStateEnum::NonFragmentShaderVisible);
+                                    Rhi::TextureStateEnum::FragmentShaderVisible,
+                                    Rhi::TextureStateEnum::NonFragmentShaderVisible);
 
             cmds.end();
             cmds.submit(ctx.m_flight_fence, ctx.m_image_ready_semaphore, ctx.m_image_presentable_semaphore);

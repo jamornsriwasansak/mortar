@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../commontypes/gpenums.h"
-#include "../commontypes/gpshadersrc.h"
+#include "rhi/commontypes/rhienums.h"
+#include "rhi/commontypes/rhishadersrc.h"
 #include "common/glfwhandler.h"
 #include "common/logger.h"
 //

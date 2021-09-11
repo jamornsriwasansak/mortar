@@ -12,7 +12,7 @@
 #include <directx/d3dx12.h>
 #include <dxgi1_6.h>
 
-#include "../commontypes/gpshadersrc.h"
+#include "rhi/commontypes/rhishadersrc.h"
 
 #include <map>
 

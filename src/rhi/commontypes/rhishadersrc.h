@@ -1,26 +1,28 @@
 #pragma once
 
 #include "common/file.h"
-#include "gpenums.h"
+#include "rhienums.h"
 
 #include <filesystem>
 #include <string>
 #include <vector>
 
+namespace Rhi
+{
 template <typename ShaderStageEnum>
 struct TShaderSrc
 {
-    std::filesystem::path    m_file_path = "";
-    std::string              m_source    = "";
-    std::string              m_entry     = "";
+    std::filesystem::path m_file_path = "";
+    std::string m_source              = "";
+    std::string m_entry               = "";
     std::vector<std::string> m_defines;
-    ShaderStageEnum          m_shader_stage;
+    ShaderStageEnum m_shader_stage;
 
     TShaderSrc() {}
 
-    TShaderSrc(const ShaderStageEnum         shader_stage,
-               const std::filesystem::path & path  = "",
-               const std::string &           entry = "")
+    TShaderSrc(const ShaderStageEnum shader_stage,
+               const std::filesystem::path & path = "",
+               const std::string & entry          = "")
     : m_shader_stage(shader_stage), m_file_path(path), m_entry(entry)
     {
     }
@@ -59,3 +61,4 @@ struct TShaderSrc
         }
     }
 };
+} // namespace Rhi

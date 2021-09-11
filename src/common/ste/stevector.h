@@ -3,7 +3,7 @@
 #include <array>
 #include <cassert>
 
-namespace Ste
+namespace Std
 {
 // fixed-sized vector
 template <typename Type, const size_t Length>

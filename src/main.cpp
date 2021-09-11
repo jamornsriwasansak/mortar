@@ -13,9 +13,9 @@ main()
     Window main_window("Mortar", target_resolution);
 
     // create device
-    Gp::Entry          entry(main_window, is_debug);
-    Gp::PhysicalDevice physical_device = entry.get_graphics_devices()[0];
-    Gp::Device         device(physical_device);
+    Rhi::Entry          entry(main_window, is_debug);
+    Rhi::PhysicalDevice physical_device = entry.get_graphics_devices()[0];
+    Rhi::Device         device(physical_device);
 
     // create renderer
     MainLoop main_loop(&device, &main_window, num_flights);

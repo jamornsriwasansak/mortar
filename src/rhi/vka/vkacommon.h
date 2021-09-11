@@ -2,9 +2,9 @@
 
 #include "common/glfwhandler.h"
 
-#include "../commontypes/gpenums.h"
-#include "../commontypes/gpshadersrc.h"
-#include "../setting.h"
+#include "rhi/commontypes/rhienums.h"
+#include "rhi/commontypes/rhishadersrc.h"
+#include "rhi/setting.h"
 #include "common/logger.h"
 #include "common/uniquehandle.h"
 //
@@ -29,5 +29,5 @@
 
 namespace VKA_NAME
 {
-using ShaderSrc = TShaderSrc<VKA_NAME::ShaderStageEnum>;
+using ShaderSrc = Rhi::TShaderSrc<VKA_NAME::ShaderStageEnum>;
 } // namespace VKA_NAME

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Gp
+namespace Rhi
 {
 struct CopyRegion
 {

@@ -2,7 +2,7 @@
 
 #include "common/camera.h"
 #include "common/ste/stevector.h"
-#include "graphicsapi/graphicsapi.h"
+#include "rhi/rhi.h"
 #include "loader/img_loader.h"
 #include "render/common/engine_setting.h"
 #include <assimp/Importer.hpp>
@@ -29,17 +29,17 @@ struct StandardObject
 
 struct SharedVertexBuffer
 {
-    Gp::Buffer m_buffer;
-    size_t     m_num_vertices = 0;
-    size_t     m_ref_count    = -1;
+    Rhi::Buffer m_buffer;
+    size_t      m_num_vertices = 0;
+    size_t      m_ref_count    = -1;
 };
 
 struct SharedIndexBuffer
 {
-    Gp::Buffer    m_buffer;
-    Gp::IndexType m_type;
-    size_t        m_num_indices = 0;
-    size_t        m_ref_count   = -1;
+    Rhi::Buffer    m_buffer;
+    Rhi::IndexType m_type;
+    size_t         m_num_indices = 0;
+    size_t         m_ref_count   = -1;
 };
 
 // --------------------------------
@@ -96,7 +96,6 @@ struct SceneGraphNode
             }
             return;
         }
-        assert(false);
     }
 
     void
@@ -117,7 +116,6 @@ struct SceneGraphNode
             }
             return;
         }
-        assert(false);
     }
 
     void
@@ -139,7 +137,6 @@ struct SceneGraphNode
             }
             return;
         }
-        assert(false);
     }
 
     size_t
@@ -164,8 +161,6 @@ struct SceneGraphNode
             }
             return sum;
         }
-        assert(false);
-        return 0;
     }
 };
 
@@ -189,51 +184,51 @@ struct Scene
 
     FpsCamera m_camera;
 
-    const Gp::Device * m_device               = nullptr;
-    Gp::Buffer         m_g_vbuf_position      = {};
-    Gp::Buffer         m_g_vbuf_compact_info  = {};
-    Gp::Buffer         m_g_ibuf               = {};
-    Gp::IndexType      m_g_ibuf_index_type    = Gp::IndexType::Uint16;
-    Gp::FormatEnum     m_g_vbuf_position_type = Gp::FormatEnum::R32G32B32_SFloat;
-    size_t             m_g_vbuf_num_vertices  = 0;
-    size_t             m_g_ibuf_num_indices   = 0;
-    Gp::Buffer         m_g_materials_buffer   = {};
+    const Rhi::Device * m_device               = nullptr;
+    Rhi::Buffer         m_g_vbuf_position      = {};
+    Rhi::Buffer         m_g_vbuf_compact_info  = {};
+    Rhi::Buffer         m_g_ibuf               = {};
+    Rhi::IndexType      m_g_ibuf_index_type    = Rhi::IndexType::Uint16;
+    Rhi::FormatEnum     m_g_vbuf_position_type = Rhi::FormatEnum::R32G32B32_SFloat;
+    size_t              m_g_vbuf_num_vertices  = 0;
+    size_t              m_g_ibuf_num_indices   = 0;
+    Rhi::Buffer         m_g_materials_buffer   = {};
 
-    Ste::FsVector<Gp::Texture, EngineSetting::MaxNumBindlessTextures> m_textures;
-    std::array<Geometry, EngineSetting::MaxNumGeometries>             m_geometries;
-    size_t                                                            m_num_geometries = 0;
+    Std::FsVector<Rhi::Texture, EngineSetting::MaxNumBindlessTextures> m_textures;
+    std::array<Geometry, EngineSetting::MaxNumGeometries>              m_geometries;
+    size_t                                                             m_num_geometries = 0;
 
-    Gp::RayTracingBlas m_rt_static_meshes_blas;
-    Gp::RayTracingTlas m_rt_tlas;
+    Rhi::RayTracingBlas m_rt_static_meshes_blas;
+    Rhi::RayTracingTlas m_rt_tlas;
 
-    Gp::CommandPool m_transfer_cmd_pool;
+    Rhi::CommandPool m_transfer_cmd_pool;
 
     SceneGraphNode m_scene_graph_root = SceneGraphNode(false);
 
     Scene() {}
 
-    Scene(const Gp::Device & device) : m_device(&device)
+    Scene(const Rhi::Device & device) : m_device(&device)
     {
-        m_transfer_cmd_pool   = Gp::CommandPool(&device, Gp::CommandQueueType::Transfer);
-        m_g_vbuf_position     = Gp::Buffer(m_device,
-                                       Gp::BufferUsageEnum::TransferDst,
-                                       Gp::MemoryUsageEnum::GpuOnly,
-                                       sizeof(float3) * EngineSetting::MaxNumVertices,
-                                       "scene_m_g_vbuf_position");
-        m_g_vbuf_compact_info = Gp::Buffer(m_device,
-                                           Gp::BufferUsageEnum::TransferDst,
-                                           Gp::MemoryUsageEnum::GpuOnly,
-                                           sizeof(CompactVertex) * EngineSetting::MaxNumVertices,
-                                           "scene_m_g_vbuf_compact_info");
-        m_g_ibuf              = Gp::Buffer(m_device,
-                              Gp::BufferUsageEnum::TransferDst,
-                              Gp::MemoryUsageEnum::GpuOnly,
-                              Gp::GetSizeInBytes(m_g_ibuf_index_type) * EngineSetting::MaxNumIndices,
-                              "scene_m_g_ibuf");
+        m_transfer_cmd_pool   = Rhi::CommandPool(&device, Rhi::CommandQueueType::Transfer);
+        m_g_vbuf_position     = Rhi::Buffer(m_device,
+                                        Rhi::BufferUsageEnum::TransferDst,
+                                        Rhi::MemoryUsageEnum::GpuOnly,
+                                        sizeof(float3) * EngineSetting::MaxNumVertices,
+                                        "scene_m_g_vbuf_position");
+        m_g_vbuf_compact_info = Rhi::Buffer(m_device,
+                                            Rhi::BufferUsageEnum::TransferDst,
+                                            Rhi::MemoryUsageEnum::GpuOnly,
+                                            sizeof(CompactVertex) * EngineSetting::MaxNumVertices,
+                                            "scene_m_g_vbuf_compact_info");
+        m_g_ibuf              = Rhi::Buffer(m_device,
+                               Rhi::BufferUsageEnum::TransferDst,
+                               Rhi::MemoryUsageEnum::GpuOnly,
+                               Rhi::GetSizeInBytes(m_g_ibuf_index_type) * EngineSetting::MaxNumIndices,
+                               "scene_m_g_ibuf");
     }
 
     void
-    add_render_object(SceneGraphNode * node, const std::filesystem::path & path, Gp::StagingBufferManager & staging_buffer_manager)
+    add_render_object(SceneGraphNode * node, const std::filesystem::path & path, Rhi::StagingBufferManager & staging_buffer_manager)
     {
         Assimp::Importer importer;
         const aiScene *  scene =
@@ -268,7 +263,7 @@ struct Scene
     }
 
     std::array<size_t, 2>
-    add_geometries(const aiScene * scene, Gp::StagingBufferManager & staging_buffer_manager)
+    add_geometries(const aiScene * scene, Rhi::StagingBufferManager & staging_buffer_manager)
     {
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
@@ -337,18 +332,18 @@ struct Scene
             index_buffer_offset  = round_up(index_buffer_offset, 32);
         }
 
-        Gp::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
+        Rhi::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
 
-        Gp::Fence tmp_fence(staging_buffer_manager.m_device);
+        Rhi::Fence tmp_fence(staging_buffer_manager.m_device);
         tmp_fence.reset();
-        Gp::Buffer staging_buffer(m_device,
-                                  Gp::BufferUsageEnum::TransferSrc,
-                                  Gp::MemoryUsageEnum::CpuOnly,
-                                  vb_positions.size() * sizeof(vb_positions[0]));
-        Gp::Buffer staging_buffer2(m_device,
-                                   Gp::BufferUsageEnum::TransferSrc,
-                                   Gp::MemoryUsageEnum::CpuOnly,
-                                   ib.size() * sizeof(ib[0]));
+        Rhi::Buffer staging_buffer(m_device,
+                                   Rhi::BufferUsageEnum::TransferSrc,
+                                   Rhi::MemoryUsageEnum::CpuOnly,
+                                   vb_positions.size() * sizeof(vb_positions[0]));
+        Rhi::Buffer staging_buffer2(m_device,
+                                    Rhi::BufferUsageEnum::TransferSrc,
+                                    Rhi::MemoryUsageEnum::CpuOnly,
+                                    ib.size() * sizeof(ib[0]));
         std::memcpy(staging_buffer.map(), vb_positions.data(), vb_positions.size() * sizeof(vb_positions[0]));
         std::memcpy(staging_buffer2.map(), ib.data(), ib.size() * sizeof(ib[0]));
         staging_buffer.unmap();
@@ -361,7 +356,7 @@ struct Scene
                                     0,
                                     vb_positions.size() * sizeof(vb_positions[0]));
         cmd_list.copy_buffer_region(m_g_ibuf,
-                                    m_g_ibuf_num_indices * Gp::GetSizeInBytes(m_g_ibuf_index_type),
+                                    m_g_ibuf_num_indices * Rhi::GetSizeInBytes(m_g_ibuf_index_type),
                                     staging_buffer2,
                                     0,
                                     ib.size() * sizeof(ib[0]));
@@ -402,20 +397,20 @@ struct Scene
 
     template <size_t NumChannels>
     size_t
-    add_texture(const std::array<uint8_t, NumChannels> & v, Gp::StagingBufferManager & staging_buffer_manager)
+    add_texture(const std::array<uint8_t, NumChannels> & v, Rhi::StagingBufferManager & staging_buffer_manager)
     {
         // load using stbi
         static_assert(NumChannels == 4 || NumChannels == 1, "num channels must be 4 or 1");
-        Gp::FormatEnum format_enum = v.size() == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
-        Gp::Texture texture(staging_buffer_manager.m_device,
-                            Gp::TextureUsageEnum::Sampled,
-                            Gp::TextureStateEnum::FragmentShaderVisible,
-                            format_enum,
-                            int2(1, 1),
-                            reinterpret_cast<const std::byte *>(v.data()),
-                            &staging_buffer_manager,
-                            float4(),
-                            "");
+        Rhi::FormatEnum format_enum = v.size() == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
+        Rhi::Texture texture(staging_buffer_manager.m_device,
+                             Rhi::TextureUsageEnum::Sampled,
+                             Rhi::TextureStateEnum::FragmentShaderVisible,
+                             format_enum,
+                             int2(1, 1),
+                             reinterpret_cast<const std::byte *>(v.data()),
+                             &staging_buffer_manager,
+                             float4(),
+                             "");
         staging_buffer_manager.submit_all_pending_upload();
 
         // emplace back
@@ -424,7 +419,7 @@ struct Scene
     }
 
     size_t
-    add_texture(const std::filesystem::path & path, const size_t desired_channel, Gp::StagingBufferManager & staging_buffer_manager)
+    add_texture(const std::filesystem::path & path, const size_t desired_channel, Rhi::StagingBufferManager & staging_buffer_manager)
     {
         const std::string filepath_str = path.string();
 
@@ -436,17 +431,17 @@ struct Scene
         assert(image);
         std::byte * image_bytes = reinterpret_cast<std::byte *>(image);
         assert(desired_channel == 4 || desired_channel == 1);
-        Gp::FormatEnum format_enum =
-            desired_channel == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
-        Gp::Texture texture(staging_buffer_manager.m_device,
-                            Gp::TextureUsageEnum::Sampled,
-                            Gp::TextureStateEnum::FragmentShaderVisible,
-                            format_enum,
-                            resolution,
-                            image_bytes,
-                            &staging_buffer_manager,
-                            float4(),
-                            filepath_str);
+        Rhi::FormatEnum format_enum =
+            desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
+        Rhi::Texture texture(staging_buffer_manager.m_device,
+                             Rhi::TextureUsageEnum::Sampled,
+                             Rhi::TextureStateEnum::FragmentShaderVisible,
+                             format_enum,
+                             resolution,
+                             image_bytes,
+                             &staging_buffer_manager,
+                             float4(),
+                             filepath_str);
         staging_buffer_manager.submit_all_pending_upload();
         stbi_image_free(image);
 
@@ -458,7 +453,7 @@ struct Scene
     StandardMaterial
     add_required_textures(const std::filesystem::path & path,
                           const aiMaterial &            material,
-                          Gp::StagingBufferManager &    staging_buffer_manager)
+                          Rhi::StagingBufferManager &   staging_buffer_manager)
     {
         StandardMaterial standard_material;
         standard_material.m_diffuse_tex_id =
@@ -474,7 +469,7 @@ struct Scene
     add_texture(const std::filesystem::path & path,
                 const aiMaterial &            material,
                 const LoadStandardParamEnum   standard_param,
-                Gp::StagingBufferManager &    staging_buffer_manager)
+                Rhi::StagingBufferManager &   staging_buffer_manager)
     {
         aiTextureType ai_tex_type         = aiTextureType::aiTextureType_NONE;
         const char *  ai_mat_key          = nullptr;
@@ -529,7 +524,7 @@ struct Scene
     };
 
     void
-    build_static_models_blas(Gp::StagingBufferManager & staging_buffer_manager)
+    build_static_models_blas(Rhi::StagingBufferManager & staging_buffer_manager)
     {
         // create vector of description
         const size_t num_static_geoms =
@@ -542,21 +537,21 @@ struct Scene
             });
 
         // populate vector of geometry descs
-        std::vector<Gp::RayTracingGeometryDesc> static_mesh_descs(num_static_geoms);
-        size_t                                  i_static_mesh = 0;
+        std::vector<Rhi::RayTracingGeometryDesc> static_mesh_descs(num_static_geoms);
+        size_t                                   i_static_mesh = 0;
         m_scene_graph_root.traverse([&](const SceneGraphLeaf & leaf_info) {
             const Geometry & geometry = m_geometries[leaf_info.m_geometry_id];
             if (geometry.m_num_indices > 0 && geometry.m_is_static)
             {
-                Gp::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
-                geom_desc.set_flag(Gp::RayTracingGeometryFlag::Opaque);
+                Rhi::RayTracingGeometryDesc & geom_desc = static_mesh_descs[i_static_mesh++];
+                geom_desc.set_flag(Rhi::RayTracingGeometryFlag::Opaque);
                 geom_desc.set_index_buffer(m_g_ibuf,
-                                           geometry.m_ibuf_offset * Gp::GetSizeInBytes(m_g_ibuf_index_type),
+                                           geometry.m_ibuf_offset * Rhi::GetSizeInBytes(m_g_ibuf_index_type),
                                            m_g_ibuf_index_type,
                                            geometry.m_num_indices);
                 geom_desc.set_vertex_buffer(m_g_vbuf_position,
-                                            geometry.m_vbuf_offset * Gp::GetSizeInBytes(m_g_vbuf_position_type),
-                                            Gp::FormatEnum::R32G32B32_SFloat,
+                                            geometry.m_vbuf_offset * Rhi::GetSizeInBytes(m_g_vbuf_position_type),
+                                            Rhi::FormatEnum::R32G32B32_SFloat,
                                             sizeof(float3),
                                             geometry.m_num_vertices);
             }
@@ -564,36 +559,36 @@ struct Scene
         assert(i_static_mesh == num_static_geoms);
 
         // build blas
-        m_rt_static_meshes_blas = Gp::RayTracingBlas(m_device,
-                                                     static_mesh_descs.data(),
-                                                     static_mesh_descs.size(),
-                                                     &staging_buffer_manager,
-                                                     "global_blas");
+        m_rt_static_meshes_blas = Rhi::RayTracingBlas(m_device,
+                                                      static_mesh_descs.data(),
+                                                      static_mesh_descs.size(),
+                                                      &staging_buffer_manager,
+                                                      "global_blas");
 
         staging_buffer_manager.submit_all_pending_upload();
     }
 
     void
-    build_or_update(Gp::StagingBufferManager & staging_buffer_manager)
+    build_or_update(Rhi::StagingBufferManager & staging_buffer_manager)
     {
         // build blas
         build_static_models_blas(staging_buffer_manager);
 
         // build tlas
-        std::array<const Gp::RayTracingInstance *, 1> instances;
-        Gp::RayTracingInstance static_meshes_instance(&m_rt_static_meshes_blas, 0);
+        std::array<const Rhi::RayTracingInstance *, 1> instances;
+        Rhi::RayTracingInstance static_meshes_instance(&m_rt_static_meshes_blas, 0);
         instances[0] = &static_meshes_instance;
 
         m_rt_tlas =
-            Gp::RayTracingTlas(m_device, instances, &staging_buffer_manager, "ray_tracing_tlas");
+            Rhi::RayTracingTlas(m_device, instances, &staging_buffer_manager, "ray_tracing_tlas");
         staging_buffer_manager.submit_all_pending_upload();
 
         // build buffer of materials
-        m_g_materials_buffer    = Gp::Buffer(m_device,
-                                          Gp::BufferUsageEnum::ConstantBuffer,
-                                          Gp::MemoryUsageEnum::CpuOnly,
-                                          sizeof(StandardMaterial) * 100,
-                                          "g_material_buffer");
+        m_g_materials_buffer    = Rhi::Buffer(m_device,
+                                           Rhi::BufferUsageEnum::ConstantBuffer,
+                                           Rhi::MemoryUsageEnum::CpuOnly,
+                                           sizeof(StandardMaterial) * 100,
+                                           "g_material_buffer");
         StandardMaterial * smat = static_cast<StandardMaterial *>(m_g_materials_buffer.map());
         m_scene_graph_root.traverse([&](const SceneGraphLeaf & leaf_info) {
             *smat = leaf_info.m_standard_material;

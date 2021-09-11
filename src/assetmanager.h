@@ -1,6 +1,6 @@
 #pragma once
 
-#include "graphicsapi/graphicsapi.h"
+#include "rhi/rhi.h"
 #include "render/common/compact_vertex.h"
 #include "render/common/standard_emissive_ref.h"
 #include "render/common/standard_material_ref.h"
@@ -28,14 +28,14 @@ struct AssetPool
     std::vector<StandardMaterial>           m_standard_materials;
     std::vector<StandardEmissive>           m_standard_emissives;
     std::vector<StandardMesh>               m_standard_meshes;
-    std::vector<Gp::Texture>                m_textures;
+    std::vector<Rhi::Texture>               m_textures;
     std::map<std::filesystem::path, size_t> m_texture_id_from_path;
-    Gp::StagingBufferManager *              m_staging_buffer_manager = nullptr;
-    Gp::Device *                            m_device                 = nullptr;
+    Rhi::StagingBufferManager *             m_staging_buffer_manager = nullptr;
+    Rhi::Device *                           m_device                 = nullptr;
 
     AssetPool() {}
 
-    AssetPool(Gp::Device * device, Gp::StagingBufferManager * staging_buffer_manager)
+    AssetPool(Rhi::Device * device, Rhi::StagingBufferManager * staging_buffer_manager)
     : m_device(device), m_staging_buffer_manager(staging_buffer_manager)
     {
         init_empty_texture(staging_buffer_manager);
@@ -109,25 +109,25 @@ struct AssetPool
         }
 
         VertexBuffer vb;
-        vb.m_buffer       = Gp::Buffer(m_device,
-                                 Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::StorageBuffer,
-                                 Gp::MemoryUsageEnum::GpuOnly,
-                                 vertices.size() * sizeof(vertices[0]),
-                                 reinterpret_cast<std::byte *>(vertices.data()),
-                                 m_staging_buffer_manager,
-                                 "vertexbuffer:" + path.string());
+        vb.m_buffer       = Rhi::Buffer(m_device,
+                                  Rhi::BufferUsageEnum::VertexBuffer | Rhi::BufferUsageEnum::StorageBuffer,
+                                  Rhi::MemoryUsageEnum::GpuOnly,
+                                  vertices.size() * sizeof(vertices[0]),
+                                  reinterpret_cast<std::byte *>(vertices.data()),
+                                  m_staging_buffer_manager,
+                                  "vertexbuffer:" + path.string());
         vb.m_num_vertices = vertices.size();
 
         IndexBuffer ib;
-        ib.m_buffer      = Gp::Buffer(m_device,
-                                 Gp::BufferUsageEnum::IndexBuffer | Gp::BufferUsageEnum::StorageBuffer,
-                                 Gp::MemoryUsageEnum::GpuOnly,
-                                 indices.size() * sizeof(indices[0]),
-                                 reinterpret_cast<std::byte *>(indices.data()),
-                                 m_staging_buffer_manager,
-                                 "indexbuffer:" + path.string());
+        ib.m_buffer      = Rhi::Buffer(m_device,
+                                  Rhi::BufferUsageEnum::IndexBuffer | Rhi::BufferUsageEnum::StorageBuffer,
+                                  Rhi::MemoryUsageEnum::GpuOnly,
+                                  indices.size() * sizeof(indices[0]),
+                                  reinterpret_cast<std::byte *>(indices.data()),
+                                  m_staging_buffer_manager,
+                                  "indexbuffer:" + path.string());
         ib.m_num_indices = indices.size();
-        ib.m_type        = Gp::IndexType::Uint32;
+        ib.m_type        = Rhi::IndexType::Uint32;
 
         m_staging_buffer_manager->submit_all_pending_upload();
 
@@ -285,16 +285,16 @@ struct AssetPool
     {
         // load using stbi
         static_assert(NumChannels == 4 || NumChannels == 1, "num channels must be 4 or 1");
-        Gp::FormatEnum format_enum = v.size() == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
-        Gp::Texture texture(m_device,
-                            Gp::TextureUsageEnum::Sampled,
-                            Gp::TextureStateEnum::FragmentShaderVisible,
-                            format_enum,
-                            int2(1, 1),
-                            reinterpret_cast<const std::byte *>(v.data()),
-                            m_staging_buffer_manager,
-                            float4(),
-                            "");
+        Rhi::FormatEnum format_enum = v.size() == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
+        Rhi::Texture texture(m_device,
+                             Rhi::TextureUsageEnum::Sampled,
+                             Rhi::TextureStateEnum::FragmentShaderVisible,
+                             format_enum,
+                             int2(1, 1),
+                             reinterpret_cast<const std::byte *>(v.data()),
+                             m_staging_buffer_manager,
+                             float4(),
+                             "");
         m_staging_buffer_manager->submit_all_pending_upload();
 
         // add to list in manager
@@ -317,17 +317,17 @@ struct AssetPool
             void * image = stbi_load(filepath_str.c_str(), &resolution.x, &resolution.y, nullptr, desired_channel);
             std::byte * image_bytes = reinterpret_cast<std::byte *>(image);
             assert(desired_channel == 4 || desired_channel == 1);
-            Gp::FormatEnum format_enum =
-                desired_channel == 4 ? Gp::FormatEnum::R8G8B8A8_UNorm : Gp::FormatEnum::R8_UNorm;
-            Gp::Texture texture(m_device,
-                                Gp::TextureUsageEnum::Sampled,
-                                Gp::TextureStateEnum::FragmentShaderVisible,
-                                format_enum,
-                                resolution,
-                                image_bytes,
-                                m_staging_buffer_manager,
-                                float4(),
-                                filepath_str);
+            Rhi::FormatEnum format_enum =
+                desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
+            Rhi::Texture texture(m_device,
+                                 Rhi::TextureUsageEnum::Sampled,
+                                 Rhi::TextureStateEnum::FragmentShaderVisible,
+                                 format_enum,
+                                 resolution,
+                                 image_bytes,
+                                 m_staging_buffer_manager,
+                                 float4(),
+                                 filepath_str);
             m_staging_buffer_manager->submit_all_pending_upload();
             stbi_image_free(image);
 
@@ -345,18 +345,18 @@ struct AssetPool
 
 private:
     void
-    init_empty_texture(Gp::StagingBufferManager * staging_buffer_manager)
+    init_empty_texture(Rhi::StagingBufferManager * staging_buffer_manager)
     {
         assert(m_textures.size() == 0);
         std::array<uint8_t, 4> default_value = { 0, 0, 0, 0 };
-        m_textures.push_back(Gp::Texture(m_device,
-                                         Gp::TextureUsageEnum::Sampled,
-                                         Gp::TextureStateEnum::FragmentShaderVisible,
-                                         Gp::FormatEnum::R8G8B8A8_UNorm,
-                                         int2(1, 1),
-                                         reinterpret_cast<std::byte *>(default_value.data()),
-                                         staging_buffer_manager,
-                                         float4(),
-                                         "texture_manager_empty_texture"));
+        m_textures.push_back(Rhi::Texture(m_device,
+                                          Rhi::TextureUsageEnum::Sampled,
+                                          Rhi::TextureStateEnum::FragmentShaderVisible,
+                                          Rhi::FormatEnum::R8G8B8A8_UNorm,
+                                          int2(1, 1),
+                                          reinterpret_cast<std::byte *>(default_value.data()),
+                                          staging_buffer_manager,
+                                          float4(),
+                                          "texture_manager_empty_texture"));
     }
 };

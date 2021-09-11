@@ -3,8 +3,8 @@
 #include "dxacommon.h"
 #include "dxilreflection.h"
 
-#include "../commontypes/gpshadersrc.h"
-#include "../shadercompiler/hlsldxccompiler.h"
+#include "rhi/commontypes/rhishadersrc.h"
+#include "rhi/shadercompiler/hlsldxccompiler.h"
 
 namespace DXA_NAME
 {

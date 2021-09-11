@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../commontypes/gpcopyregion.h"
+#include "rhi/commontypes/rhicopyregion.h"
 #include "vkacommon.h"
 #include "vkadescriptor.h"
 #include "vkadevice.h"

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../commontypes/gpenums.h"
 #include "common/logger.h"
 #include "common/vmath.h"
-#include "../commontypes/gpshadersrc.h"
+#include "rhi/commontypes/rhienums.h"
+#include "rhi/commontypes/rhishadersrc.h"
 
 #include <wrl/client.h>
 // dxcapi must be included after wrl/client
@@ -270,7 +270,7 @@ struct HlslDxcCompiler
 
     template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
-    compile_as_dxil(const TShaderSrc<ShaderStageEnum> & shader_src,
+    compile_as_dxil(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
                     const std::vector<std::string> &    defines = {}) const
     {
         Logger::Info(__FUNCTION__ " compiling dxil from path : " + shader_src.m_file_path.string());
@@ -285,7 +285,7 @@ struct HlslDxcCompiler
 
     template <typename ShaderStageEnum>
     std::vector<uint32_t>
-    compile_as_spirv(const TShaderSrc<ShaderStageEnum> & shader_src,
+    compile_as_spirv(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
                      const std::vector<std::string> &    defines = {}) const
     {
         Logger::Info(__FUNCTION__ " compiling spirv from path : " + shader_src.m_file_path.string());

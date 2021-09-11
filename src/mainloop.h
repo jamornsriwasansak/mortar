@@ -2,7 +2,7 @@
 
 #include "assetmanager.h"
 #include "common/camera.h"
-#include "graphicsapi/graphicsapi.h"
+#include "rhi/rhi.h"
 #include "render/rendercontext.h"
 #include "render/renderer.h"
 
@@ -11,22 +11,22 @@
 
 struct MainLoop
 {
-    Gp::Device * m_device = nullptr;
+    Rhi::Device * m_device = nullptr;
     Window *     m_window = nullptr;
 
-    Gp::Swapchain                   m_swapchain;
-    std::vector<Gp::Texture>        m_swapchain_textures;
-    std::vector<Gp::Fence>          m_flight_fences;
-    std::vector<Gp::CommandPool>    m_graphics_command_pools;
-    std::vector<Gp::CommandPool>    m_compute_command_pools;
-    std::vector<Gp::CommandPool>    m_transfer_command_pools;
-    std::vector<Gp::DescriptorPool> m_descriptor_pools;
-    std::vector<Gp::Semaphore>      m_image_ready_semaphores;
-    std::vector<Gp::Semaphore>      m_image_presentable_semaphore;
+    Rhi::Swapchain                   m_swapchain;
+    std::vector<Rhi::Texture>        m_swapchain_textures;
+    std::vector<Rhi::Fence>          m_flight_fences;
+    std::vector<Rhi::CommandPool>    m_graphics_command_pools;
+    std::vector<Rhi::CommandPool>    m_compute_command_pools;
+    std::vector<Rhi::CommandPool>    m_transfer_command_pools;
+    std::vector<Rhi::DescriptorPool> m_descriptor_pools;
+    std::vector<Rhi::Semaphore>      m_image_ready_semaphores;
+    std::vector<Rhi::Semaphore>      m_image_presentable_semaphore;
     size_t                          m_swapchain_length = 0;
     size_t                          m_num_flights      = 0;
 
-    Gp::StagingBufferManager m_staging_buffer_manager;
+    Rhi::StagingBufferManager m_staging_buffer_manager;
     // TODO:: replace asset pool completely with scene
     AssetPool m_asset_pool;
     Scene     m_scene;
@@ -36,16 +36,16 @@ struct MainLoop
 
     std::vector<StandardObject> m_static_objects;
 
-    Gp::Buffer  m_dummy_buffer;
-    Gp::Buffer  m_dummy_index_buffer;
-    Gp::Texture m_dummy_texture;
+    Rhi::Buffer  m_dummy_buffer;
+    Rhi::Buffer  m_dummy_index_buffer;
+    Rhi::Texture m_dummy_texture;
 
-    Gp::ImGuiRenderPass m_imgui_render_pass;
+    Rhi::ImGuiRenderPass m_imgui_render_pass;
     AssetBrowserQuick   m_asset_browser;
 
     MainLoop() {}
 
-    MainLoop(Gp::Device * device, Window * window, const size_t num_flights)
+    MainLoop(Rhi::Device * device, Window * window, const size_t num_flights)
     : m_device(device), m_window(window), m_num_flights(num_flights)
     {
         const int2 resolution = m_window->get_resolution();
@@ -61,15 +61,15 @@ struct MainLoop
     init_or_resize_swapchain()
     {
         // force all unique ptr to free
-        m_swapchain = Gp::Swapchain();
+        m_swapchain = Rhi::Swapchain();
 
         // create swapchain
-        m_swapchain        = Gp::Swapchain(m_device, *m_window, "main_swapchain");
+        m_swapchain        = Rhi::Swapchain(m_device, *m_window, "main_swapchain");
         m_swapchain_length = m_swapchain.m_num_images;
         m_swapchain_textures.resize(m_swapchain_length);
         for (size_t i = 0; i < m_swapchain.m_num_images; i++)
         {
-            m_swapchain_textures[i] = Gp::Texture(m_device, m_swapchain, i);
+            m_swapchain_textures[i] = Rhi::Texture(m_device, m_swapchain, i);
         }
 
         // initalize camera
@@ -87,7 +87,7 @@ struct MainLoop
         m_flight_fences.resize(m_num_flights);
         for (int i = 0; i < m_num_flights; i++)
         {
-            m_flight_fences[i] = Gp::Fence(m_device, "flight_fence" + std::to_string(i));
+            m_flight_fences[i] = Rhi::Fence(m_device, "flight_fence" + std::to_string(i));
         }
 
         // create command pool and descriptor pool
@@ -99,34 +99,34 @@ struct MainLoop
         m_image_presentable_semaphore.resize(m_num_flights);
         for (size_t i = 0; i < m_num_flights; i++)
         {
-            m_graphics_command_pools[i] = Gp::CommandPool(m_device, Gp::CommandQueueType::Graphics);
-            m_compute_command_pools[i]  = Gp::CommandPool(m_device, Gp::CommandQueueType::Compute);
-            m_transfer_command_pools[i] = Gp::CommandPool(m_device, Gp::CommandQueueType::Transfer);
-            m_descriptor_pools[i]       = Gp::DescriptorPool(m_device);
-            m_image_ready_semaphores[i] = Gp::Semaphore(m_device);
-            m_image_presentable_semaphore[i] = Gp::Semaphore(m_device);
+            m_graphics_command_pools[i] = Rhi::CommandPool(m_device, Rhi::CommandQueueType::Graphics);
+            m_compute_command_pools[i]  = Rhi::CommandPool(m_device, Rhi::CommandQueueType::Compute);
+            m_transfer_command_pools[i] = Rhi::CommandPool(m_device, Rhi::CommandQueueType::Transfer);
+            m_descriptor_pools[i]       = Rhi::DescriptorPool(m_device);
+            m_image_ready_semaphores[i] = Rhi::Semaphore(m_device);
+            m_image_presentable_semaphore[i] = Rhi::Semaphore(m_device);
         }
 
         // staging buffer manager
-        m_staging_buffer_manager = Gp::StagingBufferManager(m_device, "main_staging_buffer_manager");
+        m_staging_buffer_manager = Rhi::StagingBufferManager(m_device, "main_staging_buffer_manager");
         m_asset_pool             = AssetPool(m_device, &m_staging_buffer_manager);
 
         // initialize renderer
         m_renderer.init(m_device, m_swapchain_resolution, m_swapchain_textures);
 
         // init dummy buffers and texture
-        m_dummy_buffer  = Gp::Buffer(m_device,
-                                    Gp::BufferUsageEnum::VertexBuffer | Gp::BufferUsageEnum::IndexBuffer |
-                                        Gp::BufferUsageEnum::StorageBuffer,
-                                    Gp::MemoryUsageEnum::GpuOnly,
+        m_dummy_buffer  = Rhi::Buffer(m_device,
+                                    Rhi::BufferUsageEnum::VertexBuffer | Rhi::BufferUsageEnum::IndexBuffer |
+                                        Rhi::BufferUsageEnum::StorageBuffer,
+                                    Rhi::MemoryUsageEnum::GpuOnly,
                                     sizeof(uint32_t),
                                     nullptr,
                                     nullptr,
                                     "dummy_vertex_buffer");
-        m_dummy_texture = Gp::Texture(m_device,
-                                      Gp::TextureUsageEnum::Sampled,
-                                      Gp::TextureStateEnum::AllShaderVisible,
-                                      Gp::FormatEnum::R8G8B8A8_UNorm,
+        m_dummy_texture = Rhi::Texture(m_device,
+                                      Rhi::TextureUsageEnum::Sampled,
+                                      Rhi::TextureStateEnum::AllShaderVisible,
+                                      Rhi::FormatEnum::R8G8B8A8_UNorm,
                                       int2(1, 1),
                                       nullptr,
                                       nullptr,
@@ -141,7 +141,7 @@ struct MainLoop
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto/Roboto-Medium.ttf", 15);
-        m_imgui_render_pass = Gp::ImGuiRenderPass(m_device, *m_window, m_swapchain);
+        m_imgui_render_pass = Rhi::ImGuiRenderPass(m_device, *m_window, m_swapchain);
 
         m_asset_browser.init();
     }
@@ -274,11 +274,11 @@ struct MainLoop
             i_flight = (i_flight + 1) % m_num_flights;
         }
 
-        m_imgui_render_pass.shut_down();
-
         for (size_t i = 0; i < m_num_flights; i++)
         {
             m_flight_fences[i].wait();
         }
+
+        m_imgui_render_pass.shut_down();
     }
 };

@@ -1,77 +1,76 @@
 #pragma once
 
-#include "graphicsapi/graphicsapi.h"
 #include "render/common/render_params.h"
+#include "rhi/rhi.h"
 #include "rtvisualize_shared.h"
 
 struct RtVisualizePass
 {
-    Gp::RayTracingPipeline    m_rt_pipeline;
-    Gp::RayTracingShaderTable m_rt_sbt;
-    Gp::Buffer                m_cb_params;
-    Gp::Sampler               m_common_sampler;
+    Rhi::RayTracingPipeline m_rt_pipeline;
+    Rhi::RayTracingShaderTable m_rt_sbt;
+    Rhi::Buffer m_cb_params;
+    Rhi::Sampler m_common_sampler;
 
     RtVisualizePass() {}
 
-    RtVisualizePass(const Gp::Device & device)
+    RtVisualizePass(const Rhi::Device & device)
     {
         init_or_reload_shader(device);
 
         // constant params for rtvisualize
-        m_cb_params = Gp::Buffer(&device,
-                                 Gp::BufferUsageEnum::ConstantBuffer,
-                                 Gp::MemoryUsageEnum::CpuOnly,
-                                 sizeof(RtVisualizeCbParams));
+        m_cb_params = Rhi::Buffer(&device,
+                                  Rhi::BufferUsageEnum::ConstantBuffer,
+                                  Rhi::MemoryUsageEnum::CpuOnly,
+                                  sizeof(RtVisualizeCbParams));
 
         // sampler
-        m_common_sampler = Gp::Sampler(&device);
+        m_common_sampler = Rhi::Sampler(&device);
     }
 
     void
-    init_or_reload_shader(const Gp::Device & device)
+    init_or_reload_shader(const Rhi::Device & device)
     {
         std::filesystem::path shader_path = "../src/render/passes/rtvisualize/";
 
         // create pipeline for ssao
-        Gp::RayTracingPipelineConfig rt_config;
+        Rhi::RayTracingPipelineConfig rt_config;
 
         // raygen
-        const Gp::ShaderSrc     raygen_shader(Gp::ShaderStageEnum::RayGen,
-                                          shader_path / "rtvisualize.hlsl",
-                                          "RayGen");
+        const Rhi::ShaderSrc raygen_shader(Rhi::ShaderStageEnum::RayGen,
+                                           shader_path / "rtvisualize.hlsl",
+                                           "RayGen");
         [[maybe_unused]] size_t raygen_id = rt_config.add_shader(raygen_shader);
 
         // miss
-        const Gp::ShaderSrc     miss_shader(Gp::ShaderStageEnum::Miss,
-                                        shader_path / "rtvisualize.hlsl",
-                                        "Miss");
+        const Rhi::ShaderSrc miss_shader(Rhi::ShaderStageEnum::Miss,
+                                         shader_path / "rtvisualize.hlsl",
+                                         "Miss");
         [[maybe_unused]] size_t miss_id = rt_config.add_shader(miss_shader);
 
         // hitgroup
-        const Gp::ShaderSrc    hit_shader(Gp::ShaderStageEnum::ClosestHit,
-                                       shader_path / "rtvisualize.hlsl",
-                                       "ClosestHit");
-        Gp::RayTracingHitGroup hit_group;
+        const Rhi::ShaderSrc hit_shader(Rhi::ShaderStageEnum::ClosestHit,
+                                        shader_path / "rtvisualize.hlsl",
+                                        "ClosestHit");
+        Rhi::RayTracingHitGroup hit_group;
         hit_group.m_closest_hit_id = rt_config.add_shader(hit_shader);
 
         // all raygen and all hit groups
         [[maybe_unused]] size_t hitgroup_id = rt_config.add_hit_group(hit_group);
 
         m_rt_pipeline =
-            Gp::RayTracingPipeline(&device, rt_config, 16, 64, 2, "rt_visualize_pipeline");
-        m_rt_sbt = Gp::RayTracingShaderTable(&device, m_rt_pipeline, "rt_visualize_sbt");
-
+            Rhi::RayTracingPipeline(&device, rt_config, 16, 64, 2, "rt_visualize_pipeline");
+        m_rt_sbt = Rhi::RayTracingShaderTable(&device, m_rt_pipeline, "rt_visualize_sbt");
     }
 
     void
-    run(Gp::CommandList &          cmd_list,
-        const RenderContext &      render_ctx,
-        const RenderParams &       render_params,
-        const Gp::RayTracingTlas & tlas,
-        const Gp::Texture &        target_texture_buffer,
-        const uint2                target_resolution)
+    run(Rhi::CommandList & cmd_list,
+        const RenderContext & render_ctx,
+        const RenderParams & render_params,
+        const Rhi::RayTracingTlas & tlas,
+        const Rhi::Texture & target_texture_buffer,
+        const uint2 target_resolution)
     {
-        bool       p_open     = true;
+        bool p_open           = true;
         static int rtvis_mode = 0;
         if (ImGui::Begin("RtVisualize Pass", &p_open))
         {
@@ -88,19 +87,19 @@ struct RtVisualizePass
         ImGui::End();
 
         RtVisualizeCbParams cb_params;
-        CameraProperties    cam_props = render_params.m_fps_camera->get_camera_props();
-        cb_params.m_camera_inv_proj   = inverse(cam_props.m_proj);
-        cb_params.m_camera_inv_view   = inverse(cam_props.m_view);
-        cb_params.m_mode              = rtvis_mode;
+        CameraProperties cam_props  = render_params.m_fps_camera->get_camera_props();
+        cb_params.m_camera_inv_proj = inverse(cam_props.m_proj);
+        cb_params.m_camera_inv_view = inverse(cam_props.m_view);
+        cb_params.m_mode            = rtvis_mode;
         std::memcpy(m_cb_params.map(), &cb_params, sizeof(RtVisualizeCbParams));
         m_cb_params.unmap();
 
         // setup descriptor spaces and bindings
-        std::array<Gp::DescriptorSet, 2> descriptor_sets;
+        std::array<Rhi::DescriptorSet, 2> descriptor_sets;
 
         // descriptor sets 0
         descriptor_sets[0] =
-            Gp::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 0);
+            Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 0);
         descriptor_sets[0]
             .set_t_ray_tracing_accel(0, render_params.m_scene->m_rt_tlas)
             .set_u_rw_texture(0, target_texture_buffer)
@@ -109,7 +108,7 @@ struct RtVisualizePass
 
         // descriptor sets 1
         descriptor_sets[1] =
-            Gp::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
+            Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
         descriptor_sets[1].set_s_sampler(0, m_common_sampler);
         for (size_t i = 0; i < render_params.m_scene->m_textures.length(); i++)
         {
