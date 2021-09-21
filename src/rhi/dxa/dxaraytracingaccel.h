@@ -13,11 +13,11 @@ struct RayTracingGeometryDesc
     RayTracingGeometryDesc() : m_geometry_desc({}) {}
 
     RayTracingGeometryDesc &
-    set_vertex_buffer(const Buffer &   buffer,
-                      const size_t     offset_in_bytes,
+    set_vertex_buffer(const Buffer & buffer,
+                      const size_t offset_in_bytes,
                       const FormatEnum dxgi_format,
-                      const size_t     stride_in_bytes,
-                      const size_t     num_vertices)
+                      const size_t stride_in_bytes,
+                      const size_t num_vertices)
     {
         m_geometry_desc.Triangles.VertexBuffer.StartAddress =
             buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + offset_in_bytes;
@@ -60,19 +60,19 @@ struct RayTracingBlas
 
     RayTracingBlas() {}
 
-    RayTracingBlas(const Device *                 device,
-                   const RayTracingGeometryDesc * geometry_descs,
-                   const size_t                   num_geometries,
-                   StagingBufferManager *         resource_loader,
-                   const std::string &            name = "")
+    RayTracingBlas(const Device * device,
+                   const std::span<RayTracingGeometryDesc> & geometry_descs,
+                   const RayTracingBuildHint hint,
+                   StagingBufferManager * resource_loader,
+                   const std::string & name = "")
     {
         // setup input building blas
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottom_level_inputs = {};
         bottom_level_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-        bottom_level_inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+        bottom_level_inputs.Flags = static_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS>(hint);
         bottom_level_inputs.pGeometryDescs =
-            reinterpret_cast<const D3D12_RAYTRACING_GEOMETRY_DESC *>(geometry_descs);
-        bottom_level_inputs.NumDescs = static_cast<UINT>(num_geometries);
+            reinterpret_cast<D3D12_RAYTRACING_GEOMETRY_DESC *>(geometry_descs.data());
+        bottom_level_inputs.NumDescs = static_cast<UINT>(geometry_descs.size());
         bottom_level_inputs.Type     = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
 
         // get prebuild information
@@ -120,15 +120,16 @@ struct RayTracingInstance
 
     RayTracingInstance() {}
 
-    RayTracingInstance(RayTracingBlas * blas, size_t hit_group_index)
+    RayTracingInstance(const RayTracingBlas & blas, const size_t hit_group_index, const size_t instance_id)
     {
         // create an instance desc for the bottom-level acceleration structure.
         m_instance_desc.Transform[0][0]     = m_instance_desc.Transform[1][1] =
             m_instance_desc.Transform[2][2] = 1;
         m_instance_desc.InstanceMask        = 1;
         m_instance_desc.AccelerationStructure =
-            blas->m_blas_buffer.m_allocation->GetResource()->GetGPUVirtualAddress();
+            blas.m_blas_buffer.m_allocation->GetResource()->GetGPUVirtualAddress();
         m_instance_desc.InstanceContributionToHitGroupIndex = hit_group_index;
+        m_instance_desc.InstanceID                          = instance_id;
     }
 };
 
@@ -139,10 +140,10 @@ struct RayTracingTlas
 
     RayTracingTlas() {}
 
-    RayTracingTlas(const Device *                              device,
-                   const std::span<const RayTracingInstance *> instances,
-                   StagingBufferManager *                      temp_resource_manager,
-                   const std::string &                         name = "")
+    RayTracingTlas(const Device * device,
+                   const std::span<const RayTracingInstance> & instances,
+                   StagingBufferManager * temp_resource_manager,
+                   const std::string & name = "")
     {
         // copy description of instance into the buffer
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
@@ -157,7 +158,7 @@ struct RayTracingTlas
         for (size_t i = 0; i < instances.size(); i++)
         {
             size_t offset = i * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-            std::memcpy(instance_dst + offset, &instances[i]->m_instance_desc, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
+            std::memcpy(instance_dst + offset, &instances[i].m_instance_desc, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
         }
         m_instance_desc_buffer.unmap();
 

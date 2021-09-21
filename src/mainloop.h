@@ -2,9 +2,9 @@
 
 #include "assetmanager.h"
 #include "common/camera.h"
-#include "rhi/rhi.h"
 #include "render/rendercontext.h"
 #include "render/renderer.h"
+#include "rhi/rhi.h"
 
 #include "assetbrowser.h"
 #include "assetbrowserquick.h"
@@ -12,36 +12,36 @@
 struct MainLoop
 {
     Rhi::Device * m_device = nullptr;
-    Window *     m_window = nullptr;
+    Window * m_window      = nullptr;
 
-    Rhi::Swapchain                   m_swapchain;
-    std::vector<Rhi::Texture>        m_swapchain_textures;
-    std::vector<Rhi::Fence>          m_flight_fences;
-    std::vector<Rhi::CommandPool>    m_graphics_command_pools;
-    std::vector<Rhi::CommandPool>    m_compute_command_pools;
-    std::vector<Rhi::CommandPool>    m_transfer_command_pools;
+    Rhi::Swapchain m_swapchain;
+    std::vector<Rhi::Texture> m_swapchain_textures;
+    std::vector<Rhi::Fence> m_flight_fences;
+    std::vector<Rhi::CommandPool> m_graphics_command_pools;
+    std::vector<Rhi::CommandPool> m_compute_command_pools;
+    std::vector<Rhi::CommandPool> m_transfer_command_pools;
     std::vector<Rhi::DescriptorPool> m_descriptor_pools;
-    std::vector<Rhi::Semaphore>      m_image_ready_semaphores;
-    std::vector<Rhi::Semaphore>      m_image_presentable_semaphore;
-    size_t                          m_swapchain_length = 0;
-    size_t                          m_num_flights      = 0;
+    std::vector<Rhi::Semaphore> m_image_ready_semaphores;
+    std::vector<Rhi::Semaphore> m_image_presentable_semaphore;
+    size_t m_swapchain_length = 0;
+    size_t m_num_flights      = 0;
 
     Rhi::StagingBufferManager m_staging_buffer_manager;
     // TODO:: replace asset pool completely with scene
     AssetPool m_asset_pool;
-    Scene     m_scene;
+    Scene m_scene;
     FpsCamera m_camera;
-    Renderer  m_renderer;
-    int2      m_swapchain_resolution = int2(0, 0);
+    Renderer m_renderer;
+    int2 m_swapchain_resolution = int2(0, 0);
 
     std::vector<StandardObject> m_static_objects;
 
-    Rhi::Buffer  m_dummy_buffer;
-    Rhi::Buffer  m_dummy_index_buffer;
+    Rhi::Buffer m_dummy_buffer;
+    Rhi::Buffer m_dummy_index_buffer;
     Rhi::Texture m_dummy_texture;
 
     Rhi::ImGuiRenderPass m_imgui_render_pass;
-    AssetBrowserQuick   m_asset_browser;
+    AssetBrowserQuick m_asset_browser;
 
     MainLoop() {}
 
@@ -100,38 +100,39 @@ struct MainLoop
         for (size_t i = 0; i < m_num_flights; i++)
         {
             m_graphics_command_pools[i] = Rhi::CommandPool(m_device, Rhi::CommandQueueType::Graphics);
-            m_compute_command_pools[i]  = Rhi::CommandPool(m_device, Rhi::CommandQueueType::Compute);
+            m_compute_command_pools[i] = Rhi::CommandPool(m_device, Rhi::CommandQueueType::Compute);
             m_transfer_command_pools[i] = Rhi::CommandPool(m_device, Rhi::CommandQueueType::Transfer);
             m_descriptor_pools[i]       = Rhi::DescriptorPool(m_device);
-            m_image_ready_semaphores[i] = Rhi::Semaphore(m_device);
+            m_image_ready_semaphores[i]      = Rhi::Semaphore(m_device);
             m_image_presentable_semaphore[i] = Rhi::Semaphore(m_device);
         }
 
         // staging buffer manager
-        m_staging_buffer_manager = Rhi::StagingBufferManager(m_device, "main_staging_buffer_manager");
-        m_asset_pool             = AssetPool(m_device, &m_staging_buffer_manager);
+        m_staging_buffer_manager =
+            Rhi::StagingBufferManager(m_device, "main_staging_buffer_manager");
+        m_asset_pool = AssetPool(m_device, &m_staging_buffer_manager);
 
         // initialize renderer
         m_renderer.init(m_device, m_swapchain_resolution, m_swapchain_textures);
 
         // init dummy buffers and texture
         m_dummy_buffer  = Rhi::Buffer(m_device,
-                                    Rhi::BufferUsageEnum::VertexBuffer | Rhi::BufferUsageEnum::IndexBuffer |
-                                        Rhi::BufferUsageEnum::StorageBuffer,
-                                    Rhi::MemoryUsageEnum::GpuOnly,
-                                    sizeof(uint32_t),
-                                    nullptr,
-                                    nullptr,
-                                    "dummy_vertex_buffer");
+                                     Rhi::BufferUsageEnum::VertexBuffer | Rhi::BufferUsageEnum::IndexBuffer |
+                                         Rhi::BufferUsageEnum::StorageBuffer,
+                                     Rhi::MemoryUsageEnum::GpuOnly,
+                                     sizeof(uint32_t),
+                                     nullptr,
+                                     nullptr,
+                                     "dummy_vertex_buffer");
         m_dummy_texture = Rhi::Texture(m_device,
-                                      Rhi::TextureUsageEnum::Sampled,
-                                      Rhi::TextureStateEnum::AllShaderVisible,
-                                      Rhi::FormatEnum::R8G8B8A8_UNorm,
-                                      int2(1, 1),
-                                      nullptr,
-                                      nullptr,
-                                      float4(0.0f, 0.0f, 0.0f, 0.0f),
-                                      "dummy_texture");
+                                       Rhi::TextureUsageEnum::Sampled,
+                                       Rhi::TextureStateEnum::AllShaderVisible,
+                                       Rhi::FormatEnum::R8G8B8A8_UNorm,
+                                       int2(1, 1),
+                                       nullptr,
+                                       nullptr,
+                                       float4(0.0f, 0.0f, 0.0f, 0.0f),
+                                       "dummy_texture");
 
         // setup dear imgui
         IMGUI_CHECKVERSION();
@@ -262,9 +263,16 @@ struct MainLoop
         box_mesh[0].m_emissive_id = emissive_id;
         m_static_objects.insert(m_static_objects.end(), box_mesh.begin(), box_mesh.end());
 
-        m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/sponza/sponza.obj", m_staging_buffer_manager);
-        m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
-        m_scene.build_or_update(m_staging_buffer_manager);
+        urange sponza_geometries = m_scene.add_geometries("scenes/sponza/sponza.obj", m_staging_buffer_manager);
+        std::array<urange, 1> ranges;
+        ranges[0]                 = sponza_geometries;
+        size_t sponza_instance_id = m_scene.add_base_instance(ranges);
+        // m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
+
+        SceneDesc scene_desc;
+        SceneObject object = { sponza_instance_id, glm::identity<float4x4>() };
+        scene_desc.m_scene_objects.push_back({ object });
+        m_scene.commit(scene_desc, m_staging_buffer_manager);
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");
 

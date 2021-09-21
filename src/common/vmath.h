@@ -9,13 +9,23 @@
 
 using namespace glm;
 
-using uint2  = glm::uvec2;
-using uint3  = glm::uvec3;
-using uint4  = glm::uvec4;
-using half   = glm::u16;
-using half2  = glm::u16vec2;
-using half3  = glm::u16vec3;
-using half4  = glm::u16vec4;
+using uint2 = glm::uvec2;
+using uint3 = glm::uvec3;
+using uint4 = glm::uvec4;
+using half  = glm::u16;
+using half2 = glm::u16vec2;
+using half3 = glm::u16vec3;
+using half4 = glm::u16vec4;
+
+struct urange
+{
+    uint m_begin;
+    uint m_end;
+
+    urange() {}
+
+    urange(const uint begin, const uint end) : m_begin(begin), m_end(end) {}
+};
 
 template <typename T>
 constexpr const T

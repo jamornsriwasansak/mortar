@@ -48,9 +48,9 @@ struct FsVector
     }
 
 private:
-    size_t m_size;
+    size_t m_size = 0;
     // std::array already implement assertion
     // assert(m_size < Length);
-    std::array<Type, Length> m_array;
+    std::array<Type, Length> m_array = {};
 };
-} // namespace Ste
+} // namespace Std

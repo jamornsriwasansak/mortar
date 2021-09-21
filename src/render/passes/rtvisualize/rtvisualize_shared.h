@@ -8,13 +8,15 @@ struct RtVisualizeCbParams
     static const int ModeTriangleId          = 2;
     static const int ModeBaryCentricCoords   = 3;
     static const int ModePosition            = 4;
-    static const int ModeNormal              = 5;
-    static const int ModeDepth               = 6;
-    static const int ModeDiffuseReflectance  = 7;
-    static const int ModeSpecularReflectance = 8;
+    static const int ModeGeometryNormal      = 5;
+    static const int ModeTextureCoords       = 6;
+    static const int ModeDepth               = 7;
+    static const int ModeDiffuseReflectance  = 8;
+    static const int ModeSpecularReflectance = 9;
+    static const int ModeIndex               = 10;
 
     float4x4 m_camera_inv_view;
     float4x4 m_camera_inv_proj;
-    int      m_mode;
+    int m_mode;
 };
 #endif

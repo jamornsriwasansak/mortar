@@ -125,8 +125,6 @@ struct SpirvReflector
                 const auto & pair_set_binding = index_pair_binding_info.first;
                 if (pair_set_binding.first == i_set)
                 {
-                    const auto & binding = pair_set_binding.second;
-
                     const auto & info                  = index_pair_binding_info.second;
                     const auto & vk_set_layout_binding = info.first;
                     const auto & name                  = info.second;

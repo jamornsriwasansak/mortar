@@ -15,18 +15,23 @@ struct Attributes
     float2 uv;
 };
 
-RaytracingAccelerationStructure u_scene_bvh    REGISTER(t0, space0);
-ConstantBuffer<RtVisualizeCbParams> u_cbparams REGISTER(b0, space0);
-RWTexture2D<float4> u_output                   REGISTER(u0, space0);
+RaytracingAccelerationStructure     u_scene_bvh      REGISTER(t0, space0);
+ConstantBuffer<RtVisualizeCbParams> u_cbparams       REGISTER(b0, space0);
+RWTexture2D<float4>                 u_output         REGISTER(u0, space0);
 
 struct StandardMaterialsContainer
 {
     StandardMaterial m_materials[100];
 };
 
-SamplerState                               u_sampler REGISTER(s0, space1);
-Texture2D<float4>                          u_textures[100] REGISTER(t0, space1);
-ConstantBuffer<StandardMaterialsContainer> u_smc REGISTER(b0, space1);
+SamplerState                               u_sampler          REGISTER(s0, space1);
+Texture2D<float4>                          u_textures[100]    REGISTER(t0, space1);
+ConstantBuffer<StandardMaterialsContainer> u_smc              REGISTER(b0, space1);
+/*
+StructuredBuffer<uint16_t>                 u_index_buffer     REGISTER(t1, space1);
+StructuredBuffer<float3>                   u_vertex_buffer    REGISTER(t2, space1);
+StructuredBuffer<CompactVertex>            u_compactv_buffer  REGISTER(t3, space1);
+*/
 
 SHADER_TYPE("raygeneration")
 void
@@ -84,6 +89,9 @@ ClosestHit(INOUT(Payload) payload, const Attributes attrib)
     else if (u_cbparams.m_mode == RtVisualizeCbParams::ModePosition)
     {
         payload.m_color = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+    }
+    else if (u_cbparams.m_mode == RtVisualizeCbParams::ModeIndex)
+    {
     }
     else
     {

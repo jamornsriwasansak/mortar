@@ -78,14 +78,10 @@ struct Buffer
         // setup state
         D3D12_RESOURCE_STATES states = static_cast<D3D12_RESOURCE_STATES>(buffer_usage);
 
-        switch (memory_usage)
+        // if is cpu (which uses upload heap), override
+        if (memory_usage == MemoryUsageEnum::CpuOnly || memory_usage ==  MemoryUsageEnum::CpuToGpu)
         {
-        case MemoryUsageEnum::CpuOnly:
-        case MemoryUsageEnum::CpuToGpu:
-            states |= D3D12_RESOURCE_STATE_GENERIC_READ;
-            break;
-        default:
-            break;
+            states = D3D12_RESOURCE_STATE_GENERIC_READ;
         }
 
         // allocate resource

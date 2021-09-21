@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../setting.h"
 #include "common/glfwhandler.h"
 #include "common/logger.h"
-#include "../setting.h"
 //
 #include <DirectXMath.h>
 #include <directx/d3d12.h>
@@ -455,7 +455,6 @@ struct EnumHelper
     }
 };
 
-
 namespace DXA_NAME
 {
 enum class CommandQueueType : uint8_t
@@ -473,5 +472,26 @@ enum class CommandQueueType : uint8_t
     Graphics = VK_QUEUE_GRAPHICS_BIT,
     Compute  = VK_QUEUE_COMPUTE_BIT,
     Transfer = VK_QUEUE_TRANSFER_BIT
+};
+}
+
+namespace DXA_NAME
+{
+enum class RayTracingBuildHint : uint8_t
+{
+    NonDeformable = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
+    Deformable    = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD |
+                 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE,
+    Hero = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE
+};
+}
+
+namespace VKA_NAME
+{
+enum class RayTracingBuildHint : uint8_t
+{
+    NonDeformable = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+    Deformable    = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
+    Hero          = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR
 };
 }

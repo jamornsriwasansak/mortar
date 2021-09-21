@@ -79,7 +79,8 @@ struct RtVisualizePass
             ImGui::RadioButton("TriangleId", &rtvis_mode, RtVisualizeCbParams::ModeTriangleId);
             ImGui::RadioButton("BaryCentricCoords", &rtvis_mode, RtVisualizeCbParams::ModeBaryCentricCoords);
             ImGui::RadioButton("Position", &rtvis_mode, RtVisualizeCbParams::ModePosition);
-            ImGui::RadioButton("Normal", &rtvis_mode, RtVisualizeCbParams::ModeNormal);
+            ImGui::RadioButton("Geometry Normal", &rtvis_mode, RtVisualizeCbParams::ModeGeometryNormal);
+            ImGui::RadioButton("Texture Coord", &rtvis_mode, RtVisualizeCbParams::ModeSpecularReflectance);
             ImGui::RadioButton("Depth", &rtvis_mode, RtVisualizeCbParams::ModeDepth);
             ImGui::RadioButton("DiffuseReflectance", &rtvis_mode, RtVisualizeCbParams::ModeDiffuseReflectance);
             ImGui::RadioButton("SpecularReflectance", &rtvis_mode, RtVisualizeCbParams::ModeSpecularReflectance);
@@ -110,11 +111,11 @@ struct RtVisualizePass
         descriptor_sets[1] =
             Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
         descriptor_sets[1].set_s_sampler(0, m_common_sampler);
-        for (size_t i = 0; i < render_params.m_scene->m_textures.length(); i++)
+        for (size_t i = 0; i < render_params.m_scene->m_d_textures.length(); i++)
         {
-            descriptor_sets[1].set_t_texture(0, render_params.m_scene->m_textures[i], i);
+            descriptor_sets[1].set_t_texture(0, render_params.m_scene->m_d_textures[i], i);
         }
-        descriptor_sets[1].set_b_constant_buffer(0, render_params.m_scene->m_g_materials_buffer);
+        descriptor_sets[1].set_b_constant_buffer(0, render_params.m_scene->m_d_materials);
         descriptor_sets[1].update();
 
         cmd_list.bind_raytrace_pipeline(m_rt_pipeline);

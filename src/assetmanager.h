@@ -1,14 +1,30 @@
 #pragma once
 
-#include "rhi/rhi.h"
 #include "render/common/compact_vertex.h"
 #include "render/common/standard_emissive_ref.h"
 #include "render/common/standard_material_ref.h"
+#include "rhi/rhi.h"
 #include "scene.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <stb_image.h>
+
+struct SharedVertexBuffer
+{
+    Rhi::Buffer m_buffer;
+    size_t m_num_vertices = 0;
+    size_t m_ref_count    = -1;
+};
+
+struct SharedIndexBuffer
+{
+    Rhi::Buffer m_buffer;
+    Rhi::IndexType m_type;
+    size_t m_num_indices = 0;
+    size_t m_ref_count   = -1;
+};
+
 
 struct AssetPool
 {
@@ -23,15 +39,15 @@ struct AssetPool
     using IndexBuffer  = SharedIndexBuffer;
 
     // pool
-    std::vector<VertexBuffer>               m_vertex_buffers;
-    std::vector<IndexBuffer>                m_index_buffers;
-    std::vector<StandardMaterial>           m_standard_materials;
-    std::vector<StandardEmissive>           m_standard_emissives;
-    std::vector<StandardMesh>               m_standard_meshes;
-    std::vector<Rhi::Texture>               m_textures;
+    std::vector<VertexBuffer> m_vertex_buffers;
+    std::vector<IndexBuffer> m_index_buffers;
+    std::vector<StandardMaterial> m_standard_materials;
+    std::vector<StandardEmissive> m_standard_emissives;
+    std::vector<StandardMesh> m_standard_meshes;
+    std::vector<Rhi::Texture> m_textures;
     std::map<std::filesystem::path, size_t> m_texture_id_from_path;
-    Rhi::StagingBufferManager *             m_staging_buffer_manager = nullptr;
-    Rhi::Device *                           m_device                 = nullptr;
+    Rhi::StagingBufferManager * m_staging_buffer_manager = nullptr;
+    Rhi::Device * m_device                               = nullptr;
 
     AssetPool() {}
 
@@ -48,8 +64,8 @@ struct AssetPool
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
 
         const unsigned int num_meshes = scene->mNumMeshes;
-        unsigned int       ii         = 0;
-        unsigned int       iv         = 0;
+        unsigned int ii               = 0;
+        unsigned int iv               = 0;
 
         int2 result;
         result.x = m_standard_meshes.size();
@@ -58,7 +74,7 @@ struct AssetPool
 
         for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
         {
-            const aiMesh *     aimesh                                   = scene->mMeshes[i_mesh];
+            const aiMesh * aimesh                                       = scene->mMeshes[i_mesh];
             const unsigned int num_vertices                             = aimesh->mNumVertices;
             const unsigned int num_faces                                = aimesh->mNumFaces;
             m_standard_meshes[result.x + i_mesh].m_vertex_buffer_offset = iv;
@@ -74,12 +90,12 @@ struct AssetPool
         }
 
         std::vector<CompactVertex> vertices(iv);
-        std::vector<uint32_t>      indices(ii);
+        std::vector<uint32_t> indices(ii);
 
         for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
         {
             // set vertex
-            const aiMesh *     aimesh       = scene->mMeshes[i_mesh];
+            const aiMesh * aimesh           = scene->mMeshes[i_mesh];
             const unsigned int num_vertices = aimesh->mNumVertices;
             const size_t i_vertex_offset = m_standard_meshes[result.x + i_mesh].m_vertex_buffer_offset;
             for (unsigned int i_vertex = 0; i_vertex < num_vertices; i_vertex++)
@@ -160,9 +176,9 @@ struct AssetPool
     int
     add_ai_texture(const std::filesystem::path & path, const aiMaterial * material, const LoadStandardParamEnum standard_param)
     {
-        aiTextureType ai_tex_type         = aiTextureType::aiTextureType_NONE;
-        const char *  ai_mat_key          = nullptr;
-        int           num_desired_channel = 0;
+        aiTextureType ai_tex_type = aiTextureType::aiTextureType_NONE;
+        const char * ai_mat_key   = nullptr;
+        int num_desired_channel   = 0;
         if (standard_param == LoadStandardParamEnum::DiffuseReflectance)
         {
             ai_tex_type         = aiTextureType::aiTextureType_DIFFUSE;
@@ -182,7 +198,7 @@ struct AssetPool
             num_desired_channel = 1;
         }
 
-        aiString  tex_name;
+        aiString tex_name;
         aiColor4D color;
         if (material->GetTexture(ai_tex_type, 0, &tex_name) == aiReturn_SUCCESS)
         {
@@ -211,14 +227,14 @@ struct AssetPool
 
     std::vector<StandardObject>
     add_standard_meshes(const std::filesystem::path & path,
-                        const bool                    load_as_a_single_mesh = false,
-                        const bool                    load_material         = true)
+                        const bool load_as_a_single_mesh = false,
+                        const bool load_material         = true)
     {
         StopWatch sw;
         sw.reset();
         // load scene into assimp
         Assimp::Importer importer;
-        const aiScene *  scene =
+        const aiScene * scene =
             importer.ReadFile(path.string(),
                               aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
                                   aiProcess_JoinIdenticalVertices | aiProcess_RemoveRedundantMaterials);
@@ -309,7 +325,7 @@ struct AssetPool
         if (iter == m_texture_id_from_path.end())
         {
             const std::string filepath_str = path.string();
-            const size_t      index        = m_textures.size();
+            const size_t index             = m_textures.size();
 
             // load using stbi
             int2 resolution;
