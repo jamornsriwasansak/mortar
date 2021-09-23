@@ -1,7 +1,5 @@
 #pragma once
 
-#include "shared.h"
-
 struct EngineSetting
 {
     static const uint32_t MaxNumGeometries               = 1000;

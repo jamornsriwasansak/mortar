@@ -1,8 +1,6 @@
 #ifndef COMPACT_VERTEX_H
 #define COMPACT_VERTEX_H
 
-#include "shared.h"
-
 struct CompactVertex
 {
     float3 m_position;

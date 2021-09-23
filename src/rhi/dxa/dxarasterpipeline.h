@@ -3,21 +3,22 @@
 #include "dxacommon.h"
 #include "dxaframebufferbinding.h"
 #include "dxilreflection.h"
-
+//
 #include "../shadercompiler/hlsldxccompiler.h"
+//
+#include "core/logger.h"
 
 namespace DXA_NAME
 {
 struct RasterPipeline
 {
-    ComPtr<ID3D12RootSignature>   m_dx_root_signature = nullptr;
-    ComPtr<ID3D12PipelineState>   m_dx_pso            = nullptr;
-    std::vector<ShaderSrc>        m_shader_srcs       = {};
-    D3D12_VIEWPORT                m_dx_viewport       = {};
-    D3D12_RECT                    m_dx_scissor_rect   = {};
-    D3D12_PRIMITIVE_TOPOLOGY_TYPE m_dx_topology_type  = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-    D3D12_PRIMITIVE_TOPOLOGY      m_dx_topology       = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-    DXGI_FORMAT                   m_dx_depth_format   = {};
+    ComPtr<ID3D12RootSignature> m_dx_root_signature  = nullptr;
+    ComPtr<ID3D12PipelineState> m_dx_pso             = nullptr;
+    D3D12_VIEWPORT m_dx_viewport                     = {};
+    D3D12_RECT m_dx_scissor_rect                     = {};
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE m_dx_topology_type = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+    D3D12_PRIMITIVE_TOPOLOGY m_dx_topology           = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+    DXGI_FORMAT m_dx_depth_format                    = {};
 
     // just to improve the readability of m_descriptor_infos
     using RootSignatureIndex = size_t;
@@ -28,21 +29,20 @@ struct RasterPipeline
 
     RasterPipeline() {}
 
-    RasterPipeline(Device *                       device,
-                   const std::vector<ShaderSrc> & shader_srcs,
-                   const FramebufferBindings &    framebuffer_bindings,
-                   const std::string &            name = "")
+    RasterPipeline(const Device * device,
+                   const std::span<const ShaderSrc> & shader_srcs,
+                   const FramebufferBindings & framebuffer_bindings,
+                   const std::string & name = "")
     : RasterPipeline(device, shader_srcs, nullptr, framebuffer_bindings, name)
     {
     }
 
-    RasterPipeline(Device *                            device,
-                   const std::vector<ShaderSrc> &      shader_srcs,
+    RasterPipeline(const Device * device,
+                   const std::span<const ShaderSrc> & shader_srcs,
                    const ComPtr<ID3D12RootSignature> & root_signature,
-                   const FramebufferBindings &         framebuffer_bindings,
-                   const std::string &                 name)
-    : m_shader_srcs(shader_srcs),
-      m_dx_root_signature(root_signature),
+                   const FramebufferBindings & framebuffer_bindings,
+                   const std::string & name)
+    : m_dx_root_signature(root_signature),
       m_dx_topology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST),
       m_dx_topology_type(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE)
     {
@@ -50,10 +50,10 @@ struct RasterPipeline
     }
 
     void
-    init(Device *                       device,
-         const std::vector<ShaderSrc> & shader_srcs,
-         const FramebufferBindings &    framebuffer_binding,
-         const std::string &            name)
+    init(const Device * device,
+         const std::span<const ShaderSrc> & shader_srcs,
+         const FramebufferBindings & framebuffer_binding,
+         const std::string & name)
     {
         // compile all shader srcs
         std::vector<std::pair<ComPtr<IDxcBlob>, ShaderStageEnum>> shader_blobs(shader_srcs.size());
@@ -63,12 +63,12 @@ struct RasterPipeline
             {
                 shader_blobs[i].first =
                     hlsl_dxil_compiler.compile_as_dxil(shader_srcs[i], shader_srcs[i].m_defines);
-                shader_blobs[i].second = shader_srcs.at(i).m_shader_stage;
+                shader_blobs[i].second = shader_srcs[i].m_shader_stage;
             }
         }
 
         // input layout description from reflection
-        DxilReflection                   dxil_reflector;
+        DxilReflection dxil_reflector;
         DxilReflection::ReflectionResult reflection_result = dxil_reflector.reflect(shader_blobs, shader_srcs);
 
         // create root signature if we don't have root signature yet
@@ -84,7 +84,7 @@ struct RasterPipeline
             // create signature and error blob
             ComPtr<ID3DBlob> signature = nullptr;
             ComPtr<ID3DBlob> error     = nullptr;
-            HRESULT          root_description_create_result =
+            HRESULT root_description_create_result =
                 D3D12SerializeRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
             if (error != nullptr)
             {

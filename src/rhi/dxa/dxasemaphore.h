@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/uniquehandle.h"
+#include "core/uniquehandle.h"
 #include "dxacommon.h"
 
 namespace DXA_NAME
@@ -19,8 +19,8 @@ struct Semaphore
         }
     };
 
-    ComPtr<ID3D12Fence>                             m_dx_fence = nullptr;
-    UINT64                                          m_expected_fence_value;
+    ComPtr<ID3D12Fence> m_dx_fence = nullptr;
+    UINT64 m_expected_fence_value;
     UniquePtrHandle<HANDLE, SemaphoreHandleDeleter> m_fence_handle;
 
     Semaphore() {}
@@ -43,4 +43,4 @@ struct Semaphore
         device->name_dx_object(m_dx_fence, name);
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME

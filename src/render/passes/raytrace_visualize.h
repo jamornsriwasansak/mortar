@@ -1,56 +1,54 @@
 #pragma once
 
-#include "render/common/render_params.h"
-#include "scene_resource.h"
+#include "render/render_params.h"
 #include "rhi/rhi.h"
-#include "rtvisualize_shared.h"
+#include "scene_resource.h"
+#include "shaders/raytrace_visualize_params.h"
 
-struct RtVisualizePass
+struct RaytraceVisualizePass
 {
     Rhi::RayTracingPipeline m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
     Rhi::Buffer m_cb_params;
     Rhi::Sampler m_common_sampler;
 
-    RtVisualizePass() {}
+    RaytraceVisualizePass() {}
 
-    RtVisualizePass(const Rhi::Device & device)
+    RaytraceVisualizePass(const Rhi::Device & device)
     {
-        init_or_reload_shader(device);
+        init_or_reload(device);
 
         // constant params for rtvisualize
         m_cb_params = Rhi::Buffer(&device,
                                   Rhi::BufferUsageEnum::ConstantBuffer,
                                   Rhi::MemoryUsageEnum::CpuOnly,
-                                  sizeof(RtVisualizeCbParams));
+                                  sizeof(RaytraceVisualizeCbParams));
 
         // sampler
         m_common_sampler = Rhi::Sampler(&device);
     }
 
     void
-    init_or_reload_shader(const Rhi::Device & device)
+    init_or_reload(const Rhi::Device & device)
     {
-        std::filesystem::path shader_path = "../src/render/passes/rtvisualize/";
-
         // create pipeline for ssao
         Rhi::RayTracingPipelineConfig rt_config;
 
         // raygen
         const Rhi::ShaderSrc raygen_shader(Rhi::ShaderStageEnum::RayGen,
-                                           shader_path / "rtvisualize.hlsl",
+                                           BASE_SHADER_DIR "raytrace_visualize.hlsl",
                                            "RayGen");
         [[maybe_unused]] const size_t raygen_id = rt_config.add_shader(raygen_shader);
 
         // miss
         const Rhi::ShaderSrc miss_shader(Rhi::ShaderStageEnum::Miss,
-                                         shader_path / "rtvisualize.hlsl",
+                                         BASE_SHADER_DIR "raytrace_visualize.hlsl",
                                          "Miss");
         [[maybe_unused]] const size_t miss_id = rt_config.add_shader(miss_shader);
 
         // hitgroup
         const Rhi::ShaderSrc hit_shader(Rhi::ShaderStageEnum::ClosestHit,
-                                        shader_path / "rtvisualize.hlsl",
+                                        BASE_SHADER_DIR "raytrace_visualize.hlsl",
                                         "ClosestHit");
         Rhi::RayTracingHitGroup hit_group;
         hit_group.m_closest_hit_id = rt_config.add_shader(hit_shader);
@@ -59,8 +57,8 @@ struct RtVisualizePass
         [[maybe_unused]] const size_t hitgroup_id = rt_config.add_hit_group(hit_group);
 
         m_rt_pipeline =
-            Rhi::RayTracingPipeline(&device, rt_config, 16, 64, 2, "rt_visualize_pipeline");
-        m_rt_sbt = Rhi::RayTracingShaderTable(&device, m_rt_pipeline, "rt_visualize_sbt");
+            Rhi::RayTracingPipeline(&device, rt_config, 16, 64, 2, "raytrace_visualize_pipeline");
+        m_rt_sbt = Rhi::RayTracingShaderTable(&device, m_rt_pipeline, "raytrace_visualize_sbt");
     }
 
     void
@@ -72,27 +70,27 @@ struct RtVisualizePass
     {
         bool p_open           = true;
         static int rtvis_mode = 0;
-        if (ImGui::Begin("RtVisualize Pass", &p_open))
+        if (ImGui::Begin(typeid(*this).name(), &p_open))
         {
-            ImGui::RadioButton("InstanceId", &rtvis_mode, RtVisualizeCbParams::ModeInstanceId);
-            ImGui::RadioButton("GeometryId", &rtvis_mode, RtVisualizeCbParams::ModeGeometryId);
-            ImGui::RadioButton("TriangleId", &rtvis_mode, RtVisualizeCbParams::ModeTriangleId);
-            ImGui::RadioButton("BaryCentricCoords", &rtvis_mode, RtVisualizeCbParams::ModeBaryCentricCoords);
-            ImGui::RadioButton("Position", &rtvis_mode, RtVisualizeCbParams::ModePosition);
-            ImGui::RadioButton("Geometry Normal", &rtvis_mode, RtVisualizeCbParams::ModeGeometryNormal);
-            ImGui::RadioButton("Texture Coord", &rtvis_mode, RtVisualizeCbParams::ModeSpecularReflectance);
-            ImGui::RadioButton("Depth", &rtvis_mode, RtVisualizeCbParams::ModeDepth);
-            ImGui::RadioButton("DiffuseReflectance", &rtvis_mode, RtVisualizeCbParams::ModeDiffuseReflectance);
-            ImGui::RadioButton("SpecularReflectance", &rtvis_mode, RtVisualizeCbParams::ModeSpecularReflectance);
+            ImGui::RadioButton("InstanceId", &rtvis_mode, RaytraceVisualizeCbParams::ModeInstanceId);
+            ImGui::RadioButton("GeometryId", &rtvis_mode, RaytraceVisualizeCbParams::ModeGeometryId);
+            ImGui::RadioButton("TriangleId", &rtvis_mode, RaytraceVisualizeCbParams::ModeTriangleId);
+            ImGui::RadioButton("BaryCentricCoords", &rtvis_mode, RaytraceVisualizeCbParams::ModeBaryCentricCoords);
+            ImGui::RadioButton("Position", &rtvis_mode, RaytraceVisualizeCbParams::ModePosition);
+            ImGui::RadioButton("Geometry Normal", &rtvis_mode, RaytraceVisualizeCbParams::ModeGeometryNormal);
+            ImGui::RadioButton("Texture Coord", &rtvis_mode, RaytraceVisualizeCbParams::ModeSpecularReflectance);
+            ImGui::RadioButton("Depth", &rtvis_mode, RaytraceVisualizeCbParams::ModeDepth);
+            ImGui::RadioButton("DiffuseReflectance", &rtvis_mode, RaytraceVisualizeCbParams::ModeDiffuseReflectance);
+            ImGui::RadioButton("SpecularReflectance", &rtvis_mode, RaytraceVisualizeCbParams::ModeSpecularReflectance);
         }
         ImGui::End();
 
-        RtVisualizeCbParams cb_params;
+        RaytraceVisualizeCbParams cb_params;
         CameraProperties cam_props  = render_params.m_fps_camera->get_camera_props();
         cb_params.m_camera_inv_proj = inverse(cam_props.m_proj);
         cb_params.m_camera_inv_view = inverse(cam_props.m_view);
         cb_params.m_mode            = rtvis_mode;
-        std::memcpy(m_cb_params.map(), &cb_params, sizeof(RtVisualizeCbParams));
+        std::memcpy(m_cb_params.map(), &cb_params, sizeof(RaytraceVisualizeCbParams));
         m_cb_params.unmap();
 
         // setup descriptor spaces and bindings

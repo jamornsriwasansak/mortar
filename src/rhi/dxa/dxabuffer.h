@@ -8,19 +8,19 @@ namespace DXA_NAME
 {
 struct Buffer
 {
-    BufferUsageEnum                    m_buffer_usage              = BufferUsageEnum::None;
-    MemoryUsageEnum                    m_memory_usage              = MemoryUsageEnum::None;
-    D3D12MAHandle<D3D12MA::Allocation> m_allocation                = nullptr;
-    size_t                             m_size_in_bytes             = 0;
-    D3D12_GPU_DESCRIPTOR_HANDLE        m_dx_cbv_srv_uav_gpu_handle = { 0 };
+    BufferUsageEnum m_buffer_usage                          = BufferUsageEnum::None;
+    MemoryUsageEnum m_memory_usage                          = MemoryUsageEnum::None;
+    D3D12MAHandle<D3D12MA::Allocation> m_allocation         = nullptr;
+    size_t m_size_in_bytes                                  = 0;
+    D3D12_GPU_DESCRIPTOR_HANDLE m_dx_cbv_srv_uav_gpu_handle = { 0 };
 
     Buffer() {}
 
-    Buffer(const Device *        device,
+    Buffer(const Device * device,
            const BufferUsageEnum buffer_usage,
            const MemoryUsageEnum memory_usage,
-           const size_t          buffer_size,
-           const std::string &   name = "")
+           const size_t buffer_size,
+           const std::string & name = "")
     : m_size_in_bytes(buffer_size), m_memory_usage(memory_usage), m_buffer_usage(buffer_usage)
     {
         D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
@@ -52,7 +52,7 @@ struct Buffer
         }
         else
         {
-            //alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+            // alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
             alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
         }
 
@@ -79,13 +79,13 @@ struct Buffer
         D3D12_RESOURCE_STATES states = static_cast<D3D12_RESOURCE_STATES>(buffer_usage);
 
         // if is cpu (which uses upload heap), override
-        if (memory_usage == MemoryUsageEnum::CpuOnly || memory_usage ==  MemoryUsageEnum::CpuToGpu)
+        if (memory_usage == MemoryUsageEnum::CpuOnly || memory_usage == MemoryUsageEnum::CpuToGpu)
         {
             states = D3D12_RESOURCE_STATE_GENERIC_READ;
         }
 
         // allocate resource
-        ID3D12Resource *      resource;
+        ID3D12Resource * resource;
         D3D12MA::Allocation * allocation  = nullptr;
         CD3DX12_RESOURCE_DESC buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(m_size_in_bytes, flags);
         DXCK(device->m_d3d12ma->CreateResource(&alloc_desc, &buffer_desc, states, nullptr, &allocation, IID_PPV_ARGS(&resource)));
@@ -103,17 +103,17 @@ struct Buffer
         device->name_dx_object(resource, name);
     }
 
-    Buffer(const Device *         device,
-           const BufferUsageEnum  buffer_usage_,
-           const MemoryUsageEnum  memory_usage,
-           const size_t           buffer_size,
-           const std::byte *      initial_data,
+    Buffer(const Device * device,
+           const BufferUsageEnum buffer_usage_,
+           const MemoryUsageEnum memory_usage,
+           const size_t buffer_size,
+           const std::byte * initial_data,
            StagingBufferManager * initial_data_loader,
-           const std::string &    name = "")
+           const std::string & name = "")
     : m_size_in_bytes(buffer_size), m_memory_usage(memory_usage), m_buffer_usage(buffer_usage_)
     {
-        BufferUsageEnum      buffer_usage = buffer_usage_;
-        D3D12_RESOURCE_FLAGS flags        = D3D12_RESOURCE_FLAG_NONE;
+        BufferUsageEnum buffer_usage = buffer_usage_;
+        D3D12_RESOURCE_FLAGS flags   = D3D12_RESOURCE_FLAG_NONE;
         if (HasFlag(buffer_usage, BufferUsageEnum::StorageBuffer))
         {
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
@@ -143,7 +143,7 @@ struct Buffer
         }
         else
         {
-            //alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+            // alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
             alloc_desc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
         }
 
@@ -185,7 +185,7 @@ struct Buffer
         }
 
         // allocate resource
-        ID3D12Resource *      resource;
+        ID3D12Resource * resource;
         D3D12MA::Allocation * allocation  = nullptr;
         CD3DX12_RESOURCE_DESC buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(m_size_in_bytes, flags);
         DXCK(device->m_d3d12ma->CreateResource(&alloc_desc,
@@ -224,7 +224,7 @@ struct Buffer
 
                 // is not upload buffer, need staging buffer from resource loader
                 ID3D12GraphicsCommandList4 * cmd_list = initial_data_loader->m_dx_command_list.Get();
-                D3D12_SUBRESOURCE_DATA       subresource_data;
+                D3D12_SUBRESOURCE_DATA subresource_data;
                 {
                     subresource_data.pData      = reinterpret_cast<const BYTE *>(initial_data);
                     subresource_data.RowPitch   = buffer_size;
@@ -259,6 +259,12 @@ struct Buffer
         void * mapped_result;
         DXCK(m_allocation->GetResource()->Map(0, nullptr, &mapped_result));
         return mapped_result;
+    }
+
+    bool
+    is_initialized()
+    {
+        return m_allocation == nullptr;
     }
 
     void

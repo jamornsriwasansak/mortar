@@ -1,14 +1,14 @@
-#include "../../common/compact_vertex.h"
-#include "../../common/mapping.h"
-#include "../../common/onb.h"
-#include "../../common/shared.h"
-#include "../../common/standard_emissive_ref.h"
-#include "../../common/standard_material.h"
-#include "../../common/standard_material_ref.h"
-#include "../../rng/pcg.h"
 #include "bindless_object_table.h"
 #include "direct_light_params.h"
 #include "reservior.h"
+#include "rng/pcg.h"
+#include "shared/compact_vertex.h"
+#include "shared/mapping.h"
+#include "shared/onb.h"
+#include "shared/shared.h"
+#include "shared/standard_emissive_ref.h"
+#include "shared/standard_material.h"
+#include "shared/standard_material_ref.h"
 
 struct PtPayload
 {
@@ -17,7 +17,7 @@ struct PtPayload
     float3 m_hit_pos;
     float3 m_inout_dir;
     PcgRng m_rng;
-    bool   m_miss;
+    bool m_miss;
 };
 
 struct Attributes
@@ -52,26 +52,26 @@ struct NumTrianglesContainer
 };
 
 // space 0
-ConstantBuffer<CameraInfo> u_camera                REGISTER(b0, space0);
-ConstantBuffer<DirectLightParams> u_params         REGISTER(b1, space0);
+ConstantBuffer<CameraInfo> u_camera REGISTER(b0, space0);
+ConstantBuffer<DirectLightParams> u_params REGISTER(b1, space0);
 StructuredBuffer<Reservior> u_prev_frame_reservior REGISTER(t0, space0);
-RWTexture2D<float4> u_output                       REGISTER(u0, space0);
-RWStructuredBuffer<Reservior> u_frame_reservior    REGISTER(u1, space0);
+RWTexture2D<float4> u_output REGISTER(u0, space0);
+RWStructuredBuffer<Reservior> u_frame_reservior REGISTER(u1, space0);
 
 // space 1
 // bindless material
-SamplerState u_sampler                                    REGISTER(s0, space1);
+SamplerState u_sampler REGISTER(s0, space1);
 ConstantBuffer<StandardMaterialContainer> u_pbr_materials REGISTER(b0, space1);
-ConstantBuffer<MaterialIdContainer> u_material_ids        REGISTER(b1, space1);
-StructuredBuffer<StandardEmissive> u_emissives            REGISTER(t0, space1);
-Texture2D<float4>                                         u_textures[100] REGISTER(t1, space1);
+ConstantBuffer<MaterialIdContainer> u_material_ids REGISTER(b1, space1);
+StructuredBuffer<StandardEmissive> u_emissives REGISTER(t0, space1);
+Texture2D<float4> u_textures[100] REGISTER(t1, space1);
 
 // space 2 & 3
 // bindless mesh info
-RaytracingAccelerationStructure u_scene_bvh               REGISTER(t0, space2);
+RaytracingAccelerationStructure u_scene_bvh REGISTER(t0, space2);
 ConstantBuffer<BindlessObjectTable> u_bindless_mesh_table REGISTER(b0, space2);
-ConstantBuffer<NumTrianglesContainer> u_num_triangles     REGISTER(b1, space2);
-ByteAddressBuffer                                         u_index_buffers[100] REGISTER(t1, space2);
+ConstantBuffer<NumTrianglesContainer> u_num_triangles REGISTER(b1, space2);
+ByteAddressBuffer u_index_buffers[100] REGISTER(t1, space2);
 StructuredBuffer<CompactVertex> u_vertex_buffers[100] REGISTER(t0, space3);
 
 struct VertexAttributes
@@ -87,7 +87,7 @@ get_indices(uint instanceIndex, uint triangleIndex)
 {
     const int num_index_per_tri   = 3;
     const int num_bytes_per_index = 4;
-    int       address             = triangleIndex * num_index_per_tri * num_bytes_per_index;
+    int address                   = triangleIndex * num_index_per_tri * num_bytes_per_index;
     if (address < 0) address = 0;
     return u_index_buffers[instanceIndex].Load3(address);
 }
@@ -95,8 +95,8 @@ get_indices(uint instanceIndex, uint triangleIndex)
 float3
 get_interpolated_indices(uint instanceIndex, uint triangleIndex, float3 barycentrics)
 {
-    uint3  u_index_buffers = get_indices(instanceIndex, triangleIndex);
-    float3 position        = float3(0, 0, 0);
+    uint3 u_index_buffers = get_indices(instanceIndex, triangleIndex);
+    float3 position       = float3(0, 0, 0);
 
     for (uint i = 0; i < 3; i++)
     {
@@ -108,7 +108,7 @@ get_interpolated_indices(uint instanceIndex, uint triangleIndex, float3 barycent
 VertexAttributes
 get_vertex_attributes(uint instanceIndex, uint triangleIndex, float3 barycentrics)
 {
-    uint3            u_index_buffers = get_indices(instanceIndex, triangleIndex);
+    uint3 u_index_buffers = get_indices(instanceIndex, triangleIndex);
     VertexAttributes v;
     v.m_position = float3(0, 0, 0);
     v.m_snormal  = float3(0, 0, 0);
@@ -166,7 +166,7 @@ sample_emissive_geometry(INOUT(uint) geometry_id, INOUT(uint) primitive_id, INOU
 LightSample
 sample_light(const uint geometry_id, const uint primitive_id, const half2 uv)
 {
-    const float3           uvw    = float3(uv.x, uv.y, 1.0f - uv.x - uv.y);
+    const float3 uvw              = float3(uv.x, uv.y, 1.0f - uv.x - uv.y);
     const VertexAttributes attrib = get_vertex_attributes(geometry_id, primitive_id, uvw);
 
     LightSample light_sample;
@@ -191,8 +191,8 @@ length2(const float3 x)
 float3
 eval_connection(const VertexAttributes hit, const LightSample light_sample, const float3 incident, const StandardMaterialInfo material)
 {
-    const float3 diff          = light_sample.m_position - hit.m_position;
-    const float  geometry_term = max(dot(diff, hit.m_snormal), 0.0f) *
+    const float3 diff         = light_sample.m_position - hit.m_position;
+    const float geometry_term = max(dot(diff, hit.m_snormal), 0.0f) *
                                 max(-dot(diff, light_sample.m_snormal), 0.0f) / sqr(length2(diff));
     return material.eval(normalize(diff), incident) * geometry_term * light_sample.m_emission;
 }
@@ -201,9 +201,9 @@ SHADER_TYPE("raygeneration")
 void
 RayGen()
 {
-    uint2 pixel       = DispatchRaysIndex().xy;
-    uint2 resolution  = DispatchRaysDimensions().xy;
-    uint  pixel_index = pixel.y * resolution.x + pixel.x;
+    uint2 pixel      = DispatchRaysIndex().xy;
+    uint2 resolution = DispatchRaysDimensions().xy;
+    uint pixel_index = pixel.y * resolution.x + pixel.x;
 
     const float2 uv  = (float2(pixel) + float2(0.5f, 0.5f)) / float2(resolution);
     const float2 ndc = uv * 2.0f - 1.0f;
@@ -216,7 +216,7 @@ RayGen()
     payload.m_rng.init(pixel_index, u_params.m_rng_stream_id);
 
     const int num_samples = 1;
-    float3    result      = float3(0.0f, 0.0f, 0.0f);
+    float3 result         = float3(0.0f, 0.0f, 0.0f);
     for (int i = 0; i < num_samples; i++)
     {
         payload.m_inout_dir  = direction;
@@ -246,9 +246,9 @@ RayGen()
 
     if (false)
     {
-        float4 input                = u_output[pixel];
-        float3 combined_contrib     = input.xyz * input.w + result;
-        float  combined_num_samples = input.w + num_samples;
+        float4 input               = u_output[pixel];
+        float3 combined_contrib    = input.xyz * input.w + result;
+        float combined_num_samples = input.w + num_samples;
         u_output[pixel] = float4(combined_contrib / float(combined_num_samples), combined_num_samples);
     }
     else
@@ -259,9 +259,9 @@ RayGen()
 
 SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attributes attrib)
 {
-    uint2 pixel       = DispatchRaysIndex().xy;
-    uint2 resolution  = DispatchRaysDimensions().xy;
-    uint  pixel_index = pixel.y * resolution.x + pixel.x;
+    uint2 pixel      = DispatchRaysIndex().xy;
+    uint2 resolution = DispatchRaysDimensions().xy;
+    uint pixel_index = pixel.y * resolution.x + pixel.x;
 
     uint64_t rng_inc = payload.m_rng.get_inc(u_params.m_rng_stream_id);
 
@@ -272,7 +272,7 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
     // fetch pbr material info
     const uint material_id = u_material_ids.m_ids[GeometryIndex() / 4][GeometryIndex() % 4];
     const StandardMaterial material = u_pbr_materials.materials[material_id];
-    const float3           diff_refl =
+    const float3 diff_refl =
         u_textures[material.m_diffuse_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).rgb;
     const float3 spec_refl =
         u_textures[material.m_specular_tex_id].SampleLevel(u_sampler, vattrib.m_uv, 0).rgb;
@@ -282,34 +282,34 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
     StandardMaterialInfo material_info;
     material_info.init(float3(1.0f, 1.0f, 1.0f), spec_refl, 0.01f);
 
-    const Onb    onb                = Onb_create(vattrib.m_gnormal);
+    const Onb onb                   = Onb_create(vattrib.m_gnormal);
     const float3 local_incident_dir = onb.to_local(-payload.m_inout_dir);
 
     // sample next direction
     const float3 local_outgoing_dir = cosine_hemisphere_from_square(payload.m_rng.next_float2(rng_inc));
 
-    int       num_samples       = 8;
-    int       total_num_samples = 0;
+    int num_samples       = 8;
+    int total_num_samples = 0;
     Reservior reservior;
     reservior.init();
 
     {
         float3 selected_diff;
         float3 selected_nee;
-        float  selected_weight;
+        float selected_weight;
         for (int i = 0; i < num_samples; i++)
         {
             const float2 random0 = payload.m_rng.next_float2(rng_inc);
             const float2 random1 = payload.m_rng.next_float2(rng_inc);
 
             // sample geometry
-            uint  geometry_id;
-            uint  primitive_id;
+            uint geometry_id;
+            uint primitive_id;
             half2 uv;
             sample_emissive_geometry(geometry_id, primitive_id, uv, random0, random1);
 
             const LightSample light_sample = sample_light(geometry_id, primitive_id, uv);
-            const float3      diff         = light_sample.m_position - vattrib.m_position;
+            const float3 diff              = light_sample.m_position - vattrib.m_position;
             const float3 nee = eval_connection(vattrib, light_sample, local_incident_dir, material_info);
             const float weight = length(nee);
 
@@ -325,7 +325,7 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
         LightSample light_sample =
             sample_light(reservior.m_geometry_id, reservior.m_primitive_id, reservior.m_uv);
         const float3 nee = eval_connection(vattrib, light_sample, local_incident_dir, material_info);
-        const float  weight = length(nee);
+        const float weight = length(nee);
         total_num_samples += num_samples;
 
         // evaluate visibility
@@ -353,9 +353,9 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
     for (int i = -radius; i <= radius; i++)
         for (int j = -radius; j <= radius; j++)
         {
-            int2      offset_pixel       = clamp(pixel + int2(i, j), int2(0, 0), resolution);
-            int       offset_pixel_index = offset_pixel.y * resolution.x + offset_pixel.x;
-            Reservior prev_reservior     = u_prev_frame_reservior[offset_pixel_index];
+            int2 offset_pixel        = clamp(pixel + int2(i, j), int2(0, 0), resolution);
+            int offset_pixel_index   = offset_pixel.y * resolution.x + offset_pixel.x;
+            Reservior prev_reservior = u_prev_frame_reservior[offset_pixel_index];
             total_num_samples += num_samples;
 
             reservior.update(prev_reservior.m_geometry_id,
@@ -368,8 +368,8 @@ SHADER_TYPE("closesthit") void ClosestHit(INOUT(PtPayload) payload, const Attrib
     LightSample light_sample =
         sample_light(reservior.m_geometry_id, reservior.m_primitive_id, reservior.m_uv);
     const float3 nee    = eval_connection(vattrib, light_sample, local_incident_dir, material_info);
-    const float  weight = length(nee);
-    const float  inv_pdf = weight > 0.0f ? reservior.m_w_sum / (weight * total_num_samples) : 0.0f;
+    const float weight  = length(nee);
+    const float inv_pdf = weight > 0.0f ? reservior.m_w_sum / (weight * total_num_samples) : 0.0f;
 
     const float3 nee_contrib = diff_refl * payload.m_importance * nee * inv_pdf;
     payload.m_importance *= diff_refl / M_PI;

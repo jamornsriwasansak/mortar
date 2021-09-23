@@ -142,7 +142,7 @@ struct RayTracingInstance
 
     RayTracingInstance() {}
 
-    RayTracingInstance(const RayTracingBlas & blas, const size_t hit_group_index, const size_t instance_id)
+    RayTracingInstance(const RayTracingBlas & blas, const uint32_t hit_group_index, const uint32_t instance_id)
     {
         m_vk_instance.transform.matrix[0][0] = 1.0f;
         m_vk_instance.transform.matrix[1][1] = 1.0f;
@@ -150,7 +150,7 @@ struct RayTracingInstance
         m_vk_instance.setAccelerationStructureReference(blas.m_accel_buffer.m_device_address);
         m_vk_instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
         m_vk_instance.setMask(1);
-        m_vk_instance.setInstanceShaderBindingTableRecordOffset(static_cast<uint32_t>(hit_group_index));
+        m_vk_instance.setInstanceShaderBindingTableRecordOffset(hit_group_index);
         m_vk_instance.setInstanceCustomIndex(instance_id);
     }
 };

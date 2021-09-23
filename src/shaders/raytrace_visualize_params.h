@@ -1,7 +1,7 @@
 #ifndef RT_VISUALIZE_CB_PARAMS
 #define RT_VISUALIZE_CB_PARAMS
 
-struct RtVisualizeCbParams
+struct RaytraceVisualizeCbParams
 {
     static const int ModeInstanceId          = 0;
     static const int ModeGeometryId          = 1;

@@ -8,7 +8,7 @@
 #include "vkacommon.h"
 #include "vkaentry.h"
 
-#include "common/uniquehandle.h"
+#include "core/uniquehandle.h"
 
 namespace VKA_NAME
 {
@@ -23,17 +23,17 @@ struct Device
 
     // device
     vk::PhysicalDeviceProperties m_vk_device_properties;
-    vk::PhysicalDevice           m_vk_pdevice; // physical device
-    vk::UniqueDevice             m_vk_ldevice; // logical device
-    vk::Instance                 m_vk_instance;
-    vk::SurfaceKHR               m_vk_surface;
+    vk::PhysicalDevice m_vk_pdevice; // physical device
+    vk::UniqueDevice m_vk_ldevice;   // logical device
+    vk::Instance m_vk_instance;
+    vk::SurfaceKHR m_vk_surface;
 
     // device queue and its command pool
-    vk::Queue                m_vk_graphics_queue;
-    vk::Queue                m_vk_present_queue;
-    vk::Queue                m_vk_compute_queue;
-    vk::Queue                m_vk_transfer_queue;
-    vk::UniqueCommandPool    m_vk_graphics_command_pool;
+    vk::Queue m_vk_graphics_queue;
+    vk::Queue m_vk_present_queue;
+    vk::Queue m_vk_compute_queue;
+    vk::Queue m_vk_transfer_queue;
+    vk::UniqueCommandPool m_vk_graphics_command_pool;
     vk::UniqueDescriptorPool m_vk_descriptor_pool;
     struct QueueFamilyIndices
     {
@@ -43,7 +43,7 @@ struct Device
         uint32_t m_present  = std::numeric_limits<uint32_t>::max();
     };
     QueueFamilyIndices m_family_indices;
-    FeaturesAvailable  m_features;
+    FeaturesAvailable m_features;
 
     struct VmaAllocatorDeleter
     {
@@ -252,11 +252,11 @@ private:
     bool m_debug = false;
 
     vk::UniqueDevice
-    create_device(const vk::PhysicalDevice &      physical_device,
+    create_device(const vk::PhysicalDevice & physical_device,
                   const std::vector<const char *> layers,
                   const std::vector<const char *> extensions,
-                  const FeaturesAvailable &       features,
-                  const std::vector<uint32_t>     family_indices_)
+                  const FeaturesAvailable & features,
+                  const std::vector<uint32_t> family_indices_)
     {
         Logger::Info(__FUNCTION__ " creating logical device");
         // make sure all indices in the provided family_indices is unique
@@ -264,7 +264,7 @@ private:
         std::vector<uint32_t> family_indices(family_indices_set_tmp.begin(), family_indices_set_tmp.end());
 
         // create info for all queues
-        const float                            queue_priority = 1.0f;
+        const float queue_priority = 1.0f;
         std::vector<vk::DeviceQueueCreateInfo> queue_cis;
         for (const uint32_t family_index : family_indices)
         {
@@ -350,7 +350,7 @@ private:
     }
 
     QueueFamilyIndices
-    explore_queue_family(const vk::PhysicalDevice &          physical_device,
+    explore_queue_family(const vk::PhysicalDevice & physical_device,
                          const std::optional<vk::SurfaceKHR> surface = std::nullopt)
     {
         QueueFamilyIndices result;
@@ -387,11 +387,11 @@ private:
 
         // find dedicated compute queue
         std::set<size_t> selected_queue_family_ids;
-        const uint32_t   not_found = std::numeric_limits<uint32_t>::max();
+        const uint32_t not_found = std::numeric_limits<uint32_t>::max();
 
-        auto select_queue_family = [&](const vk::QueueFlags queue_flag,
-                                       const bool           need_present,
-                                       const bool           check_if_selected) -> uint32_t {
+        auto select_queue_family =
+            [&](const vk::QueueFlags queue_flag, const bool need_present, const bool check_if_selected) -> uint32_t
+        {
             for (size_t i_queue_family = 0; i_queue_family < queue_family_properties.size(); i_queue_family++)
             {
                 if (check_if_selected)

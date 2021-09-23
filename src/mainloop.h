@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/camera.h"
-#include "render/rendercontext.h"
+#include "core/camera.h"
+#include "render/render_context.h"
 #include "render/renderer.h"
 #include "rhi/rhi.h"
 
@@ -226,7 +226,6 @@ struct MainLoop
             init_or_resize_swapchain();
             m_imgui_render_pass.init_or_resize_framebuffer(m_device, m_swapchain);
             m_renderer.init_or_resize_resolution(m_device, m_window->get_resolution(), m_swapchain_textures);
-            m_renderer.init_shaders(m_device, false);
         }
         m_window->update();
     }

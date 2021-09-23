@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../setting.h"
-#include "common/glfwhandler.h"
-#include "common/logger.h"
+#include "core/glfwhandler.h"
+#include "core/logger.h"
 //
 #include <DirectXMath.h>
 #include <directx/d3d12.h>

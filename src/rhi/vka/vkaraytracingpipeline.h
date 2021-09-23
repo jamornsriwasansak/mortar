@@ -71,8 +71,8 @@ struct RayTracingPipeline
 
     RayTracingPipeline(const Device * device,
                        const RayTracingPipelineConfig & rt_lib,
-                       const size_t attribute_size,
-                       const size_t payload_size,
+                       [[maybe_unused]] const size_t attribute_size,
+                       [[maybe_unused]] const size_t payload_size,
                        const size_t recursion_depth = 1,
                        const std::string & name     = "")
     : m_num_raygens(rt_lib.get_num_shaders(ShaderStageEnum::RayGen)),

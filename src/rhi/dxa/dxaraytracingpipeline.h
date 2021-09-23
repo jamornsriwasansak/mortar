@@ -6,6 +6,8 @@
 #include "rhi/commontypes/rhishadersrc.h"
 #include "rhi/shadercompiler/hlsldxccompiler.h"
 
+#include <optional>
+
 namespace DXA_NAME
 {
 struct RayTracingHitGroup

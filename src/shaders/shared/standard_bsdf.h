@@ -87,7 +87,7 @@ Microfacet_sampleGGXVNDF(INOUT(float3) h, const float3 incoming, const float2 al
     h         = Ne.xzy;
 }
 
-struct StandardMaterialInfo
+struct StandardBsdf
 {
     float3 m_diff_refl;
     float3 m_spec_refl;

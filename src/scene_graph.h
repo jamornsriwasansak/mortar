@@ -3,6 +3,7 @@
 #include "rhi/rhi.h"
 //
 #include <iostream>
+#include <numeric>
 #include <variant>
 #include <vector>
 
@@ -20,8 +21,8 @@ struct SceneGraphGeometry
 struct SceneGraphLeaf
 {
     bool m_is_instance     = false;
-    uint32_t m_instance_id = -1;
-    uint32_t m_geometry_id = -1;
+    uint32_t m_instance_id = std::numeric_limits<uint32_t>::max();
+    uint32_t m_geometry_id = std::numeric_limits<uint32_t>::max();
     // multiplication of tranforms from root to leaf
     float4x4 m_total_transform;
 };

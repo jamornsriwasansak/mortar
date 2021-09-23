@@ -1,14 +1,15 @@
 #pragma once
 
-#include "common/logger.h"
-#include "common/vmath.h"
 #include "rhi/commontypes/rhienums.h"
 #include "rhi/commontypes/rhishadersrc.h"
-
+//
 #include <wrl/client.h>
 // dxcapi must be included after wrl/client
 #include "../inc/dxcapi.h"
-
+//
+#include "core/logger.h"
+#include "core/vmath.h"
+//
 #include <filesystem>
 #include <map>
 #include <string>
@@ -23,7 +24,7 @@ struct HlslDxcCompiler
     template <typename T>
     using ComPtr = Microsoft::WRL::ComPtr<T>;
 
-    ComPtr<IDxcUtils>    m_utils;
+    ComPtr<IDxcUtils> m_utils;
     ComPtr<IDxcCompiler> m_compiler;
 
     HlslDxcCompiler()
@@ -47,13 +48,13 @@ struct HlslDxcCompiler
 
     template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
-    dxc_compile(const std::string &              shader_name,
-                const std::string &              shader_string,
-                const std::string &              shader_access_point,
-                const ShaderStageEnum            shader_stage,
-                const std::filesystem::path &    path,
+    dxc_compile(const std::string & shader_name,
+                const std::string & shader_string,
+                const std::string & shader_access_point,
+                const ShaderStageEnum shader_stage,
+                const std::filesystem::path & path,
                 const std::vector<std::string> & defines,
-                const bool                       as_spirv) const
+                const bool as_spirv) const
     {
         std::map<ShaderStageEnum, LPCWSTR> TargetProfile = {
             { ShaderStageEnum::Vertex, L"vs_6_0" },  { ShaderStageEnum::Fragment, L"ps_6_0" },
@@ -175,7 +176,7 @@ struct HlslDxcCompiler
                 if (preprocess_result)
                 {
                     ComPtr<IDxcBlobEncoding> error_blob;
-                    HRESULT                  hr2 = preprocess_result->GetErrorBuffer(&error_blob);
+                    HRESULT hr2 = preprocess_result->GetErrorBuffer(&error_blob);
                     if (SUCCEEDED(hr2) && error_blob)
                     {
                         Logger::Error<true>(__FUNCTION__,
@@ -235,7 +236,7 @@ struct HlslDxcCompiler
                 if (compilation_result)
                 {
                     ComPtr<IDxcBlobEncoding> error_blob;
-                    HRESULT                  hr2 = compilation_result->GetErrorBuffer(&error_blob);
+                    HRESULT hr2 = compilation_result->GetErrorBuffer(&error_blob);
                     if (SUCCEEDED(hr2) && error_blob)
                     {
                         Logger::Error<true>(__FUNCTION__,
@@ -271,7 +272,7 @@ struct HlslDxcCompiler
     template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
     compile_as_dxil(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
-                    const std::vector<std::string> &    defines = {}) const
+                    const std::vector<std::string> & defines = {}) const
     {
         Logger::Info(__FUNCTION__ " compiling dxil from path : " + shader_src.m_file_path.string());
         return dxc_compile(shader_src.m_file_path.string(),
@@ -286,7 +287,7 @@ struct HlslDxcCompiler
     template <typename ShaderStageEnum>
     std::vector<uint32_t>
     compile_as_spirv(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
-                     const std::vector<std::string> &    defines = {}) const
+                     const std::vector<std::string> & defines = {}) const
     {
         Logger::Info(__FUNCTION__ " compiling spirv from path : " + shader_src.m_file_path.string());
 

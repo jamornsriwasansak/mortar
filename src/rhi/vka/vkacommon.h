@@ -1,12 +1,12 @@
 #pragma once
 
-#include "common/glfwhandler.h"
-
 #include "rhi/commontypes/rhienums.h"
 #include "rhi/commontypes/rhishadersrc.h"
 #include "rhi/setting.h"
-#include "common/logger.h"
-#include "common/uniquehandle.h"
+//
+#include "core/glfwhandler.h"
+#include "core/logger.h"
+#include "core/uniquehandle.h"
 //
 #include <iostream>
 #include <map>

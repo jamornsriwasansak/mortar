@@ -1,12 +1,15 @@
 #pragma once
 
-#include "common/camera.h"
-#include "common/ste/stevector.h"
-#include "loader/img_loader.h"
-#include "render/common/compact_vertex.h"
-#include "render/common/engine_setting.h"
-#include "render/common/standard_material_ref.h"
 #include "rhi/rhi.h"
+//
+#include "core/camera.h"
+#include "core/ste/stevector.h"
+#include "loader/img_loader.h"
+//
+#include "engine_setting.h"
+#include "shaders/shared/compact_vertex.h"
+#include "shaders/shared/standard_material.h"
+//
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>

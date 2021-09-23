@@ -2,8 +2,9 @@
 
 #include "rhi/commontypes/rhienums.h"
 #include "rhi/commontypes/rhishadersrc.h"
-#include "common/glfwhandler.h"
-#include "common/logger.h"
+//
+#include "core/glfwhandler.h"
+#include "core/logger.h"
 //
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -33,7 +34,7 @@
         if (FAILED(result571481963))                                                     \
         {                                                                                \
             _com_error err571481963(result571481963);                                    \
-            LPCTSTR    err_msg571481963 = err571481963.ErrorMessage();                   \
+            LPCTSTR err_msg571481963 = err571481963.ErrorMessage();                      \
             Logger::Error<true>(__FUNCTION__, " : ", __LINE__, " : ", err_msg571481963); \
         }                                                                                \
     } while (false)
@@ -62,24 +63,24 @@ struct DescriptorHandle
 {
     D3D12_GPU_DESCRIPTOR_HANDLE m_dx_gpu_handle = { 0 };
     D3D12_CPU_DESCRIPTOR_HANDLE m_dx_cpu_handle = { 0 };
-    size_t                      num_handles     = 0;
+    size_t num_handles                          = 0;
 };
 
 struct DescriptorHeap
 {
-    ID3D12Device5 *              m_dx_device           = nullptr;
-    ComPtr<ID3D12DescriptorHeap> m_dx_descriptor_heap  = nullptr;
-    UINT                         m_dx_offset           = 0;
-    size_t                       m_dx_handle_size      = 0;
-    D3D12_GPU_DESCRIPTOR_HANDLE  m_dx_gpu_handle_start = { 0 };
-    D3D12_CPU_DESCRIPTOR_HANDLE  m_dx_cpu_handle_start = { 0 };
+    ID3D12Device5 * m_dx_device                       = nullptr;
+    ComPtr<ID3D12DescriptorHeap> m_dx_descriptor_heap = nullptr;
+    UINT m_dx_offset                                  = 0;
+    size_t m_dx_handle_size                           = 0;
+    D3D12_GPU_DESCRIPTOR_HANDLE m_dx_gpu_handle_start = { 0 };
+    D3D12_CPU_DESCRIPTOR_HANDLE m_dx_cpu_handle_start = { 0 };
 
     DescriptorHeap() {}
 
-    DescriptorHeap(ID3D12Device5 *             dx_device,
+    DescriptorHeap(ID3D12Device5 * dx_device,
                    D3D12_DESCRIPTOR_HEAP_FLAGS heap_flags,
-                   D3D12_DESCRIPTOR_HEAP_TYPE  heap_type,
-                   const size_t                num_descriptors)
+                   D3D12_DESCRIPTOR_HEAP_TYPE heap_type,
+                   const size_t num_descriptors)
     : m_dx_device(dx_device)
     {
         D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
