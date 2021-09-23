@@ -8,23 +8,17 @@
 #include "passes/rtvisualize/rtvisualize.h"
 #include "rendercontext.h"
 #include "rhi/rhi.h"
-#include "scene.h"
+#include "scene_resource.h"
 
 struct Renderer
 {
     Rhi::RasterPipeline m_raster_pipeline;
     Rhi::RayTracingPipeline m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
-    Rhi::RayTracingBlas m_rt_static_mesh_nonemissive_blas;
-    Rhi::RayTracingBlas m_rt_static_mesh_emissive_blas;
-    Rhi::RayTracingTlas m_rt_tlas;
     std::vector<Rhi::FramebufferBindings> m_raster_fbindings;
     std::array<Rhi::Texture, 2> m_rt_results;
     std::array<Rhi::Buffer, 2> m_prev_frame_reserviors;
     Rhi::Sampler m_sampler;
-
-    using IndexBuffer  = SharedIndexBuffer;
-    using VertexBuffer = SharedVertexBuffer;
 
     RtVisualizePass m_pass_rt_visualize;
 
@@ -193,7 +187,7 @@ struct Renderer
         // cmds.trace_rays(m_rt_sbt, params.m_resolution.x, params.m_resolution.y);
 
         m_pass_rt_visualize
-            .run(cmds, ctx, params, m_rt_tlas, m_rt_results[ctx.m_flight_index % 2], params.m_resolution);
+            .run(cmds, ctx, params, m_rt_results[ctx.m_flight_index % 2], params.m_resolution);
 
         {
             // transition
@@ -219,8 +213,8 @@ struct Renderer
 
                 // raster
                 cmds.bind_graphics_descriptor_set(beauty_desc_sets);
-                cmds.bind_vertex_buffer(params.m_asset_pool->m_vertex_buffers[0].m_buffer, sizeof(CompactVertex));
-                cmds.bind_index_buffer(params.m_asset_pool->m_index_buffers[0].m_buffer, Rhi::IndexType::Uint32);
+                cmds.bind_vertex_buffer(params.m_scene_resource->m_d_materials, sizeof(CompactVertex));
+                cmds.bind_index_buffer(params.m_scene_resource->m_d_ibuf, Rhi::IndexType::Uint32);
                 cmds.draw_instanced(3, 1, 0, 0);
             }
             cmds.end_render_pass();

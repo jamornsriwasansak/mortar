@@ -1,6 +1,7 @@
 #pragma once
 
 #include "render/common/render_params.h"
+#include "scene_resource.h"
 #include "rhi/rhi.h"
 #include "rtvisualize_shared.h"
 
@@ -39,13 +40,13 @@ struct RtVisualizePass
         const Rhi::ShaderSrc raygen_shader(Rhi::ShaderStageEnum::RayGen,
                                            shader_path / "rtvisualize.hlsl",
                                            "RayGen");
-        [[maybe_unused]] size_t raygen_id = rt_config.add_shader(raygen_shader);
+        [[maybe_unused]] const size_t raygen_id = rt_config.add_shader(raygen_shader);
 
         // miss
         const Rhi::ShaderSrc miss_shader(Rhi::ShaderStageEnum::Miss,
                                          shader_path / "rtvisualize.hlsl",
                                          "Miss");
-        [[maybe_unused]] size_t miss_id = rt_config.add_shader(miss_shader);
+        [[maybe_unused]] const size_t miss_id = rt_config.add_shader(miss_shader);
 
         // hitgroup
         const Rhi::ShaderSrc hit_shader(Rhi::ShaderStageEnum::ClosestHit,
@@ -55,7 +56,7 @@ struct RtVisualizePass
         hit_group.m_closest_hit_id = rt_config.add_shader(hit_shader);
 
         // all raygen and all hit groups
-        [[maybe_unused]] size_t hitgroup_id = rt_config.add_hit_group(hit_group);
+        [[maybe_unused]] const size_t hitgroup_id = rt_config.add_hit_group(hit_group);
 
         m_rt_pipeline =
             Rhi::RayTracingPipeline(&device, rt_config, 16, 64, 2, "rt_visualize_pipeline");
@@ -66,7 +67,6 @@ struct RtVisualizePass
     run(Rhi::CommandList & cmd_list,
         const RenderContext & render_ctx,
         const RenderParams & render_params,
-        const Rhi::RayTracingTlas & tlas,
         const Rhi::Texture & target_texture_buffer,
         const uint2 target_resolution)
     {
@@ -102,7 +102,7 @@ struct RtVisualizePass
         descriptor_sets[0] =
             Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 0);
         descriptor_sets[0]
-            .set_t_ray_tracing_accel(0, render_params.m_scene->m_rt_tlas)
+            .set_t_ray_tracing_accel(0, render_params.m_scene_resource->m_rt_tlas)
             .set_u_rw_texture(0, target_texture_buffer)
             .set_b_constant_buffer(0, m_cb_params)
             .update();
@@ -111,11 +111,11 @@ struct RtVisualizePass
         descriptor_sets[1] =
             Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
         descriptor_sets[1].set_s_sampler(0, m_common_sampler);
-        for (size_t i = 0; i < render_params.m_scene->m_d_textures.length(); i++)
+        for (size_t i = 0; i < render_params.m_scene_resource->m_d_textures.length(); i++)
         {
-            descriptor_sets[1].set_t_texture(0, render_params.m_scene->m_d_textures[i], i);
+            descriptor_sets[1].set_t_texture(0, render_params.m_scene_resource->m_d_textures[i], i);
         }
-        descriptor_sets[1].set_b_constant_buffer(0, render_params.m_scene->m_d_materials);
+        descriptor_sets[1].set_b_constant_buffer(0, render_params.m_scene_resource->m_d_materials);
         descriptor_sets[1].update();
 
         cmd_list.bind_raytrace_pipeline(m_rt_pipeline);

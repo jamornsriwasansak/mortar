@@ -3,7 +3,9 @@
 #include "common/camera.h"
 #include "common/ste/stevector.h"
 #include "loader/img_loader.h"
+#include "render/common/compact_vertex.h"
 #include "render/common/engine_setting.h"
+#include "render/common/standard_material_ref.h"
 #include "rhi/rhi.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -21,13 +23,6 @@ struct StandardMesh
     size_t m_num_indices;
 };
 
-struct StandardObject
-{
-    int m_mesh_id     = -1;
-    int m_material_id = -1;
-    int m_emissive_id = -1;
-};
-
 struct SceneGeometry
 {
     uint32_t m_vbuf_offset = 0;
@@ -43,18 +38,18 @@ struct SceneBaseInstance
     std::vector<urange> m_geometry_id_ranges = {};
 };
 
-struct SceneObject
+struct SceneInstance
 {
-    uint32_t m_instance  = 0;
-    float4x4 m_transform = glm::identity<float4x4>();
+    uint32_t m_base_instance_id = 0;
+    float4x4 m_transform        = glm::identity<float4x4>();
 };
 
 struct SceneDesc
 {
-    std::vector<SceneObject> m_scene_objects = {};
+    std::vector<SceneInstance> m_instances = {};
 };
 
-struct Scene
+struct SceneResource
 {
     enum class LoadStandardParamEnum
     {
@@ -103,9 +98,9 @@ struct Scene
     // std::vector<SceneGraphNode> m_scene_static_instances;
     // std::vector<SceneGraphNode> m_scene_dynamic_instances;
 
-    Scene() {}
+    SceneResource() {}
 
-    Scene(const Rhi::Device & device) : m_device(&device)
+    SceneResource(const Rhi::Device & device) : m_device(&device)
     {
         m_transfer_cmd_pool = Rhi::CommandPool(&device, Rhi::CommandQueueType::Transfer);
 
@@ -491,13 +486,13 @@ struct Scene
         // build tlas
         {
             // populate instances list to be build tlas
-            std::vector<Rhi::RayTracingInstance> instances(scene_desc.m_scene_objects.size());
-            for (size_t i_inst = 0; i_inst < scene_desc.m_scene_objects.size(); i_inst++)
+            std::vector<Rhi::RayTracingInstance> instances(scene_desc.m_instances.size());
+            for (size_t i_inst = 0; i_inst < scene_desc.m_instances.size(); i_inst++)
             {
-                const size_t instance_id         = scene_desc.m_scene_objects[i_inst].m_instance;
-                const Rhi::RayTracingBlas & blas = m_rt_blases[instance_id];
+                const size_t base_instance_id = scene_desc.m_instances[i_inst].m_base_instance_id;
+                const Rhi::RayTracingBlas & blas = m_rt_blases[base_instance_id];
                 instances[i_inst] =
-                    Rhi::RayTracingInstance(blas, scene_desc.m_scene_objects[i_inst].m_transform, 0, instance_id);
+                    Rhi::RayTracingInstance(blas, scene_desc.m_instances[i_inst].m_transform, 0, base_instance_id);
             }
 
             // build tlas

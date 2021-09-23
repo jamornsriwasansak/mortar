@@ -1,6 +1,5 @@
 #pragma once
 
-#include "assetmanager.h"
 #include "common/camera.h"
 #include "render/rendercontext.h"
 #include "render/renderer.h"
@@ -28,13 +27,10 @@ struct MainLoop
 
     Rhi::StagingBufferManager m_staging_buffer_manager;
     // TODO:: replace asset pool completely with scene
-    AssetPool m_asset_pool;
-    Scene m_scene;
+    SceneResource m_scene_resource;
     FpsCamera m_camera;
     Renderer m_renderer;
     int2 m_swapchain_resolution = int2(0, 0);
-
-    std::vector<StandardObject> m_static_objects;
 
     Rhi::Buffer m_dummy_buffer;
     Rhi::Buffer m_dummy_index_buffer;
@@ -54,7 +50,7 @@ struct MainLoop
                              float3(0, 1, 0),
                              radians(60.0f),
                              float(resolution.x) / float(resolution.y));
-        m_scene               = Scene(*device);
+        m_scene_resource      = SceneResource(*device);
     }
 
     void
@@ -110,7 +106,6 @@ struct MainLoop
         // staging buffer manager
         m_staging_buffer_manager =
             Rhi::StagingBufferManager(m_device, "main_staging_buffer_manager");
-        m_asset_pool = AssetPool(m_device, &m_staging_buffer_manager);
 
         // initialize renderer
         m_renderer.init(m_device, m_swapchain_resolution, m_swapchain_textures);
@@ -198,9 +193,7 @@ struct MainLoop
 
         RenderParams render_params;
         render_params.m_resolution           = m_swapchain_resolution;
-        render_params.m_asset_pool           = &m_asset_pool;
-        render_params.m_scene                = &m_scene;
-        render_params.m_static_objects       = &m_static_objects;
+        render_params.m_scene_resource       = &m_scene_resource;
         render_params.m_is_static_mesh_dirty = false;
         render_params.m_fps_camera           = &m_camera;
         render_params.m_is_shaders_dirty     = reload_shader;
@@ -243,30 +236,18 @@ struct MainLoop
     {
         size_t i_flight = 0;
 
-        std::vector<StandardObject> sponza_mesh =
-            m_asset_pool.add_standard_meshes("scenes/sponza/sponza.obj");
-        m_static_objects.insert(m_static_objects.end(), sponza_mesh.begin(), sponza_mesh.end());
-
-        int white_tex_id =
-            m_asset_pool.add_constant_texture(std::array<uint8_t, 4>{ static_cast<uint8_t>(255),
-                                                                      static_cast<uint8_t>(255),
-                                                                      static_cast<uint8_t>(255),
-                                                                      static_cast<uint8_t>(255) });
-
+        /*
         StandardEmissive standard_emissive;
         standard_emissive.m_emissive_tex_id = white_tex_id;
         standard_emissive.m_emissive_scale  = 100.0f;
         int emissive_id                     = m_asset_pool.add_standard_emissive(standard_emissive);
+        */
 
-        std::vector<StandardObject> box_mesh =
-            m_asset_pool.add_standard_meshes("scenes/cube/cube.obj", false, false);
-        box_mesh[0].m_emissive_id = emissive_id;
-        m_static_objects.insert(m_static_objects.end(), box_mesh.begin(), box_mesh.end());
-
-        urange sponza_geometries = m_scene.add_geometries("scenes/sponza/sponza.obj", m_staging_buffer_manager);
+        urange sponza_geometries =
+            m_scene_resource.add_geometries("scenes/sponza/sponza.obj", m_staging_buffer_manager);
         std::array<urange, 1> ranges;
         ranges[0]                 = sponza_geometries;
-        size_t sponza_instance_id = m_scene.add_base_instance(ranges);
+        size_t sponza_instance_id = m_scene_resource.add_base_instance(ranges);
         // m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
 
         SceneDesc scene_desc;
@@ -274,13 +255,13 @@ struct MainLoop
         {
             for (size_t i = 0; i < 1; i++)
             {
-                SceneObject instance2 = { sponza_instance_id,
-                                          glm::translate(glm::identity<float4x4>(),
-                                                         float3(40.0f * j, 0.0f, 20.0f * i)) };
-                scene_desc.m_scene_objects.push_back(instance2);
+                SceneInstance instance2 = { sponza_instance_id,
+                                            glm::translate(glm::identity<float4x4>(),
+                                                           float3(40.0f * j, 0.0f, 20.0f * i)) };
+                scene_desc.m_instances.push_back(instance2);
             }
         }
-        m_scene.commit(scene_desc, m_staging_buffer_manager);
+        m_scene_resource.commit(scene_desc, m_staging_buffer_manager);
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");
 
