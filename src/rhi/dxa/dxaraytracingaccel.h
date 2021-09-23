@@ -120,11 +120,14 @@ struct RayTracingInstance
 
     RayTracingInstance() {}
 
-    RayTracingInstance(const RayTracingBlas & blas, const size_t hit_group_index, const size_t instance_id)
+    RayTracingInstance(const RayTracingBlas & blas, const float4x4 transform, const size_t hit_group_index, const size_t instance_id)
     {
         // create an instance desc for the bottom-level acceleration structure.
-        m_instance_desc.Transform[0][0]     = m_instance_desc.Transform[1][1] =
-            m_instance_desc.Transform[2][2] = 1;
+        for (uint8_t r = 0; r < 3; r++)
+            for (uint8_t c = 0; c < 4; c++)
+            {
+                m_instance_desc.Transform[r][c] = transform[c][r];
+            }
         m_instance_desc.InstanceMask        = 1;
         m_instance_desc.AccelerationStructure =
             blas.m_blas_buffer.m_allocation->GetResource()->GetGPUVirtualAddress();

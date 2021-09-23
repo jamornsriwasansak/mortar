@@ -270,8 +270,16 @@ struct MainLoop
         // m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
 
         SceneDesc scene_desc;
-        SceneObject object = { sponza_instance_id, glm::identity<float4x4>() };
-        scene_desc.m_scene_objects.push_back({ object });
+        for (size_t j = 0; j < 1; j++)
+        {
+            for (size_t i = 0; i < 1; i++)
+            {
+                SceneObject instance2 = { sponza_instance_id,
+                                          glm::translate(glm::identity<float4x4>(),
+                                                         float3(40.0f * j, 0.0f, 20.0f * i)) };
+                scene_desc.m_scene_objects.push_back(instance2);
+            }
+        }
         m_scene.commit(scene_desc, m_staging_buffer_manager);
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");

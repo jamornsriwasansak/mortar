@@ -449,7 +449,6 @@ struct Scene
 
                 // prepare descs
                 geom_descs.clear();
-                geom_descs.resize(base_instance.m_geometry_id_ranges.size());
 
                 // populate geometry descs
                 bool is_updatable = false;
@@ -463,7 +462,7 @@ struct Scene
                         {
                             is_updatable = true;
                         }
-                        Rhi::RayTracingGeometryDesc & geom_desc = geom_descs[i_geom];
+                        Rhi::RayTracingGeometryDesc geom_desc;
                         geom_desc.set_flag(Rhi::RayTracingGeometryFlag::Opaque);
                         geom_desc.set_index_buffer(m_d_ibuf,
                                                    geometry.m_ibuf_offset * Rhi::GetSizeInBytes(m_ibuf_index_type),
@@ -474,6 +473,7 @@ struct Scene
                                                     m_vbuf_position_type,
                                                     Rhi::GetSizeInBytes(m_vbuf_position_type),
                                                     geometry.m_num_vertices);
+                        geom_descs.push_back(geom_desc);
                     }
                 }
 
@@ -496,7 +496,8 @@ struct Scene
             {
                 const size_t instance_id         = scene_desc.m_scene_objects[i_inst].m_instance;
                 const Rhi::RayTracingBlas & blas = m_rt_blases[instance_id];
-                instances[i_inst]                = Rhi::RayTracingInstance(blas, 0, instance_id);
+                instances[i_inst] =
+                    Rhi::RayTracingInstance(blas, scene_desc.m_scene_objects[i_inst].m_transform, 0, instance_id);
             }
 
             // build tlas
