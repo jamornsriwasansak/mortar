@@ -7,6 +7,7 @@
 #include "loader/img_loader.h"
 //
 #include "engine_setting.h"
+#include "shaders/shared/bindless_table.h"
 #include "shaders/shared/compact_vertex.h"
 #include "shaders/shared/standard_material.h"
 //
@@ -15,16 +16,6 @@
 #include <assimp/scene.h>
 #include <filesystem>
 #include <scene_graph.h>
-
-struct StandardMesh
-{
-    size_t m_vertex_buffer_id;
-    size_t m_index_buffer_id;
-    size_t m_vertex_buffer_offset;
-    size_t m_index_buffer_offset;
-    size_t m_num_vertices;
-    size_t m_num_indices;
-};
 
 struct SceneGeometry
 {
@@ -72,8 +63,8 @@ struct SceneResource
     Rhi::Buffer m_d_vbuf_position        = {};
     Rhi::Buffer m_d_vbuf_packed          = {};
     Rhi::Buffer m_d_ibuf                 = {};
-    size_t m_vbuf_num_vertices           = 0;
-    size_t m_ibuf_num_indices            = 0;
+    size_t m_num_vertices                = 0;
+    size_t m_num_indices                 = 0;
 
     // device & host textures and materials
     Std::FsVector<Rhi::Texture, EngineSetting::MaxNumBindlessTextures> m_d_textures;
@@ -82,8 +73,10 @@ struct SceneResource
 
     // device & host lookup table for geometry & instance
     // look up offset into geometry table based on instance index
-    Rhi::Buffer m_d_rt_instance_table = {};
-    Rhi::Buffer m_d_rt_geometry_table = {};
+    Rhi::Buffer m_d_base_instance_table      = {};
+    Rhi::Buffer m_d_geometry_table           = {};
+    size_t m_num_base_instance_table_entries = 0;
+    size_t m_num_geometry_table_entries      = 0;
 
     // device & host blas (requires update)
     std::vector<Rhi::RayTracingBlas> m_rt_blases;
@@ -95,7 +88,7 @@ struct SceneResource
     // scene graph
     SceneGraphNode m_scene_graph_root = SceneGraphNode(false);
     Std::FsVector<SceneGeometry, EngineSetting::MaxNumGeometries> m_geometries;
-    Std::FsVector<SceneBaseInstance, EngineSetting::MaxNumInstances> m_base_instances;
+    Std::FsVector<SceneBaseInstance, EngineSetting::MaxNumBaseInstances> m_base_instances;
 
     // TODO:: too complicated for now
     // std::vector<SceneGraphNode> m_scene_static_instances;
@@ -132,16 +125,17 @@ struct SceneResource
                                     "scene_m_d_materials");
 
         // geometry table and geometry offset table
-        m_d_rt_instance_table = Rhi::Buffer(m_device,
-                                            Rhi::BufferUsageEnum::TransferDst,
-                                            Rhi::MemoryUsageEnum::CpuOnly,
-                                            sizeof(uint32_t) * EngineSetting::MaxNumGeometryOffsetTableEntry,
-                                            "scene_m_d_geometry_table_offset");
-        m_d_rt_geometry_table = Rhi::Buffer(m_device,
-                                            Rhi::BufferUsageEnum::TransferDst,
-                                            Rhi::MemoryUsageEnum::CpuOnly,
-                                            sizeof(uint32_t) * EngineSetting::MaxNumGeometryTableEntry,
-                                            "scene_m_d_geometry_table");
+        m_d_base_instance_table =
+            Rhi::Buffer(m_device,
+                        Rhi::BufferUsageEnum::TransferDst,
+                        Rhi::MemoryUsageEnum::CpuOnly,
+                        sizeof(BaseInstanceTableEntry) * EngineSetting::MaxNumGeometryOffsetTableEntry,
+                        "scene_m_d_geometry_table_offset");
+        m_d_geometry_table = Rhi::Buffer(m_device,
+                                         Rhi::BufferUsageEnum::TransferDst,
+                                         Rhi::MemoryUsageEnum::CpuOnly,
+                                         sizeof(GeometryTableEntry) * EngineSetting::MaxNumGeometryTableEntry,
+                                         "scene_m_d_geometry_table");
     }
 
     urange
@@ -244,28 +238,42 @@ struct SceneResource
                                         Rhi::BufferUsageEnum::TransferSrc,
                                         Rhi::MemoryUsageEnum::CpuOnly,
                                         ib.size() * sizeof(ib[0]));
+            Rhi::Buffer staging_buffer3(m_device,
+                                        Rhi::BufferUsageEnum::TransferSrc,
+                                        Rhi::MemoryUsageEnum::CpuOnly,
+                                        vb_packed_info.size() * sizeof(vb_packed_info[0]));
+
             std::memcpy(staging_buffer.map(), vb_positions.data(), vb_positions.size() * sizeof(vb_positions[0]));
             std::memcpy(staging_buffer2.map(), ib.data(), ib.size() * sizeof(ib[0]));
+            std::memcpy(staging_buffer3.map(),
+                        vb_packed_info.data(),
+                        vb_packed_info.size() * sizeof(vb_packed_info[0]));
             staging_buffer.unmap();
             staging_buffer2.unmap();
+            staging_buffer3.unmap();
 
             cmd_list.begin();
             cmd_list.copy_buffer_region(m_d_vbuf_position,
-                                        m_vbuf_num_vertices * sizeof(float3),
+                                        m_num_vertices * sizeof(float3),
                                         staging_buffer,
                                         0,
                                         vb_positions.size() * sizeof(vb_positions[0]));
             cmd_list.copy_buffer_region(m_d_ibuf,
-                                        m_ibuf_num_indices * Rhi::GetSizeInBytes(m_ibuf_index_type),
+                                        m_num_indices * Rhi::GetSizeInBytes(m_ibuf_index_type),
                                         staging_buffer2,
                                         0,
                                         ib.size() * sizeof(ib[0]));
+            cmd_list.copy_buffer_region(m_d_vbuf_packed,
+                                        m_num_vertices * sizeof(CompactVertex),
+                                        staging_buffer3,
+                                        0,
+                                        vb_packed_info.size() * sizeof(vb_packed_info[0]));
             cmd_list.end();
             cmd_list.submit(&tmp_fence);
             tmp_fence.wait();
 
-            vertex_buffer_offset = m_vbuf_num_vertices;
-            index_buffer_offset  = m_ibuf_num_indices;
+            vertex_buffer_offset = m_num_vertices;
+            index_buffer_offset  = m_num_indices;
             for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
             {
                 // all information
@@ -288,8 +296,8 @@ struct SceneResource
                 index_buffer_offset  = round_up(index_buffer_offset, 32);
             }
 
-            m_vbuf_num_vertices += total_num_vertices;
-            m_ibuf_num_indices += total_num_indices;
+            m_num_vertices += total_num_vertices;
+            m_num_indices += total_num_indices;
         }
 
         return result;
@@ -516,46 +524,40 @@ struct SceneResource
             m_d_materials.unmap();
         }
 
-        struct DGeometry
-        {
-            uint32_t m_vertex_offset;
-            uint32_t m_index_offset;
-            uint32_t m_material_id;
-            uint32_t m_padding;
-        };
-
         // build mesh table
         {
-            std::vector<DGeometry> instance_geometry_table;
-            std::vector<uint32_t> base_instance_table;
+            std::vector<GeometryTableEntry> geometry_table;
+            std::vector<BaseInstanceTableEntry> base_instance_table;
             for (size_t i = 0; i < m_base_instances.length(); i++)
             {
-                base_instance_table.push_back(instance_geometry_table.size());
+                BaseInstanceTableEntry base_instance_entry;
+                base_instance_entry.m_geometry_entry_offset = geometry_table.size();
+                base_instance_table.push_back(base_instance_entry);
                 for (size_t k = 0; k < m_base_instances[i].m_geometry_id_ranges.size(); k++)
                 {
                     const urange & gid_range = m_base_instances[i].m_geometry_id_ranges[k];
                     for (size_t j = gid_range.m_begin; j < gid_range.m_end; j++)
                     {
                         const auto & geometry = m_geometries[j];
-                        DGeometry dgeometry;
-                        dgeometry.m_vertex_offset = geometry.m_vbuf_offset;
-                        dgeometry.m_index_offset  = geometry.m_ibuf_offset;
-                        dgeometry.m_material_id   = geometry.m_material_id;
-                        instance_geometry_table.push_back(dgeometry);
+                        GeometryTableEntry geometry_entry;
+                        geometry_entry.m_vertex_offset = geometry.m_vbuf_offset;
+                        geometry_entry.m_index_offset  = geometry.m_ibuf_offset;
+                        geometry_entry.m_material_id   = geometry.m_material_id;
+                        geometry_table.push_back(geometry_entry);
                     }
                 }
             }
 
-            DGeometry * geometry_table = static_cast<DGeometry *>(m_d_rt_instance_table.map());
-            uint32_t * instance_table  = static_cast<uint32_t *>(m_d_rt_geometry_table.map());
-            std::memcpy(geometry_table,
-                        instance_geometry_table.data(),
-                        sizeof(DGeometry) * instance_geometry_table.size());
-            std::memcpy(instance_table,
+            std::memcpy(m_d_geometry_table.map(),
+                        geometry_table.data(),
+                        sizeof(GeometryTableEntry) * geometry_table.size());
+            std::memcpy(m_d_base_instance_table.map(),
                         base_instance_table.data(),
-                        sizeof(uint32_t) * base_instance_table.size());
-            m_d_rt_instance_table.unmap();
-            m_d_rt_geometry_table.unmap();
+                        sizeof(BaseInstanceTableEntry) * base_instance_table.size());
+            m_num_base_instance_table_entries = base_instance_table.size();
+            m_num_geometry_table_entries      = geometry_table.size();
+            m_d_base_instance_table.unmap();
+            m_d_geometry_table.unmap();
         }
     }
 };

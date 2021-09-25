@@ -57,7 +57,7 @@ struct HlslDxcCompiler
                 const bool as_spirv) const
     {
         std::map<ShaderStageEnum, LPCWSTR> TargetProfile = {
-            { ShaderStageEnum::Vertex, L"vs_6_0" },  { ShaderStageEnum::Fragment, L"ps_6_0" },
+            { ShaderStageEnum::Vertex, L"vs_6_2" },  { ShaderStageEnum::Fragment, L"ps_6_2" },
             { ShaderStageEnum::RayGen, L"lib_6_5" }, { ShaderStageEnum::Miss, L"lib_6_5" },
             { ShaderStageEnum::AnyHit, L"lib_6_5" }, { ShaderStageEnum::ClosestHit, L"lib_6_5" }
         };
@@ -113,6 +113,10 @@ struct HlslDxcCompiler
         arguments.push_back(DXC_ARG_ALL_RESOURCES_BOUND);
         arguments.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
         arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS);
+        arguments.push_back(L"-enable-16bit-types");
+        //arguments.push_back(L"-enable-templates");
+        arguments.push_back(L"-HV 2018");
+        arguments.push_back(L"-T *s_6_2");
 
         // compile as spirv if needed
         const std::wstring bshift = std::to_wstring(BShift);
