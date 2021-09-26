@@ -72,19 +72,33 @@ struct RaytraceVisualizePass
         static int rtvis_mode = 0;
         if (ImGui::Begin(typeid(*this).name(), &p_open))
         {
-            ImGui::RadioButton("InstanceId", &rtvis_mode, RaytraceVisualizeCbParams::ModeInstanceId);
-            ImGui::RadioButton("BaseInstanceId", &rtvis_mode, RaytraceVisualizeCbParams::ModeBaseInstanceId);
-            ImGui::RadioButton("GeometryId", &rtvis_mode, RaytraceVisualizeCbParams::ModeGeometryId);
-            ImGui::RadioButton("TriangleId", &rtvis_mode, RaytraceVisualizeCbParams::ModeTriangleId);
-            ImGui::RadioButton("BaryCentricCoords", &rtvis_mode, RaytraceVisualizeCbParams::ModeBaryCentricCoords);
-            ImGui::RadioButton("Position", &rtvis_mode, RaytraceVisualizeCbParams::ModePosition);
-            ImGui::RadioButton("Geometry Normal", &rtvis_mode, RaytraceVisualizeCbParams::ModeGeometryNormal);
-            ImGui::RadioButton("Shading Normal", &rtvis_mode, RaytraceVisualizeCbParams::ModeShadingNormal);
-            ImGui::RadioButton("Texture Coord", &rtvis_mode, RaytraceVisualizeCbParams::ModeTextureCoords);
-            ImGui::RadioButton("Depth", &rtvis_mode, RaytraceVisualizeCbParams::ModeDepth);
-            ImGui::RadioButton("DiffuseReflectance", &rtvis_mode, RaytraceVisualizeCbParams::ModeDiffuseReflectance);
-            ImGui::RadioButton("SpecularReflectance", &rtvis_mode, RaytraceVisualizeCbParams::ModeSpecularReflectance);
-            ImGui::RadioButton("Roughness", &rtvis_mode, RaytraceVisualizeCbParams::ModeRoughness);
+            ImGui::RadioButton("InstanceId", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeInstanceId));
+            ImGui::RadioButton("BaseInstanceId",
+                               &rtvis_mode,
+                               static_cast<int>(RaytraceVisualizeModeEnum::ModeBaseInstanceId));
+            ImGui::RadioButton("GeometryId", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeGeometryId));
+            ImGui::RadioButton("TriangleId", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeTriangleId));
+            ImGui::RadioButton("BaryCentricCoords",
+                               &rtvis_mode,
+                               static_cast<int>(RaytraceVisualizeModeEnum::ModeBaryCentricCoords));
+            ImGui::RadioButton("Position", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModePosition));
+            ImGui::RadioButton("Geometry Normal",
+                               &rtvis_mode,
+                               static_cast<int>(RaytraceVisualizeModeEnum::ModeGeometryNormal));
+            ImGui::RadioButton("Shading Normal",
+                               &rtvis_mode,
+                               static_cast<int>(RaytraceVisualizeModeEnum::ModeShadingNormal));
+            ImGui::RadioButton("Texture Coord",
+                               &rtvis_mode,
+                               static_cast<int>(RaytraceVisualizeModeEnum::ModeTextureCoords));
+            ImGui::RadioButton("Depth", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeDepth));
+            ImGui::RadioButton("DiffuseReflectance",
+                               &rtvis_mode,
+                               static_cast<int>(RaytraceVisualizeModeEnum::ModeDiffuseReflectance));
+            ImGui::RadioButton("SpecularReflectance",
+                               &rtvis_mode,
+                               static_cast<int>(RaytraceVisualizeModeEnum::ModeSpecularReflectance));
+            ImGui::RadioButton("Roughness", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeRoughness));
         }
         ImGui::End();
 
@@ -92,7 +106,7 @@ struct RaytraceVisualizePass
         CameraProperties cam_props  = render_params.m_fps_camera->get_camera_props();
         cb_params.m_camera_inv_proj = inverse(cam_props.m_proj);
         cb_params.m_camera_inv_view = inverse(cam_props.m_view);
-        cb_params.m_mode            = rtvis_mode;
+        cb_params.m_mode            = static_cast<RaytraceVisualizeModeEnum>(rtvis_mode);
         std::memcpy(m_cb_params.map(), &cb_params, sizeof(RaytraceVisualizeCbParams));
         m_cb_params.unmap();
 

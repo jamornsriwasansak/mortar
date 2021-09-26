@@ -101,47 +101,45 @@ void ClosestHit(inout Payload payload, const Attributes attrib)
                             texcoord1 * barycentric.x + texcoord2 * barycentric.y;
     const StandardMaterial mat = u_smc.m_materials[geometry_entry.m_material_id];
 
-    if (PrimitiveIndex() >= 2033)
-    {
-    }
+    const RaytraceVisualizeModeEnum mode = u_cbparams.m_mode;
 
-    if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeInstanceId)
+    if (mode == RaytraceVisualizeModeEnum::ModeInstanceId)
     {
         payload.m_color = color_from_uint(InstanceIndex());
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeBaseInstanceId)
+    else if (mode == RaytraceVisualizeModeEnum::ModeBaseInstanceId)
     {
         payload.m_color = color_from_uint(InstanceID());
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeGeometryId)
+    else if (mode == RaytraceVisualizeModeEnum::ModeGeometryId)
     {
         payload.m_color = color_from_uint(GeometryIndex());
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeTriangleId)
+    else if (mode == RaytraceVisualizeModeEnum::ModeTriangleId)
     {
         payload.m_color = color_from_uint(PrimitiveIndex());
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeBaryCentricCoords)
+    else if (mode == RaytraceVisualizeModeEnum::ModeBaryCentricCoords)
     {
         payload.m_color = half3(1.0h - attrib.uv.x - attrib.uv.y, attrib.uv.x, attrib.uv.y);
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModePosition)
+    else if (mode == RaytraceVisualizeModeEnum::ModePosition)
     {
         payload.m_color = half3(WorldRayOrigin() + WorldRayDirection() * RayTCurrent());
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeGeometryNormal)
+    else if (mode == RaytraceVisualizeModeEnum::ModeGeometryNormal)
     {
         payload.m_color = half3(normalize(cross(position1 - position0, position2 - position0)));
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeShadingNormal)
+    else if (mode == RaytraceVisualizeModeEnum::ModeShadingNormal)
     {
         payload.m_color = half3(snormal);
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeTextureCoords)
+    else if (mode == RaytraceVisualizeModeEnum::ModeTextureCoords)
     {
         payload.m_color = half3(texcoord, 0.0h);
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeDepth)
+    else if (mode == RaytraceVisualizeModeEnum::ModeDepth)
     {
         // compute depth
         float depth = length(WorldRayDirection()) * RayTCurrent();
@@ -150,16 +148,16 @@ void ClosestHit(inout Payload payload, const Attributes attrib)
         depth           = depth * depth * depth;
         payload.m_color = half3(depth, depth, depth);
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeDiffuseReflectance)
+    else if (mode == RaytraceVisualizeModeEnum::ModeDiffuseReflectance)
     {
         payload.m_color = half3(u_textures[mat.m_diffuse_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeSpecularReflectance)
+    else if (mode == RaytraceVisualizeModeEnum::ModeSpecularReflectance)
     {
         payload.m_color =
             half3(u_textures[mat.m_specular_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeRoughness)
+    else if (mode == RaytraceVisualizeModeEnum::ModeRoughness)
     {
         payload.m_color =
             half3(u_textures[mat.m_roughness_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
