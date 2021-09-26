@@ -57,14 +57,15 @@ struct SceneResource
     // command pool
     Rhi::CommandPool m_transfer_cmd_pool;
 
+    static constexpr Rhi::IndexType m_ibuf_index_type     = Rhi::IndexType::Uint16;
+    static constexpr Rhi::FormatEnum m_vbuf_position_type = Rhi::FormatEnum::R32G32B32_SFloat;
+
     // device position, packed and index information
-    Rhi::IndexType m_ibuf_index_type     = Rhi::IndexType::Uint16;
-    Rhi::FormatEnum m_vbuf_position_type = Rhi::FormatEnum::R32G32B32_SFloat;
-    Rhi::Buffer m_d_vbuf_position        = {};
-    Rhi::Buffer m_d_vbuf_packed          = {};
-    Rhi::Buffer m_d_ibuf                 = {};
-    size_t m_num_vertices                = 0;
-    size_t m_num_indices                 = 0;
+    Rhi::Buffer m_d_vbuf_position = {};
+    Rhi::Buffer m_d_vbuf_packed   = {};
+    Rhi::Buffer m_d_ibuf          = {};
+    size_t m_num_vertices         = 0;
+    size_t m_num_indices          = 0;
 
     // device & host textures and materials
     Std::FsVector<Rhi::Texture, EngineSetting::MaxNumBindlessTextures> m_d_textures;
@@ -173,8 +174,8 @@ struct SceneResource
                 total_num_indices += aimesh->mNumFaces * 3;
 
                 // round so the index is align by 32
-                total_num_indices  = round_up(total_num_indices, 32);
                 total_num_vertices = round_up(total_num_vertices, 32);
+                total_num_indices  = round_up(total_num_indices, 32);
             }
 
             std::vector<float3> vb_positions(total_num_vertices);
@@ -252,9 +253,12 @@ struct SceneResource
             staging_buffer2.unmap();
             staging_buffer3.unmap();
 
+            static_assert(Rhi::GetSizeInBytes(m_vbuf_position_type) == sizeof(vb_positions[0]));
+            static_assert(Rhi::GetSizeInBytes(m_ibuf_index_type) == sizeof(ib[0]));
+
             cmd_list.begin();
             cmd_list.copy_buffer_region(m_d_vbuf_position,
-                                        m_num_vertices * sizeof(float3),
+                                        m_num_vertices * Rhi::GetSizeInBytes(m_vbuf_position_type),
                                         staging_buffer,
                                         0,
                                         vb_positions.size() * sizeof(vb_positions[0]));

@@ -262,7 +262,7 @@ enum class FormatEnum : uint8_t
     R32G32B32A32_SFloat = DXGI_FORMAT_R32G32B32A32_FLOAT
 };
 
-inline size_t
+constexpr inline size_t
 GetSizeInBytes(const FormatEnum & format_enum)
 {
     switch (format_enum)
@@ -337,7 +337,7 @@ enum class IndexType : uint8_t
     Uint32 = DXGI_FORMAT_R32_UINT
 };
 
-inline size_t
+constexpr inline size_t
 GetSizeInBytes(const IndexType it)
 {
     switch (it)
