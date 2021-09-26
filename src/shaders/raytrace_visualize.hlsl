@@ -35,8 +35,9 @@ RaytracingAccelerationStructure u_scene_bvh : register(t0, space1);
 StructuredBuffer<BaseInstanceTableEntry> u_base_instance_table : register(t1, space1);
 StructuredBuffer<GeometryTableEntry> u_geometry_table : register(t2, space1);
 StructuredBuffer<uint16_t> u_indices : register(t3, space1);
-StructuredBuffer<CompactVertex> u_compact_vertices : register(t4, space1);
-Texture2D<float4> u_textures[100] : register(t5, space1);
+StructuredBuffer<float3> u_positions : register(t4, space1);
+StructuredBuffer<CompactVertex> u_compact_vertices : register(t5, space1);
+Texture2D<float4> u_textures[100] : register(t6, space1);
 
 [shader("raygeneration")] void
 RayGen()
@@ -72,23 +73,43 @@ RayGen()
 [shader("closesthit")]
 void ClosestHit(inout Payload payload, const Attributes attrib)
 {
+    const float2 barycentric = attrib.uv;
+
     payload.m_miss                        = false;
     const uint base_geometry_entry_offset = u_base_instance_table[InstanceID()].m_geometry_entry_offset;
     const uint geometry_offset            = base_geometry_entry_offset + GeometryIndex();
     const GeometryTableEntry geometry_entry = u_geometry_table[geometry_offset];
 
     const uint index0       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_offset];
-    const uint index1       = u_indices[PrimitiveIndex() * 3 + 1 + geometry_entry.m_index_offset];
-    const uint index2       = u_indices[PrimitiveIndex() * 3 + 2 + geometry_entry.m_index_offset];
+    const uint index1       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_offset + 1];
+    const uint index2       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_offset + 2];
+    const float3 position0  = u_positions[index0 + geometry_entry.m_vertex_offset];
+    const float3 position1  = u_positions[index1 + geometry_entry.m_vertex_offset];
+    const float3 position2  = u_positions[index2 + geometry_entry.m_vertex_offset];
     const CompactVertex cv0 = u_compact_vertices[index0 + geometry_entry.m_vertex_offset];
     const CompactVertex cv1 = u_compact_vertices[index1 + geometry_entry.m_vertex_offset];
     const CompactVertex cv2 = u_compact_vertices[index2 + geometry_entry.m_vertex_offset];
+    const float3 snormal0   = cv0.get_snormal();
+    const float3 snormal1   = cv1.get_snormal();
+    const float3 snormal2   = cv2.get_snormal();
+    const float3 snormal    = normalize(snormal0 * (1.0f - barycentric.x - barycentric.y) +
+                            snormal1 * barycentric.x + snormal2 * barycentric.y);
+    const float2 texcoord0  = cv0.m_texcoord;
+    const float2 texcoord1  = cv1.m_texcoord;
+    const float2 texcoord2  = cv2.m_texcoord;
+    const float2 texcoord   = texcoord0 * (1.0f - barycentric.x - barycentric.y) +
+                            texcoord1 * barycentric.x + texcoord2 * barycentric.y;
+    const StandardMaterial mat = u_smc.m_materials[geometry_entry.m_material_id];
+
+    if (PrimitiveIndex() >= 2033)
+    {
+    }
 
     if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeInstanceId)
     {
         payload.m_color = color_from_uint(InstanceIndex());
     }
-    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeInstanceId)
+    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeBaseInstanceId)
     {
         payload.m_color = color_from_uint(InstanceID());
     }
@@ -108,24 +129,40 @@ void ClosestHit(inout Payload payload, const Attributes attrib)
     {
         payload.m_color = half3(WorldRayOrigin() + WorldRayDirection() * RayTCurrent());
     }
+    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeGeometryNormal)
+    {
+        payload.m_color = half3(normalize(cross(position1 - position0, position2 - position0)));
+    }
+    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeShadingNormal)
+    {
+        payload.m_color = half3(snormal);
+    }
     else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeTextureCoords)
     {
-        const half2 texcoord0 = half2(cv0.m_texcoord_x, cv0.m_texcoord_y);
-        const half2 texcoord1 = half2(cv1.m_texcoord_x, cv1.m_texcoord_y);
-        const half2 texcoord2 = half2(cv2.m_texcoord_x, cv2.m_texcoord_y);
-        const half2 barycentric = half2(attrib.uv);
-        const half2 texcoord  =
-            texcoord0 * (1.0h - barycentric.x - barycentric.y)
-            + texcoord1 * barycentric.x
-            + texcoord2 * barycentric.y;
-        payload.m_color = color_from_uint(geometry_entry.m_material_id) * 0.0001h +
-                          half3(texcoord, 0.0h);
+        payload.m_color = half3(texcoord, 0.0h);
     }
-    else
+    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeDepth)
     {
-        StandardMaterial mat = u_smc.m_materials[GeometryIndex()];
+        // compute depth
+        float depth = length(WorldRayDirection()) * RayTCurrent();
+        // tonemap depth and apply contrast
+        depth           = depth / (depth + 1.0f);
+        depth           = depth * depth * depth;
+        payload.m_color = half3(depth, depth, depth);
+    }
+    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeDiffuseReflectance)
+    {
+        payload.m_color = half3(u_textures[mat.m_diffuse_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
+    }
+    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeSpecularReflectance)
+    {
         payload.m_color =
-            half3(u_textures[mat.m_diffuse_tex_id].SampleLevel(u_sampler, attrib.uv, 0).rgb);
+            half3(u_textures[mat.m_specular_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
+    }
+    else if (u_cbparams.m_mode == RaytraceVisualizeCbParams::ModeRoughness)
+    {
+        payload.m_color =
+            half3(u_textures[mat.m_roughness_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
     }
 }
 

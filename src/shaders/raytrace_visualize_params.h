@@ -10,11 +10,12 @@ struct RaytraceVisualizeCbParams
     static const int ModeBaryCentricCoords   = 4;
     static const int ModePosition            = 5;
     static const int ModeGeometryNormal      = 6;
-    static const int ModeTextureCoords       = 7;
-    static const int ModeDepth               = 8;
-    static const int ModeDiffuseReflectance  = 9;
-    static const int ModeSpecularReflectance = 10;
-    static const int ModeIndex               = 11;
+    static const int ModeShadingNormal       = 7;
+    static const int ModeTextureCoords       = 8;
+    static const int ModeDepth               = 9;
+    static const int ModeDiffuseReflectance  = 10;
+    static const int ModeSpecularReflectance = 11;
+    static const int ModeRoughness           = 12;
 
     float4x4 m_camera_inv_view;
     float4x4 m_camera_inv_proj;

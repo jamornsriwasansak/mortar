@@ -73,15 +73,18 @@ struct RaytraceVisualizePass
         if (ImGui::Begin(typeid(*this).name(), &p_open))
         {
             ImGui::RadioButton("InstanceId", &rtvis_mode, RaytraceVisualizeCbParams::ModeInstanceId);
+            ImGui::RadioButton("BaseInstanceId", &rtvis_mode, RaytraceVisualizeCbParams::ModeBaseInstanceId);
             ImGui::RadioButton("GeometryId", &rtvis_mode, RaytraceVisualizeCbParams::ModeGeometryId);
             ImGui::RadioButton("TriangleId", &rtvis_mode, RaytraceVisualizeCbParams::ModeTriangleId);
             ImGui::RadioButton("BaryCentricCoords", &rtvis_mode, RaytraceVisualizeCbParams::ModeBaryCentricCoords);
             ImGui::RadioButton("Position", &rtvis_mode, RaytraceVisualizeCbParams::ModePosition);
             ImGui::RadioButton("Geometry Normal", &rtvis_mode, RaytraceVisualizeCbParams::ModeGeometryNormal);
+            ImGui::RadioButton("Shading Normal", &rtvis_mode, RaytraceVisualizeCbParams::ModeShadingNormal);
             ImGui::RadioButton("Texture Coord", &rtvis_mode, RaytraceVisualizeCbParams::ModeTextureCoords);
             ImGui::RadioButton("Depth", &rtvis_mode, RaytraceVisualizeCbParams::ModeDepth);
             ImGui::RadioButton("DiffuseReflectance", &rtvis_mode, RaytraceVisualizeCbParams::ModeDiffuseReflectance);
             ImGui::RadioButton("SpecularReflectance", &rtvis_mode, RaytraceVisualizeCbParams::ModeSpecularReflectance);
+            ImGui::RadioButton("Roughness", &rtvis_mode, RaytraceVisualizeCbParams::ModeRoughness);
         }
         ImGui::End();
 
@@ -109,7 +112,7 @@ struct RaytraceVisualizePass
             Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
         for (size_t i = 0; i < render_params.m_scene_resource->m_d_textures.length(); i++)
         {
-            descriptor_sets[1].set_t_texture(5, render_params.m_scene_resource->m_d_textures[i], i);
+            descriptor_sets[1].set_t_texture(6, render_params.m_scene_resource->m_d_textures[i], i);
         }
         descriptor_sets[1]
             .set_s_sampler(0, m_common_sampler)
@@ -128,6 +131,10 @@ struct RaytraceVisualizePass
                                      sizeof(uint16_t),
                                      render_params.m_scene_resource->m_num_indices)
             .set_t_structured_buffer(4,
+                                     render_params.m_scene_resource->m_d_vbuf_position,
+                                     sizeof(float3),
+                                     render_params.m_scene_resource->m_num_vertices)
+            .set_t_structured_buffer(5,
                                      render_params.m_scene_resource->m_d_vbuf_packed,
                                      sizeof(CompactVertex),
                                      render_params.m_scene_resource->m_num_vertices)

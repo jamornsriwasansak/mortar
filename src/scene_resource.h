@@ -143,10 +143,7 @@ struct SceneResource
     add_geometries(const std::filesystem::path & path, Rhi::StagingBufferManager & staging_buffer_manager)
     {
         Assimp::Importer importer;
-        const aiScene * scene =
-            importer.ReadFile(path.string(),
-                              aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
-                                  aiProcess_JoinIdenticalVertices | aiProcess_RemoveRedundantMaterials);
+        const aiScene * scene = importer.ReadFile(path.string(), aiProcessPreset_TargetRealtime_Fast);
 
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
@@ -190,7 +187,7 @@ struct SceneResource
                 const aiMesh * aimesh       = scene->mMeshes[i_mesh];
                 const uint32_t num_vertices = static_cast<uint32_t>(aimesh->mNumVertices);
                 const uint32_t num_faces    = static_cast<uint32_t>(aimesh->mNumFaces);
-                if (num_faces * 3 > std::numeric_limits<uint16_t>::max())
+                if (num_vertices > std::numeric_limits<uint16_t>::max())
                 {
                     Logger::Critical<true>(__FUNCTION__,
                                            " the framework does not support num faces per mesh > "
@@ -205,10 +202,20 @@ struct SceneResource
 
                     // setup compact information
                     CompactVertex & vertex = vb_packed_info[vertex_buffer_offset + i_vertex];
-                    vertex.m_position      = to_float3(aimesh->mVertices[i_vertex]);
-                    vertex.m_snormal       = to_float3(aimesh->mNormals[i_vertex]);
-                    vertex.m_texcoord_x    = aimesh->mTextureCoords[0][i_vertex].x;
-                    vertex.m_texcoord_y    = aimesh->mTextureCoords[0][i_vertex].y;
+                    float3 snormal         = to_float3(aimesh->mNormals[i_vertex]);
+                    const float slen       = length(snormal);
+                    if (slen == 0.0f)
+                    {
+                        snormal = float3(0.0f, 0.0f, 1.0f);
+                    }
+                    else
+                    {
+                        snormal = snormal / slen;
+                    }
+
+                    vertex.set_snormal(snormal);
+                    vertex.m_texcoord.x = aimesh->mTextureCoords[0][i_vertex].x;
+                    vertex.m_texcoord.y = aimesh->mTextureCoords[0][i_vertex].y;
                 }
 
                 // set faces
@@ -217,9 +224,19 @@ struct SceneResource
                     for (size_t i_vertex = 0; i_vertex < 3; i_vertex++)
                     {
                         uint16_t & index = ib[index_buffer_offset + i_face * 3 + i_vertex];
+                        assert(aimesh->mFaces[i_face].mNumIndices == 3);
                         index = static_cast<uint16_t>(aimesh->mFaces[i_face].mIndices[i_vertex]);
                     }
                 }
+
+                SceneGeometry model;
+                model.m_vbuf_offset  = vertex_buffer_offset;
+                model.m_ibuf_offset  = index_buffer_offset;
+                model.m_num_indices  = num_faces * 3;
+                model.m_num_vertices = num_vertices;
+                model.m_is_updatable = true;
+                model.m_material_id  = material_offset + aimesh->mMaterialIndex;
+                m_geometries.push_back(model);
 
                 vertex_buffer_offset += aimesh->mNumVertices;
                 index_buffer_offset += aimesh->mNumFaces * 3;
@@ -229,8 +246,6 @@ struct SceneResource
 
             Rhi::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
 
-            Rhi::Fence tmp_fence(staging_buffer_manager.m_device);
-            tmp_fence.reset();
             Rhi::Buffer staging_buffer(m_device,
                                        Rhi::BufferUsageEnum::TransferSrc,
                                        Rhi::MemoryUsageEnum::CpuOnly,
@@ -273,32 +288,14 @@ struct SceneResource
                                         0,
                                         vb_packed_info.size() * sizeof(vb_packed_info[0]));
             cmd_list.end();
+
+            Rhi::Fence tmp_fence(staging_buffer_manager.m_device);
+            tmp_fence.reset();
             cmd_list.submit(&tmp_fence);
             tmp_fence.wait();
 
             vertex_buffer_offset = m_num_vertices;
             index_buffer_offset  = m_num_indices;
-            for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
-            {
-                // all information
-                const aiMesh * aimesh       = scene->mMeshes[i_mesh];
-                const uint32_t num_vertices = static_cast<uint32_t>(aimesh->mNumVertices);
-                const uint32_t num_faces    = static_cast<uint32_t>(aimesh->mNumFaces);
-
-                SceneGeometry model;
-                model.m_vbuf_offset  = vertex_buffer_offset;
-                model.m_ibuf_offset  = index_buffer_offset;
-                model.m_num_indices  = num_faces * 3;
-                model.m_num_vertices = num_vertices;
-                model.m_is_updatable = true;
-                model.m_material_id  = material_offset + aimesh->mMaterialIndex;
-                m_geometries.push_back(model);
-
-                vertex_buffer_offset += aimesh->mNumVertices;
-                index_buffer_offset += aimesh->mNumFaces * 3;
-                vertex_buffer_offset = round_up(vertex_buffer_offset, 32);
-                index_buffer_offset  = round_up(index_buffer_offset, 32);
-            }
 
             m_num_vertices += total_num_vertices;
             m_num_indices += total_num_indices;

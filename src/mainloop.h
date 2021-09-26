@@ -235,18 +235,10 @@ struct MainLoop
     {
         size_t i_flight = 0;
 
-        /*
-        StandardEmissive standard_emissive;
-        standard_emissive.m_emissive_tex_id = white_tex_id;
-        standard_emissive.m_emissive_scale  = 100.0f;
-        int emissive_id                     = m_asset_pool.add_standard_emissive(standard_emissive);
-        */
-
         urange sponza_geometries =
             m_scene_resource.add_geometries("scenes/sponza/sponza.obj", m_staging_buffer_manager);
-        std::array<urange, 1> ranges;
-        ranges[0]                 = sponza_geometries;
-        size_t sponza_instance_id = m_scene_resource.add_base_instance(ranges);
+        std::array<urange, 1> ranges = { sponza_geometries };
+        size_t sponza_instance_id    = m_scene_resource.add_base_instance(ranges);
         // m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
 
         SceneDesc scene_desc;
