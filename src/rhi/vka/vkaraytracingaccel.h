@@ -63,16 +63,16 @@ struct RayTracingBlas
     RayTracingBlas() {}
 
     RayTracingBlas(const Device * device,
-                   const RayTracingGeometryDesc * geometry_descs,
-                   const size_t num_geometries,
+                   const std::span<const RayTracingGeometryDesc> & geometry_descs,
+                   const RayTracingBuildHint hint,
                    StagingBufferManager * buf_manager, // TODO:: get rid of staging buffer manager
                    const std::string & name = "")
     {
-        std::vector<vk::AccelerationStructureGeometryDataKHR> tri_geometry_datas(num_geometries);
-        std::vector<vk::AccelerationStructureGeometryKHR> geometries(num_geometries);
-        std::vector<vk::AccelerationStructureBuildRangeInfoKHR> build_ranges(num_geometries);
-        std::vector<uint32_t> max_primitive_counts(num_geometries);
-        for (size_t i = 0; i < num_geometries; i++)
+        std::vector<vk::AccelerationStructureGeometryDataKHR> tri_geometry_datas(geometry_descs.size());
+        std::vector<vk::AccelerationStructureGeometryKHR> geometries(geometry_descs.size());
+        std::vector<vk::AccelerationStructureBuildRangeInfoKHR> build_ranges(geometry_descs.size());
+        std::vector<uint32_t> max_primitive_counts(geometry_descs.size());
+        for (size_t i = 0; i < geometry_descs.size(); i++)
         {
             auto & geometry_data = tri_geometry_datas[i];
             geometry_data.setTriangles(geometry_descs[i].m_geometry_trimesh_desc);
@@ -86,9 +86,11 @@ struct RayTracingBlas
             max_primitive_counts[i] = geometry_descs[i].m_build_range.primitiveCount;
         }
 
+        vk::BuildAccelerationStructureFlagsKHR build_flags(static_cast<VkBuildAccelerationStructureFlagBitsKHR>(hint));
+
         vk::AccelerationStructureBuildGeometryInfoKHR build_info;
         build_info.setMode(vk::BuildAccelerationStructureModeKHR::eBuild);
-        build_info.setFlags(vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace);
+        build_info.setFlags(build_flags);
         build_info.setPGeometries(geometries.data());
         build_info.setGeometryCount(static_cast<uint32_t>(geometries.size()));
         build_info.setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
@@ -142,11 +144,14 @@ struct RayTracingInstance
 
     RayTracingInstance() {}
 
-    RayTracingInstance(const RayTracingBlas & blas, const uint32_t hit_group_index, const uint32_t instance_id)
+    RayTracingInstance(const RayTracingBlas & blas, const float4x4 transform, const uint32_t hit_group_index, const uint32_t instance_id)
     {
-        m_vk_instance.transform.matrix[0][0] = 1.0f;
-        m_vk_instance.transform.matrix[1][1] = 1.0f;
-        m_vk_instance.transform.matrix[2][2] = 1.0f;
+        // create an instance desc for the bottom-level acceleration structure.
+        for (uint8_t r = 0; r < 3; r++)
+            for (uint8_t c = 0; c < 4; c++)
+            {
+                m_vk_instance.transform.matrix[r][c] = transform[c][r];
+            }
         m_vk_instance.setAccelerationStructureReference(blas.m_accel_buffer.m_device_address);
         m_vk_instance.setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
         m_vk_instance.setMask(1);
@@ -164,14 +169,14 @@ struct RayTracingTlas
     RayTracingTlas() {}
 
     RayTracingTlas(const Device * device,
-                   const std::span<RayTracingInstance *> & instance,
+                   const std::span<const RayTracingInstance> & instance,
                    StagingBufferManager * buf_manager,
                    const std::string & name = "")
     {
         std::vector<vk::AccelerationStructureInstanceKHR> instances(instance.size());
         for (size_t i_instance = 0; i_instance < instance.size(); i_instance++)
         {
-            instances[i_instance] = instance[i_instance]->m_vk_instance;
+            instances[i_instance] = instance[i_instance].m_vk_instance;
         }
 
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";

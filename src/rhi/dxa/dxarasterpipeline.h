@@ -30,7 +30,7 @@ struct RasterPipeline
     RasterPipeline() {}
 
     RasterPipeline(const Device * device,
-                   const std::span<const ShaderSrc> & shader_srcs,
+                   const std::span<const DXA_NAME::ShaderSrc> & shader_srcs,
                    const FramebufferBindings & framebuffer_bindings,
                    const std::string & name = "")
     : RasterPipeline(device, shader_srcs, nullptr, framebuffer_bindings, name)
@@ -38,7 +38,7 @@ struct RasterPipeline
     }
 
     RasterPipeline(const Device * device,
-                   const std::span<const ShaderSrc> & shader_srcs,
+                   const std::span<const DXA_NAME::ShaderSrc> & shader_srcs,
                    const ComPtr<ID3D12RootSignature> & root_signature,
                    const FramebufferBindings & framebuffer_bindings,
                    const std::string & name)
@@ -51,7 +51,7 @@ struct RasterPipeline
 
     void
     init(const Device * device,
-         const std::span<const ShaderSrc> & shader_srcs,
+         const std::span<const DXA_NAME::ShaderSrc> & shader_srcs,
          const FramebufferBindings & framebuffer_binding,
          const std::string & name)
     {

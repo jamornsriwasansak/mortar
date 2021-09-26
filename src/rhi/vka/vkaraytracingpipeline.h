@@ -9,19 +9,19 @@
 
 namespace VKA_NAME
 {
+struct RayTracingHitGroup
+{
+    std::optional<size_t> m_closest_hit_id;
+    std::optional<size_t> m_any_hit_id;
+    std::optional<size_t> m_intersect_id;
+};
+
 struct RayTracingPipelineConfig
 {
-    struct HitGroup
-    {
-        std::optional<size_t> m_closest_hit_id;
-        std::optional<size_t> m_any_hit_id;
-        std::optional<size_t> m_intersect_id;
-    };
-
     RayTracingPipelineConfig() {}
 
     std::vector<ShaderSrc> m_shader_srcs;
-    std::vector<HitGroup> m_hit_groups;
+    std::vector<RayTracingHitGroup> m_hit_groups;
     // std::vector<vk::PipelineShaderStageCreateInfo>      m_shader_stages;
     // std::vector<vk::RayTracingShaderGroupCreateInfoKHR> m_shader_groups;
 
@@ -33,12 +33,8 @@ struct RayTracingPipelineConfig
     }
 
     size_t
-    add_hit_group(const size_t closest_hit_id, const size_t any_hit_id = -1, const size_t intersect_id = -1)
+    add_hit_group(const RayTracingHitGroup & hit_group)
     {
-        HitGroup hit_group;
-        hit_group.m_closest_hit_id = closest_hit_id;
-        hit_group.m_any_hit_id     = any_hit_id;
-        hit_group.m_intersect_id   = intersect_id;
         m_hit_groups.push_back(hit_group);
         return m_hit_groups.size() - 1;
     }

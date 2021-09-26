@@ -35,6 +35,12 @@ struct FsVector
         return m_array[index];
     }
 
+    void *
+    data() const
+    {
+        return m_array.data();
+    }
+
     size_t
     length() const
     {

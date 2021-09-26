@@ -315,6 +315,7 @@ private:
         device_vulkan12_features.setRuntimeDescriptorArray(VK_TRUE);
         device_vulkan12_features.setPNext(&feature_raytracing_pipeline);
         device_vulkan12_features.setUniformAndStorageBuffer8BitAccess(VK_TRUE);
+        device_vulkan12_features.setShaderFloat16(VK_TRUE);
 
         vk::PhysicalDeviceFeatures2 device_features2 = {};
         device_features2.setFeatures(device_features);

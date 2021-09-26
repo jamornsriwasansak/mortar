@@ -41,7 +41,7 @@
 
 namespace DXA_NAME
 {
-using ShaderSrc = TShaderSrc<DXA_NAME::ShaderStageEnum>;
+using ShaderSrc = Rhi::TShaderSrc<DXA_NAME::ShaderStageEnum>;
 
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;

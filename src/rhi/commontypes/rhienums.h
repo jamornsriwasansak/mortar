@@ -262,20 +262,6 @@ enum class FormatEnum : uint8_t
     R32G32B32A32_SFloat = DXGI_FORMAT_R32G32B32A32_FLOAT
 };
 
-constexpr inline size_t
-GetSizeInBytes(const FormatEnum & format_enum)
-{
-    switch (format_enum)
-    {
-    case FormatEnum::R32G32B32_SFloat:
-        return sizeof(float) * 3;
-    case FormatEnum::R32G32B32A32_SFloat:
-        return sizeof(float) * 4;
-    default:
-        assert(false); // unhandled case
-        return 0;
-    }
-}
 } // namespace DXA_NAME
 
 namespace VKA_NAME
@@ -292,8 +278,11 @@ enum class FormatEnum : uint32_t
     R32G32B32_SFloat    = VK_FORMAT_R32G32B32_SFLOAT,
     R32G32B32A32_SFloat = VK_FORMAT_R32G32B32A32_SFLOAT
 };
+} // namespace VKA_NAME
 
-inline size_t
+namespace Rhi
+{
+constexpr inline size_t
 GetSizeInBytes(const FormatEnum & format_enum)
 {
     switch (format_enum)
@@ -307,7 +296,7 @@ GetSizeInBytes(const FormatEnum & format_enum)
         return 0;
     }
 }
-} // namespace VKA_NAME
+} // namespace Rhi
 
 namespace DXA_NAME
 {
@@ -337,6 +326,21 @@ enum class IndexType : uint8_t
     Uint32 = DXGI_FORMAT_R32_UINT
 };
 
+} // namespace DXA_NAME
+
+namespace VKA_NAME
+{
+enum class IndexType : uint32_t
+{
+    None   = VK_INDEX_TYPE_NONE_KHR,
+    Uint8  = VK_INDEX_TYPE_UINT8_EXT,
+    Uint16 = VK_INDEX_TYPE_UINT16,
+    Uint32 = VK_INDEX_TYPE_UINT32
+};
+} // namespace VKA_NAME
+
+namespace Rhi
+{
 constexpr inline size_t
 GetSizeInBytes(const IndexType it)
 {
@@ -352,35 +356,7 @@ GetSizeInBytes(const IndexType it)
         return 0;
     }
 }
-
-} // namespace DXA_NAME
-
-namespace VKA_NAME
-{
-enum class IndexType : uint32_t
-{
-    None   = VK_INDEX_TYPE_NONE_KHR,
-    Uint8  = VK_INDEX_TYPE_UINT8_EXT,
-    Uint16 = VK_INDEX_TYPE_UINT16,
-    Uint32 = VK_INDEX_TYPE_UINT32
-};
-
-inline size_t
-GetSizeInBytes(const IndexType it)
-{
-    switch (it)
-    {
-    case IndexType::Uint8:
-        return sizeof(uint8_t);
-    case IndexType::Uint16:
-        return sizeof(uint16_t);
-    case IndexType::Uint32:
-        return sizeof(uint32_t);
-    default:
-        return 0;
-    }
-}
-} // namespace VKA_NAME
+} // namespace Rhi
 
 /*
  * Ray Tracing Accel

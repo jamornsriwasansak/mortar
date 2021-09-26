@@ -27,9 +27,8 @@ struct SpirvReflector
 {
     SpirvReflector() {}
 
-    template <typename ShaderStageEnum>
     VkReflectionResult
-    reflect(const std::vector<Rhi::TShaderSrc<ShaderStageEnum>> & shader_srcs,
+    reflect(const std::span<const VKA_NAME::ShaderSrc> & shader_srcs,
             const std::vector<std::vector<uint32_t>> & spirv_codes)
     {
         assert(shader_srcs.size() == spirv_codes.size());
