@@ -264,6 +264,7 @@ struct MainLoop
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");
 
+        m_window->m_stop_watch.reset();
         while (!m_window->should_close_window())
         {
             loop(i_flight);
