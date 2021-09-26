@@ -35,7 +35,7 @@ struct FsVector
         return m_array[index];
     }
 
-    void *
+    const Type *
     data() const
     {
         return m_array.data();

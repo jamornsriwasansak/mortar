@@ -9,5 +9,5 @@ struct EngineSetting
     static const uint32_t MaxNumIndices                  = 400000;
     static const uint32_t MaxNumGeometryOffsetTableEntry = 100;
     static const uint32_t MaxNumGeometryTableEntry       = 100;
-    static const uint32_t MaxNumBaseInstances                = 100;
+    static const uint32_t MaxNumBaseInstances            = 100;
 };

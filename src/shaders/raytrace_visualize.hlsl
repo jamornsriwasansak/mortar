@@ -19,13 +19,7 @@ struct Attributes
 ConstantBuffer<RaytraceVisualizeCbParams> u_cbparams : register(b0, space0);
 RWTexture2D<float4> u_output : register(u0, space0);
 
-struct StandardMaterialsContainer
-{
-    StandardMaterial m_materials[100];
-};
-
 SamplerState u_sampler : register(s0, space1);
-ConstantBuffer<StandardMaterialsContainer> u_smc : register(b0, space1);
 /*
 StructuredBuffer<uint16_t>                 u_index_buffer     REGISTER(t1, space1);
 StructuredBuffer<float3>                   u_vertex_buffer    REGISTER(t2, space1);
@@ -37,7 +31,8 @@ StructuredBuffer<GeometryTableEntry> u_geometry_table : register(t2, space1);
 StructuredBuffer<uint16_t> u_indices : register(t3, space1);
 StructuredBuffer<float3> u_positions : register(t4, space1);
 StructuredBuffer<CompactVertex> u_compact_vertices : register(t5, space1);
-Texture2D<float4> u_textures[100] : register(t6, space1);
+StructuredBuffer<StandardMaterial> u_materials : register(t6, space1);
+Texture2D<float4> u_textures[100] : register(t7, space1);
 
 [shader("raygeneration")] void
 RayGen()
@@ -70,8 +65,7 @@ RayGen()
     u_output[pixel] = float4(payload.m_color, 1.0f);
 }
 
-[shader("closesthit")]
-void ClosestHit(inout Payload payload, const Attributes attrib)
+    [shader("closesthit")] void ClosestHit(inout Payload payload, const Attributes attrib)
 {
     const float2 barycentric = attrib.uv;
 
@@ -93,13 +87,13 @@ void ClosestHit(inout Payload payload, const Attributes attrib)
     const float3 snormal1   = cv1.get_snormal();
     const float3 snormal2   = cv2.get_snormal();
     const float3 snormal    = normalize(snormal0 * (1.0f - barycentric.x - barycentric.y) +
-                            snormal1 * barycentric.x + snormal2 * barycentric.y);
+                                     snormal1 * barycentric.x + snormal2 * barycentric.y);
     const float2 texcoord0  = cv0.m_texcoord;
     const float2 texcoord1  = cv1.m_texcoord;
     const float2 texcoord2  = cv2.m_texcoord;
     const float2 texcoord   = texcoord0 * (1.0f - barycentric.x - barycentric.y) +
                             texcoord1 * barycentric.x + texcoord2 * barycentric.y;
-    const StandardMaterial mat = u_smc.m_materials[geometry_entry.m_material_id];
+    const StandardMaterial mat = u_materials[geometry_entry.m_material_id];
 
     const RaytraceVisualizeModeEnum mode = u_cbparams.m_mode;
 

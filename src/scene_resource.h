@@ -69,7 +69,7 @@ struct SceneResource
 
     // device & host textures and materials
     Std::FsVector<Rhi::Texture, EngineSetting::MaxNumBindlessTextures> m_d_textures;
-    Rhi::Buffer m_d_materials;
+    Rhi::Buffer m_d_materials = {};
     Std::FsVector<StandardMaterial, EngineSetting::MaxNumStandardMaterials> m_h_materials;
 
     // device & host lookup table for geometry & instance
@@ -120,8 +120,8 @@ struct SceneResource
 
         // materials
         m_d_materials = Rhi::Buffer(m_device,
-                                    Rhi::BufferUsageEnum::ConstantBuffer,
-                                    Rhi::MemoryUsageEnum::CpuOnly,
+                                    Rhi::BufferUsageEnum::TransferDst,
+                                    Rhi::MemoryUsageEnum::GpuOnly,
                                     sizeof(StandardMaterial) * EngineSetting::MaxNumStandardMaterials,
                                     "scene_m_d_materials");
 
@@ -129,12 +129,12 @@ struct SceneResource
         m_d_base_instance_table =
             Rhi::Buffer(m_device,
                         Rhi::BufferUsageEnum::TransferDst,
-                        Rhi::MemoryUsageEnum::CpuOnly,
+                        Rhi::MemoryUsageEnum::GpuOnly,
                         sizeof(BaseInstanceTableEntry) * EngineSetting::MaxNumGeometryOffsetTableEntry,
                         "scene_m_d_geometry_table_offset");
         m_d_geometry_table = Rhi::Buffer(m_device,
                                          Rhi::BufferUsageEnum::TransferDst,
-                                         Rhi::MemoryUsageEnum::CpuOnly,
+                                         Rhi::MemoryUsageEnum::GpuOnly,
                                          sizeof(GeometryTableEntry) * EngineSetting::MaxNumGeometryTableEntry,
                                          "scene_m_d_geometry_table");
     }
@@ -515,17 +515,29 @@ struct SceneResource
             staging_buffer_manager.submit_all_pending_upload();
         }
 
+        Rhi::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
+        cmd_list.begin();
+
         // build material buffer
+        Rhi::Buffer staging_buffer(m_device,
+                                   Rhi::BufferUsageEnum::TransferSrc,
+                                   Rhi::MemoryUsageEnum::CpuOnly,
+                                   m_h_materials.length() * sizeof(m_h_materials[0]));
         {
-            StandardMaterial * smat = static_cast<StandardMaterial *>(m_d_materials.map());
-            for (size_t i = 0; i < m_h_materials.max_size(); i++)
-            {
-                smat[i] = m_h_materials[i];
-            }
-            m_d_materials.unmap();
+            std::memcpy(staging_buffer.map(),
+                        m_h_materials.data(),
+                        m_h_materials.length() * sizeof(m_h_materials[0]));
+            staging_buffer.unmap();
+            cmd_list.copy_buffer_region(m_d_materials,
+                                        0,
+                                        staging_buffer,
+                                        0,
+                                        m_h_materials.length() * sizeof(m_h_materials[0]));
         }
 
         // build mesh table
+        Rhi::Buffer staging_buffer2 = {};
+        Rhi::Buffer staging_buffer3 = {};
         {
             std::vector<GeometryTableEntry> geometry_table;
             std::vector<BaseInstanceTableEntry> base_instance_table;
@@ -549,16 +561,41 @@ struct SceneResource
                 }
             }
 
-            std::memcpy(m_d_geometry_table.map(),
+            staging_buffer2 = Rhi::Buffer(m_device,
+                                          Rhi::BufferUsageEnum::TransferSrc,
+                                          Rhi::MemoryUsageEnum::CpuOnly,
+                                          sizeof(GeometryTableEntry) * geometry_table.size());
+            staging_buffer3 = Rhi::Buffer(m_device,
+                                          Rhi::BufferUsageEnum::TransferSrc,
+                                          Rhi::MemoryUsageEnum::CpuOnly,
+                                          sizeof(BaseInstanceTableEntry) * base_instance_table.size());
+            std::memcpy(staging_buffer2.map(),
                         geometry_table.data(),
-                        sizeof(GeometryTableEntry) * geometry_table.size());
-            std::memcpy(m_d_base_instance_table.map(),
+                        geometry_table.size() * sizeof(geometry_table[0]));
+            std::memcpy(staging_buffer3.map(),
                         base_instance_table.data(),
-                        sizeof(BaseInstanceTableEntry) * base_instance_table.size());
+                        base_instance_table.size() * sizeof(base_instance_table[0]));
+            staging_buffer2.unmap();
+            staging_buffer3.unmap();
+            cmd_list.copy_buffer_region(m_d_geometry_table,
+                                        0,
+                                        staging_buffer2,
+                                        0,
+                                        sizeof(GeometryTableEntry) * geometry_table.size());
+            cmd_list.copy_buffer_region(m_d_base_instance_table,
+                                        0,
+                                        staging_buffer3,
+                                        0,
+                                        sizeof(BaseInstanceTableEntry) * base_instance_table.size());
             m_num_base_instance_table_entries = base_instance_table.size();
             m_num_geometry_table_entries      = geometry_table.size();
-            m_d_base_instance_table.unmap();
-            m_d_geometry_table.unmap();
         }
+
+        cmd_list.end();
+
+        Rhi::Fence fence(m_device);
+        fence.reset();
+        cmd_list.submit(&fence);
+        fence.wait();
     }
 };

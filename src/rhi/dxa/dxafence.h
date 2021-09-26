@@ -23,7 +23,7 @@ struct Fence
 
     Fence() {}
 
-    Fence(Device * device, const std::string & name = "")
+    Fence(const Device * device, const std::string & name = "")
     {
         m_expected_fence_value = 1;
 

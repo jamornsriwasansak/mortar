@@ -126,11 +126,10 @@ struct RaytraceVisualizePass
             Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
         for (size_t i = 0; i < render_params.m_scene_resource->m_d_textures.length(); i++)
         {
-            descriptor_sets[1].set_t_texture(6, render_params.m_scene_resource->m_d_textures[i], i);
+            descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[i], i);
         }
         descriptor_sets[1]
             .set_s_sampler(0, m_common_sampler)
-            .set_b_constant_buffer(0, render_params.m_scene_resource->m_d_materials)
             .set_t_ray_tracing_accel(0, render_params.m_scene_resource->m_rt_tlas)
             .set_t_structured_buffer(1,
                                      render_params.m_scene_resource->m_d_base_instance_table,
@@ -152,6 +151,10 @@ struct RaytraceVisualizePass
                                      render_params.m_scene_resource->m_d_vbuf_packed,
                                      sizeof(CompactVertex),
                                      render_params.m_scene_resource->m_num_vertices)
+            .set_t_structured_buffer(6,
+                                     render_params.m_scene_resource->m_d_materials,
+                                     sizeof(StandardMaterial),
+                                     EngineSetting::MaxNumStandardMaterials)
             .update();
 
         cmd_list.bind_raytrace_pipeline(m_rt_pipeline);
