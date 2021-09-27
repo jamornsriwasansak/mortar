@@ -3,7 +3,7 @@
 #define VKA_NAME RhiVka
 #define DXA_NAME RhiDxa
 
-#if 0
+#if 1
 #undef VKA_NAME
 #define VKA_NAME Rhi
 #else

@@ -16,10 +16,10 @@ rgb_from_hsv(const half3 hsv)
 }
 
 half3
-color_from_uint(const uint u)
+color_from_uint(const uint32_t u)
 {
     // hash into a random uint
-    uint v = u;
+    uint32_t v = u;
     v ^= v >> 17;
     v *= 0xed5ad4bbU;
     v ^= v >> 11;

@@ -7,7 +7,7 @@
 
 struct Payload
 {
-    half3 m_color;
+    float3 m_color;
     bool m_miss;
 };
 
@@ -50,7 +50,7 @@ RayGen()
 
     Payload payload;
     payload.m_miss  = true;
-    payload.m_color = half3(0.0h, 0.0h, 0.0h);
+    payload.m_color = float3(0.0f, 0.0f, 0.0f);
 
     // Setup the ray
     RayDesc ray;
@@ -62,10 +62,11 @@ RayGen()
     // Trace the ray
     TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
 
-    u_output[pixel] = float4(payload.m_color, 1.0f);
+    u_output[pixel] = float4(payload.m_color.r, payload.m_color.g, payload.m_color.b, 1.0f);
 }
 
-    [shader("closesthit")] void ClosestHit(inout Payload payload, const Attributes attrib)
+[shader("closesthit")] void
+ClosestHit(inout Payload payload, const Attributes attrib)
 {
     const float2 barycentric = attrib.uv;
 
@@ -139,7 +140,7 @@ RayGen()
         float depth = length(WorldRayDirection()) * RayTCurrent();
         // tonemap depth and apply contrast
         depth           = depth / (depth + 1.0f);
-        depth           = depth * depth * depth;
+        depth           = pow(depth, 20.0f);
         payload.m_color = half3(depth, depth, depth);
     }
     else if (mode == RaytraceVisualizeModeEnum::ModeDiffuseReflectance)

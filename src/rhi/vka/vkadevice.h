@@ -317,6 +317,9 @@ private:
         device_vulkan12_features.setUniformAndStorageBuffer8BitAccess(VK_TRUE);
         device_vulkan12_features.setShaderFloat16(VK_TRUE);
 
+        // allow Uniform and Storage buffer to not to be restricted by std140 and std430 (aligned by 32)
+        device_vulkan12_features.setScalarBlockLayout(VK_TRUE);
+
         vk::PhysicalDeviceFeatures2 device_features2 = {};
         device_features2.setFeatures(device_features);
         device_features2.setPNext(&device_vulkan12_features);

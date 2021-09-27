@@ -21,7 +21,7 @@ struct RaytraceVisualizePass
         // constant params for rtvisualize
         m_cb_params = Rhi::Buffer(&device,
                                   Rhi::BufferUsageEnum::ConstantBuffer,
-                                  Rhi::MemoryUsageEnum::CpuOnly,
+                                  Rhi::MemoryUsageEnum::CpuToGpu,
                                   sizeof(RaytraceVisualizeCbParams));
 
         // sampler
@@ -127,6 +127,10 @@ struct RaytraceVisualizePass
         for (size_t i = 0; i < render_params.m_scene_resource->m_d_textures.length(); i++)
         {
             descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[i], i);
+        }
+        for (size_t i = render_params.m_scene_resource->m_d_textures.length(); i < 100; i++)
+        {
+            descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[0], i);
         }
         descriptor_sets[1]
             .set_s_sampler(0, m_common_sampler)

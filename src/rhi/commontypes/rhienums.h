@@ -68,6 +68,13 @@ HasFlag(const EnumType & value, const EnumType & must_have_flag)
     return (value & must_have_flag) == must_have_flag;
 }
 
+template <typename EnumType>
+bool
+HasOnlyFlag(const EnumType & value, const EnumType & flag)
+{
+    return value == flag;
+}
+
 /*
  * Shader Stage Enum
  */

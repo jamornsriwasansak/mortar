@@ -99,28 +99,31 @@ struct SceneResource
 
     SceneResource(const Rhi::Device & device) : m_device(&device)
     {
-        m_transfer_cmd_pool = Rhi::CommandPool(&device, Rhi::CommandQueueType::Transfer);
+        m_transfer_cmd_pool = Rhi::CommandPool(&device, Rhi::CommandQueueType::Graphics);
 
         // index buffer vertex buffer
         m_d_vbuf_position = Rhi::Buffer(m_device,
-                                        Rhi::BufferUsageEnum::TransferDst,
+                                        Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
+                                            Rhi::BufferUsageEnum::VertexBuffer,
                                         Rhi::MemoryUsageEnum::GpuOnly,
                                         sizeof(float3) * EngineSetting::MaxNumVertices,
                                         "scene_m_d_vbuf_position");
         m_d_vbuf_packed   = Rhi::Buffer(m_device,
-                                      Rhi::BufferUsageEnum::TransferDst,
+                                      Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
+                                          Rhi::BufferUsageEnum::VertexBuffer,
                                       Rhi::MemoryUsageEnum::GpuOnly,
                                       sizeof(CompactVertex) * EngineSetting::MaxNumVertices,
                                       "scene_m_d_vbuf_packed");
         m_d_ibuf          = Rhi::Buffer(m_device,
-                               Rhi::BufferUsageEnum::TransferDst,
+                               Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
+                                   Rhi::BufferUsageEnum::IndexBuffer,
                                Rhi::MemoryUsageEnum::GpuOnly,
                                Rhi::GetSizeInBytes(m_ibuf_index_type) * EngineSetting::MaxNumIndices,
                                "scene_m_d_ibuf");
 
         // materials
         m_d_materials = Rhi::Buffer(m_device,
-                                    Rhi::BufferUsageEnum::TransferDst,
+                                    Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                                     Rhi::MemoryUsageEnum::GpuOnly,
                                     sizeof(StandardMaterial) * EngineSetting::MaxNumStandardMaterials,
                                     "scene_m_d_materials");
@@ -128,15 +131,16 @@ struct SceneResource
         // geometry table and geometry offset table
         m_d_base_instance_table =
             Rhi::Buffer(m_device,
-                        Rhi::BufferUsageEnum::TransferDst,
+                        Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                         Rhi::MemoryUsageEnum::GpuOnly,
                         sizeof(BaseInstanceTableEntry) * EngineSetting::MaxNumGeometryOffsetTableEntry,
-                        "scene_m_d_geometry_table_offset");
-        m_d_geometry_table = Rhi::Buffer(m_device,
-                                         Rhi::BufferUsageEnum::TransferDst,
-                                         Rhi::MemoryUsageEnum::GpuOnly,
-                                         sizeof(GeometryTableEntry) * EngineSetting::MaxNumGeometryTableEntry,
-                                         "scene_m_d_geometry_table");
+                        "scene_m_d_base_instance_table");
+        m_d_geometry_table =
+            Rhi::Buffer(m_device,
+                        Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
+                        Rhi::MemoryUsageEnum::GpuOnly,
+                        sizeof(GeometryTableEntry) * EngineSetting::MaxNumGeometryTableEntry,
+                        "scene_m_d_geometry_table");
     }
 
     urange
@@ -590,7 +594,6 @@ struct SceneResource
             m_num_base_instance_table_entries = base_instance_table.size();
             m_num_geometry_table_entries      = geometry_table.size();
         }
-
         cmd_list.end();
 
         Rhi::Fence fence(m_device);

@@ -130,6 +130,12 @@ struct HlslDxcCompiler
             arguments.push_back(L"-spirv");
             arguments.push_back(L"-fspv-target-env=vulkan1.2");
 
+            // force storage buffer and constant buffer to not use std140 and std430
+            // and simply use dx-like (VK_EXT_scalar_block_layout) standard instead
+            // this renders padding unnecessary.
+            // note: this requires vk::Device::setScalarBlockLayout(VK_TRUE)
+            arguments.push_back(L"-fvk-use-scalar-layout");
+
             // constant buffer - 0
             arguments.push_back(L"-fvk-b-shift");
             arguments.push_back(bshift.c_str());

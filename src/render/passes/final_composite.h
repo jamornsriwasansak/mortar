@@ -47,7 +47,7 @@ struct BeautyPass
 
         // raster
         cmd_list.bind_graphics_descriptor_set(beauty_desc_sets);
-        cmd_list.bind_vertex_buffer(params.m_scene_resource->m_d_materials, sizeof(CompactVertex));
+        cmd_list.bind_vertex_buffer(params.m_scene_resource->m_d_vbuf_position, sizeof(CompactVertex));
         cmd_list.bind_index_buffer(params.m_scene_resource->m_d_ibuf, Rhi::IndexType::Uint32);
         cmd_list.draw_instanced(3, 1, 0, 0);
 

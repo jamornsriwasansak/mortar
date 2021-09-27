@@ -24,6 +24,12 @@ struct Buffer
     : m_size_in_bytes(buffer_size), m_memory_usage(memory_usage), m_buffer_usage(buffer_usage)
     {
         D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
+        if (memory_usage == MemoryUsageEnum::GpuOnly)
+        {
+            flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        }
+        /*
+        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
         if (HasFlag(buffer_usage, BufferUsageEnum::StorageBuffer))
         {
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
@@ -34,6 +40,7 @@ struct Buffer
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
             assert(memory_usage == MemoryUsageEnum::GpuOnly);
         }
+        */
 
         // constant buffer needs 256 bytes alignment
         if ((buffer_usage & BufferUsageEnum::ConstantBuffer) == BufferUsageEnum::ConstantBuffer)
@@ -77,6 +84,13 @@ struct Buffer
 
         // setup state
         D3D12_RESOURCE_STATES states = static_cast<D3D12_RESOURCE_STATES>(buffer_usage);
+        /*
+        if (HasFlag(buffer_usage, BufferUsageEnum::StorageBuffer) &&
+            !HasOnlyFlag(buffer_usage, BufferUsageEnum::StorageBuffer))
+        {
+            states = states ^ D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        }
+        */
 
         // if is cpu (which uses upload heap), override
         if (memory_usage == MemoryUsageEnum::CpuOnly || memory_usage == MemoryUsageEnum::CpuToGpu)
