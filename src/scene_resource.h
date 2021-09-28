@@ -143,7 +143,8 @@ struct SceneResource
     add_geometries(const std::filesystem::path & path, Rhi::StagingBufferManager & staging_buffer_manager)
     {
         Assimp::Importer importer;
-        const aiScene * scene = importer.ReadFile(path.string(), aiProcessPreset_TargetRealtime_Fast);
+        const aiScene * scene =
+            importer.ReadFile(path.string(), aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals);
 
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
@@ -161,14 +162,20 @@ struct SceneResource
         }
 
         // upload vertices and indices
+        unsigned int total_num_vertices = 0;
+        unsigned int total_num_indices  = 0;
         {
-            unsigned int total_num_vertices = 0;
-            unsigned int total_num_indices  = 0;
             for (unsigned int i_mesh = 0; i_mesh < num_meshes; i_mesh++)
             {
                 const aiMesh * aimesh = scene->mMeshes[i_mesh];
                 total_num_vertices += aimesh->mNumVertices;
-                total_num_indices += aimesh->mNumFaces * 3;
+
+                for (unsigned int i_ai_face = 0; i_ai_face < aimesh->mNumFaces; i_ai_face++)
+                {
+                    const unsigned int num_ai_indices = aimesh->mFaces[i_ai_face].mNumIndices;
+                    const unsigned int num_indices    = (num_ai_indices - 2) * 3;
+                    total_num_indices += num_indices;
+                }
 
                 // round so the index is align by 32
                 total_num_vertices = round_up(total_num_vertices, 32);
@@ -219,30 +226,43 @@ struct SceneResource
                 }
 
                 // set faces
+                unsigned int next_index_buffer_offset = index_buffer_offset;
                 for (unsigned int i_face = 0; i_face < num_faces; i_face++)
                 {
-                    for (size_t i_vertex = 0; i_vertex < 3; i_vertex++)
+                    const uint16_t ai_index0 = aimesh->mFaces[i_face].mIndices[0];
+                    for (unsigned int i_fan = 0; i_fan < aimesh->mFaces[i_face].mNumIndices - 2; i_fan++)
                     {
-                        uint16_t & index = ib[index_buffer_offset + i_face * 3 + i_vertex];
-                        assert(aimesh->mFaces[i_face].mNumIndices == 3);
-                        index = static_cast<uint16_t>(aimesh->mFaces[i_face].mIndices[i_vertex]);
+                        // convert triangle fan -> triangles
+                        uint16_t & index0 = ib[next_index_buffer_offset + 0];
+                        uint16_t & index1 = ib[next_index_buffer_offset + 1];
+                        uint16_t & index2 = ib[next_index_buffer_offset + 2];
+
+                        const uint16_t ai_index1 = aimesh->mFaces[i_face].mIndices[i_fan + 1];
+                        const uint16_t ai_index2 = aimesh->mFaces[i_face].mIndices[i_fan + 2];
+
+                        index0 = ai_index0;
+                        index1 = ai_index1;
+                        index2 = ai_index2;
+
+                        next_index_buffer_offset += 3;
                     }
                 }
 
                 SceneGeometry model;
                 model.m_vbuf_offset  = vertex_buffer_offset;
                 model.m_ibuf_offset  = index_buffer_offset;
-                model.m_num_indices  = num_faces * 3;
+                model.m_num_indices  = next_index_buffer_offset - index_buffer_offset;
                 model.m_num_vertices = num_vertices;
                 model.m_is_updatable = true;
                 model.m_material_id  = material_offset + aimesh->mMaterialIndex;
                 m_geometries.push_back(model);
 
                 vertex_buffer_offset += aimesh->mNumVertices;
-                index_buffer_offset += aimesh->mNumFaces * 3;
                 vertex_buffer_offset = round_up(vertex_buffer_offset, 32);
+                index_buffer_offset  = next_index_buffer_offset;
                 index_buffer_offset  = round_up(index_buffer_offset, 32);
             }
+            assert(index_buffer_offset == total_num_indices);
 
             Rhi::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
 
