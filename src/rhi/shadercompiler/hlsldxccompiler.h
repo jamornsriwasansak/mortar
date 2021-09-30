@@ -91,6 +91,7 @@ struct HlslDxcCompiler
 
         // convert string of defines into string of wide strings
         std::vector<std::wstring> wdefines;
+        wdefines.reserve(defines.size());
         for (size_t i = 0; i < defines.size(); i++)
         {
             wdefines.emplace_back(defines[i].begin(), defines[i].end());
@@ -98,6 +99,7 @@ struct HlslDxcCompiler
 
         // plug wide strings into dxc
         std::vector<DxcDefine> dxc_defines;
+        dxc_defines.reserve(wdefines.size() + 2);
         for (size_t i = 0; i < wdefines.size(); i++)
         {
             DxcDefine dxcdefine;
@@ -106,9 +108,19 @@ struct HlslDxcCompiler
             dxc_defines.push_back(dxcdefine);
         }
 
+        // default dxc defines
+        DxcDefine dxc_preprocessor;
+        dxc_preprocessor.Name = L"__dxc";
+        dxc_preprocessor.Value = nullptr;
+        dxc_defines.push_back(dxc_preprocessor);
+
+        DxcDefine hlsl_preprocessor;
+        hlsl_preprocessor.Name = L"__hlsl";
+        hlsl_preprocessor.Value = nullptr;
+        dxc_defines.push_back(hlsl_preprocessor);
+
         // populate arguments (dxc command-line arguments)
         std::vector<LPCWSTR> arguments;
-
         arguments.push_back(DXC_ARG_DEBUG);
         arguments.push_back(DXC_ARG_ALL_RESOURCES_BOUND);
         arguments.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
