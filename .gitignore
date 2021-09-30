@@ -7,3 +7,4 @@ sandbox/build/
 sandbox/lib/
 *.ilk
 *.pdb
+sandbox/tmp/
