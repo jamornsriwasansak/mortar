@@ -363,6 +363,42 @@ GetSizeInBytes(const IndexType it)
         return 0;
     }
 }
+
+template<typename Index>
+constexpr inline IndexType
+GetIndexType()
+{
+    if constexpr (std::is_same<Index, uint8_t>::value)
+    {
+        return IndexType::Uint8;
+    }
+    else if constexpr (std::is_same<Index, uint16_t>::value)
+    {
+        return IndexType::Uint16;
+    }
+    else if constexpr (std::is_same<Index, uint32_t>::value)
+    {
+        return IndexType::Uint32;
+    }
+    else
+    {
+        static_assert(false, "unknown index type");
+    }
+}
+
+template<typename Format>
+constexpr inline FormatEnum
+GetVertexType()
+{
+    if constexpr (std::is_same<Format, float3>::value)
+    {
+        return FormatEnum::R32G32B32_SFloat;
+    }
+    else
+    {
+        static_assert(false, "unknown index type");
+    }
+}
 } // namespace Rhi
 
 /*

@@ -57,8 +57,8 @@ struct SceneResource
     // command pool
     Rhi::CommandPool m_transfer_cmd_pool;
 
-    static constexpr Rhi::IndexType m_ibuf_index_type     = Rhi::IndexType::Uint16;
-    static constexpr Rhi::FormatEnum m_vbuf_position_type = Rhi::FormatEnum::R32G32B32_SFloat;
+    static constexpr Rhi::IndexType m_ibuf_index_type     = Rhi::GetIndexType<uint16_t>();
+    static constexpr Rhi::FormatEnum m_vbuf_position_type = Rhi::GetVertexType<float3>();
 
     // device position, packed and index information
     Rhi::Buffer m_d_vbuf_position = {};
@@ -147,8 +147,7 @@ struct SceneResource
     add_geometries(const std::filesystem::path & path, Rhi::StagingBufferManager & staging_buffer_manager)
     {
         Assimp::Importer importer;
-        const aiScene * scene =
-            importer.ReadFile(path.string(), aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals);
+        const aiScene * scene = importer.ReadFile(path.string(), aiProcess_GenNormals);
 
         auto to_float3 = [&](const aiVector3D & vec3) { return float3(vec3.x, vec3.y, vec3.z); };
         auto to_float2 = [&](const aiVector2D & vec2) { return float2(vec2.x, vec2.y); };
