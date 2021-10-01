@@ -45,13 +45,6 @@ struct SceneDesc
 
 struct SceneResource
 {
-    enum class LoadStandardParamEnum
-    {
-        DiffuseReflectance,
-        SpecularReflectance,
-        SpecularRoughness
-    };
-
     const Rhi::Device * m_device = nullptr;
 
     // command pool
@@ -339,16 +332,34 @@ struct SceneResource
 
     StandardMaterial
     add_standard_material(const std::filesystem::path & path,
-                          const aiMaterial & material,
+                          const aiMaterial & ai_material,
                           Rhi::StagingBufferManager & staging_buffer_manager)
     {
         StandardMaterial standard_material;
-        standard_material.m_diffuse_tex_id =
-            add_texture(path, material, LoadStandardParamEnum::DiffuseReflectance, staging_buffer_manager);
-        standard_material.m_specular_tex_id =
-            add_texture(path, material, LoadStandardParamEnum::SpecularReflectance, staging_buffer_manager);
-        standard_material.m_roughness_tex_id =
-            add_texture(path, material, LoadStandardParamEnum::SpecularRoughness, staging_buffer_manager);
+        set_material(&standard_material.m_diffuse_tex_id,
+                     &standard_material,
+                     path,
+                     ai_material,
+                     aiTextureType::aiTextureType_DIFFUSE,
+                     AI_MATKEY_COLOR_DIFFUSE,
+                     4,
+                     staging_buffer_manager);
+        set_material(&standard_material.m_specular_tex_id,
+                     &standard_material,
+                     path,
+                     ai_material,
+                     aiTextureType::aiTextureType_SPECULAR,
+                     AI_MATKEY_COLOR_SPECULAR,
+                     4,
+                     staging_buffer_manager);
+        set_material(&standard_material.m_roughness_tex_id,
+                     &standard_material,
+                     path,
+                     ai_material,
+                     aiTextureType::aiTextureType_SHININESS,
+                     AI_MATKEY_SHININESS,
+                     1,
+                     staging_buffer_manager);
         return standard_material;
     }
 
@@ -373,6 +384,40 @@ struct SceneResource
         // emplace back
         m_d_textures.emplace_back(std::move(texture));
         return m_d_textures.length() - 1;
+    }
+
+    void
+    set_material(uint32_t * blob,
+                 StandardMaterial * material,
+                 const std::filesystem::path & path,
+                 const aiMaterial & ai_material,
+                 const aiTextureType ai_tex_type,
+                 const char * ai_mat_key_0,
+                 int ai_mat_key_1,
+                 int ai_mat_key_2,
+                 const int num_desired_channels,
+                 Rhi::StagingBufferManager & staging_buffer_manager)
+    {
+        aiString tex_name;
+        aiColor4D color;
+        if (ai_material.GetTexture(ai_tex_type, 0, &tex_name) == aiReturn_SUCCESS)
+        {
+            const std::filesystem::path tex_path = path.parent_path() / std::string(tex_name.C_Str());
+            *blob = add_texture(tex_path, num_desired_channels, staging_buffer_manager);
+            assert((*blob & (1 << 24)) == 0);
+        }
+        else if (aiGetMaterialColor(&ai_material, ai_mat_key_0, ai_mat_key_1, ai_mat_key_2, &color) == aiReturn_SUCCESS)
+        {
+            if (num_desired_channels == 1)
+            {
+                *blob = material->encode_r(color.r);
+            }
+            else if (num_desired_channels == 4 || num_desired_channels == 3 || num_desired_channels == 2)
+            {
+                *blob = material->encode_rgb(float3(color.r, color.g, color.b));
+            }
+            assert((*blob & (1 << 24)) != 0);
+        }
     }
 
     size_t
@@ -406,64 +451,6 @@ struct SceneResource
         m_d_textures.emplace_back(std::move(texture));
         return m_d_textures.length() - 1;
     }
-
-    size_t
-    add_texture(const std::filesystem::path & path,
-                const aiMaterial & material,
-                const LoadStandardParamEnum standard_param,
-                Rhi::StagingBufferManager & staging_buffer_manager)
-    {
-        aiTextureType ai_tex_type = aiTextureType::aiTextureType_NONE;
-        const char * ai_mat_key   = nullptr;
-        int num_desired_channel   = 0;
-        if (standard_param == LoadStandardParamEnum::DiffuseReflectance)
-        {
-            ai_tex_type         = aiTextureType::aiTextureType_DIFFUSE;
-            ai_mat_key          = AI_MATKEY_COLOR_DIFFUSE;
-            num_desired_channel = 4;
-        }
-        else if (standard_param == LoadStandardParamEnum::SpecularReflectance)
-        {
-            ai_tex_type         = aiTextureType::aiTextureType_SPECULAR;
-            ai_mat_key          = AI_MATKEY_COLOR_SPECULAR;
-            num_desired_channel = 4;
-        }
-        else if (standard_param == LoadStandardParamEnum::SpecularRoughness)
-        {
-            ai_tex_type         = aiTextureType::aiTextureType_SHININESS;
-            ai_mat_key          = AI_MATKEY_COLOR_DIFFUSE;
-            num_desired_channel = 1;
-        }
-
-        aiString tex_name;
-        aiColor4D color;
-        if (material.GetTexture(ai_tex_type, 0, &tex_name) == aiReturn_SUCCESS)
-        {
-            const std::filesystem::path tex_path = path.parent_path() / std::string(tex_name.C_Str());
-            return add_texture(tex_path, num_desired_channel, staging_buffer_manager);
-        }
-        else if (aiGetMaterialColor(&material, ai_mat_key, 0, 0, &color) == aiReturn_SUCCESS)
-        {
-            if (num_desired_channel == 1)
-            {
-                const uint8_t r = static_cast<uint8_t>(color.r * 256);
-                return add_texture(std::array<uint8_t, 1>{ r }, staging_buffer_manager);
-            }
-            else if (num_desired_channel == 4)
-            {
-                const uint8_t r = static_cast<uint8_t>(color.r * 256);
-                const uint8_t g = static_cast<uint8_t>(color.g * 256);
-                const uint8_t b = static_cast<uint8_t>(color.b * 256);
-                const uint8_t a = static_cast<uint8_t>(color.a * 256);
-                return add_texture(std::array<uint8_t, 4>{ r, g, b, a }, staging_buffer_manager);
-            }
-        }
-
-        // should not reach this point
-        assert(false);
-
-        return static_cast<size_t>(0);
-    };
 
     void
     commit(const SceneDesc & scene_desc, Rhi::StagingBufferManager & staging_buffer_manager)

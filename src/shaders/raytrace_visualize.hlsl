@@ -4,6 +4,7 @@
 #include "shared/camera_params.h"
 #include "shared/compact_vertex.h"
 #include "shared/standard_material.h"
+#include "shared/type.h"
 
 struct Payload
 {
@@ -145,17 +146,15 @@ ClosestHit(inout Payload payload, const Attributes attrib)
     }
     else if (mode == RaytraceVisualizeModeEnum::ModeDiffuseReflectance)
     {
-        payload.m_color = half3(u_textures[mat.m_diffuse_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
+        payload.m_color = mat.get_diffuse_refl(u_textures, u_sampler, texcoord);
     }
     else if (mode == RaytraceVisualizeModeEnum::ModeSpecularReflectance)
     {
-        payload.m_color =
-            half3(u_textures[mat.m_specular_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
+        payload.m_color = mat.get_specular_refl(u_textures, u_sampler, texcoord);
     }
     else if (mode == RaytraceVisualizeModeEnum::ModeRoughness)
     {
-        payload.m_color =
-            half3(u_textures[mat.m_roughness_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb);
+        payload.m_color = mat.get_roughness(u_textures, u_sampler, texcoord).rrr;
     }
 }
 

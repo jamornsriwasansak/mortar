@@ -13,6 +13,7 @@ struct Renderer
     std::vector<Rhi::FramebufferBindings> m_raster_fbindings;
     std::array<Rhi::Texture, 2> m_rt_results;
 
+    // TODO:: remove
     bool m_lskjdflksjdflkjsdlkfj = true;
 
     RaytraceVisualizePass m_pass_raytrace_visualize;
