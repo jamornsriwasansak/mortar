@@ -267,7 +267,7 @@ struct Buffer
     void *
     map()
     {
-        assert(m_memory_usage == MemoryUsageEnum::CpuOnly || m_memory_usage == MemoryUsageEnum::CpuToGpu);
+        assert(m_memory_usage == MemoryUsageEnum::CpuOnly || m_memory_usage == MemoryUsageEnum::CpuToGpu || m_memory_usage == MemoryUsageEnum::GpuToCpu);
         void * mapped_result;
         DXCK(m_allocation->GetResource()->Map(0, nullptr, &mapped_result));
         return mapped_result;

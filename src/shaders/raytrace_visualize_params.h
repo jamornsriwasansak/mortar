@@ -1,3 +1,6 @@
+//#define DEBUG_RayTraceVisualizePrintClickedInfo
+//#define DEBUG_RayTraceVisualizePrintChar4BufferSize 1000
+
 #ifndef RT_VISUALIZE_CB_PARAMS
 #define RT_VISUALIZE_CB_PARAMS
 
@@ -25,7 +28,17 @@ struct RaytraceVisualizeCbParams
     RaytraceVisualizeModeEnum m_mode;
     uint32_t _padding[3];
 };
+
 #ifdef __cplusplus
 static_assert(sizeof(RaytraceVisualizeCbParams) % (sizeof(uint32_t) * 4) == 0);
 #endif
+
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+struct RaytraceVisualizeDebugPrintCbParams
+{
+    uint3 m_selected_thread_id;
+    uint m_flag;
+};
+#endif
+
 #endif

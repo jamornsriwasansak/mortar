@@ -1,7 +1,7 @@
 #pragma once
 
-constexpr bool DebugPrintSplittedGeometry        = false;
-constexpr bool DebugCheckInvalidSplittedGeometry = false;
+//#define DEBUG_PrintSplittedGeometry
+//#define DEBUG_CheckInvalidSplittedGeometry
 
 #include "core/logger.h"
 #include "core/vmath.h"
@@ -164,22 +164,20 @@ struct AiScene
                 geometry.m_is_indices_reorder_needed = true;
                 geometries->push_back(geometry);
 
-                if constexpr (DebugPrintSplittedGeometry)
-                {
-                    Logger::Info(__FUNCTION__, "\n", geometry.to_string());
-                }
+#ifdef DEBUG_PrintSplittedGeometry
+                Logger::Info(__FUNCTION__, "\n", geometry.to_string());
+#endif
 
-                if constexpr (DebugCheckInvalidSplittedGeometry)
+#ifdef DEBUG_CheckInvalidSplittedGeometry
+                if (geometry.m_src_faces_range.length() == 0 || geometry.m_dst_num_indices == 0 ||
+                    geometry.m_dst_num_vertices == 0)
                 {
-                    if (geometry.m_src_faces_range.length() == 0 ||
-                        geometry.m_dst_num_indices == 0 || geometry.m_dst_num_vertices == 0)
-                    {
-                        Logger::Info(__FUNCTION__, "src_ai_mesh.num_faces : ", src_mesh.mNumFaces);
-                        Logger::Error<true>(__FUNCTION__,
-                                            "dst_geometry.m_src_indices_range.length() : ",
-                                            geometry.m_src_faces_range.length());
-                    }
+                    Logger::Info(__FUNCTION__, "src_ai_mesh.num_faces : ", src_mesh.mNumFaces);
+                    Logger::Error<true>(__FUNCTION__,
+                                        "dst_geometry.m_src_indices_range.length() : ",
+                                        geometry.m_src_faces_range.length());
                 }
+#endif
 
                 // update
                 i_range_begin    = i_range_end;
@@ -203,22 +201,20 @@ struct AiScene
         geometry.m_is_indices_reorder_needed = true;
         geometries->push_back(geometry);
 
-        if constexpr (DebugPrintSplittedGeometry)
-        {
-            Logger::Info(__FUNCTION__, "\n", geometry.to_string());
-        }
+#ifdef DEBUG_PrintSplittedGeometry
+        Logger::Info(__FUNCTION__, "\n", geometry.to_string());
+#endif
 
-        if constexpr (DebugCheckInvalidSplittedGeometry)
+#ifdef DEBUG_CheckInvalidSplittedGeometry
+        if (geometry.m_src_faces_range.length() == 0 || geometry.m_dst_num_indices == 0 ||
+            geometry.m_dst_num_vertices == 0)
         {
-            if (geometry.m_src_faces_range.length() == 0 || geometry.m_dst_num_indices == 0 ||
-                geometry.m_dst_num_vertices == 0)
-            {
-                Logger::Info(__FUNCTION__, "src_ai_mesh.num_faces : ", src_mesh.mNumFaces);
-                Logger::Error<true>(__FUNCTION__,
-                                    "dst_geometry.m_src_indices_range.length() : ",
-                                    geometry.m_src_faces_range.length());
-            }
+            Logger::Info(__FUNCTION__, "src_ai_mesh.num_faces : ", src_mesh.mNumFaces);
+            Logger::Error<true>(__FUNCTION__,
+                                "dst_geometry.m_src_indices_range.length() : ",
+                                geometry.m_src_faces_range.length());
         }
+#endif
     }
 
     void

@@ -15,24 +15,24 @@ namespace VKA_NAME
 {
 struct DescriptorSet
 {
-    vk::DescriptorSet  m_vk_descriptor_set;
-    const Device *     m_device;
+    vk::DescriptorSet m_vk_descriptor_set;
+    const Device * m_device;
     vk::PipelineLayout m_vk_pipeline_layout;
 
     // TODO:: avoid std::list
-    std::list<vk::DescriptorBufferInfo>                       m_descriptor_buffer_infos;
-    std::list<vk::DescriptorImageInfo>                        m_descriptor_image_infos;
+    std::list<vk::DescriptorBufferInfo> m_descriptor_buffer_infos;
+    std::list<vk::DescriptorImageInfo> m_descriptor_image_infos;
     std::list<vk::WriteDescriptorSetAccelerationStructureKHR> m_descriptor_accel_infos;
 
     std::vector<vk::WriteDescriptorSet> m_write_descriptor_set;
 
     DescriptorSet() {}
 
-    DescriptorSet(const Device *         device,
+    DescriptorSet(const Device * device,
                   const RasterPipeline & pipeline,
-                  DescriptorPool *       descriptor_pool,
-                  const size_t           i_set,
-                  const std::string &    name = "")
+                  DescriptorPool * descriptor_pool,
+                  const size_t i_set,
+                  const std::string & name = "")
     : DescriptorSet(device,
                     pipeline.m_vk_pipeline_layout.get(),
                     pipeline.m_vk_descriptor_set_layouts[i_set].get(),
@@ -41,11 +41,11 @@ struct DescriptorSet
     {
     }
 
-    DescriptorSet(const Device *             device,
+    DescriptorSet(const Device * device,
                   const RayTracingPipeline & pipeline,
-                  DescriptorPool *           descriptor_pool,
-                  const size_t               i_set,
-                  const std::string &        name = "")
+                  DescriptorPool * descriptor_pool,
+                  const size_t i_set,
+                  const std::string & name = "")
     : DescriptorSet(device,
                     pipeline.m_vk_pipeline_layout.get(),
                     pipeline.m_vk_descriptor_set_layouts[i_set].get(),
@@ -54,11 +54,11 @@ struct DescriptorSet
     {
     }
 
-    DescriptorSet(const Device *                device,
-                  const vk::PipelineLayout      vk_pipeline_layout,
+    DescriptorSet(const Device * device,
+                  const vk::PipelineLayout vk_pipeline_layout,
                   const vk::DescriptorSetLayout vk_desc_set,
-                  const vk::DescriptorPool      vk_desc_pool,
-                  const std::string &           name = "")
+                  const vk::DescriptorPool vk_desc_pool,
+                  const std::string & name = "")
     : m_device(device), m_vk_pipeline_layout(vk_pipeline_layout)
     {
         vk::DescriptorSetAllocateInfo set_ai = {};
@@ -113,12 +113,12 @@ struct DescriptorSet
     }
 
     DescriptorSet &
-    set_t_structured_buffer(const size_t   binding,
+    set_t_structured_buffer(const size_t binding,
                             const Buffer & buffer,
-                            const size_t   stride,
-                            const size_t   num_elements,
-                            const size_t   i_element     = 0,
-                            const size_t   first_element = 0)
+                            const size_t stride,
+                            const size_t num_elements,
+                            const size_t i_element     = 0,
+                            const size_t first_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
         buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
@@ -138,12 +138,12 @@ struct DescriptorSet
     }
 
     DescriptorSet &
-    set_t_byte_address_buffer(const size_t   binding,
+    set_t_byte_address_buffer(const size_t binding,
                               const Buffer & buffer,
-                              const size_t   stride,
-                              const size_t   num_elements,
-                              const size_t   i_element     = 0,
-                              const size_t   first_element = 0)
+                              const size_t stride,
+                              const size_t num_elements,
+                              const size_t i_element     = 0,
+                              const size_t first_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
         buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
@@ -203,12 +203,12 @@ struct DescriptorSet
     }
 
     DescriptorSet &
-    set_u_rw_structured_buffer(const size_t   binding,
+    set_u_rw_structured_buffer(const size_t binding,
                                const Buffer & buffer,
-                               const size_t   stride,
-                               const size_t   num_elements,
-                               const size_t   first_element,
-                               const size_t   i_element = 0)
+                               const size_t stride,
+                               const size_t num_elements,
+                               const size_t i_element     = 0,
+                               const size_t first_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
         buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
@@ -223,6 +223,7 @@ struct DescriptorSet
         write_descriptor.setDescriptorCount(1);
         write_descriptor.setDescriptorType(vk::DescriptorType::eStorageBuffer);
         write_descriptor.setPBufferInfo(&m_descriptor_buffer_infos.back());
+        write_descriptor.setPImageInfo(nullptr);
         m_write_descriptor_set.push_back(write_descriptor);
         return *this;
     }

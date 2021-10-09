@@ -4,7 +4,6 @@
 #include "shared/camera_params.h"
 #include "shared/compact_vertex.h"
 #include "shared/types.h"
-#include "shared/debug_print.h"
 
 struct Payload
 {
@@ -31,7 +30,11 @@ Texture2D<float4> u_textures[100] : register(t7, space1);
 #include "shared/standard_material.h"
 StructuredBuffer<StandardMaterial> u_materials : register(t6, space1);
 
-RWStructuredBuffer<DebugChar4> u_debug_char4 : register(u0, space2);
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+ConstantBuffer<RaytraceVisualizeDebugPrintCbParams> u_debug_cbparams : register(b0, space2);
+RWStructuredBuffer<uint32_t> u_debug_char4 : register(u0, space2);
+#include "shared/debug_print.h"
+#endif
 
 [shader("raygeneration")] void
 RayGen()
@@ -40,7 +43,7 @@ RayGen()
     uint2 resolution = DispatchRaysDimensions().xy;
     uint pixel_index = pixel.y * resolution.x + pixel.x;
 
-    const float2 uv  = (float2(pixel) + float2(0.5f, 0.5f)) / float2(resolution);
+    const float2 uv  = (float2(pixel) + 0.5f.xx) / float2(resolution);
     const float2 ndc = uv * 2.0f - 1.0f;
 
     const float3 origin    = mul(u_cbparams.m_camera_inv_view, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
@@ -154,6 +157,24 @@ ClosestHit(inout Payload payload, const Attributes attrib)
     {
         payload.m_color = mat.get_roughness(texcoord).rrr;
     }
+
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+    DebugWriter dwriter;
+    dwriter.init();
+    if (any(u_debug_cbparams.m_selected_thread_id.xy == DispatchRaysIndex().xy))
+    {
+        payload.m_color = float3(0.5f, 0.5f, 0.5f);
+    }
+    if (all(u_debug_cbparams.m_selected_thread_id.xy == DispatchRaysIndex().xy))
+    {
+        dwriter.c('g'); dwriter.c('e'); dwriter.c('o'); dwriter.c('m'); dwriter.c(' '); dwriter.c('i'); dwriter.c('d'); dwriter.c(':');
+        dwriter.write_uint(GeometryIndex());
+        dwriter.c('\n');
+        dwriter.c('p'); dwriter.c('r'); dwriter.c('i'); dwriter.c('m'); dwriter.c(' '); dwriter.c('i'); dwriter.c('d'); dwriter.c(':');
+        dwriter.write_uint(PrimitiveIndex());
+        dwriter.c('\n');
+    }
+#endif
 }
 
 [shader("miss")] void

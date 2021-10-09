@@ -12,6 +12,12 @@ struct RaytraceVisualizePass
     Rhi::Buffer m_cb_params;
     Rhi::Sampler m_common_sampler;
 
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+    Rhi::Buffer m_debug_cb_params;
+    Rhi::Buffer m_debug_print_buffer;
+    Rhi::Buffer m_cpu_temp_buffer;
+#endif
+
     RaytraceVisualizePass() {}
 
     RaytraceVisualizePass(const Rhi::Device & device)
@@ -22,10 +28,34 @@ struct RaytraceVisualizePass
         m_cb_params = Rhi::Buffer(&device,
                                   Rhi::BufferUsageEnum::ConstantBuffer,
                                   Rhi::MemoryUsageEnum::CpuToGpu,
-                                  sizeof(RaytraceVisualizeCbParams));
+                                  sizeof(RaytraceVisualizeCbParams),
+            "raytrace_visualize_cbparams");
 
         // sampler
         m_common_sampler = Rhi::Sampler(&device);
+
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+        // constant params for debug
+        m_debug_cb_params = Rhi::Buffer(&device,
+                                        Rhi::BufferUsageEnum::ConstantBuffer,
+                                        Rhi::MemoryUsageEnum::CpuToGpu,
+                                        sizeof(RaytraceVisualizeDebugPrintCbParams),
+                                        "raytrace_visualize_debug_cbparams");
+
+        // print buffer
+        m_debug_print_buffer =
+            Rhi::Buffer(&device,
+                        Rhi::BufferUsageEnum::StorageBuffer | Rhi::BufferUsageEnum::TransferSrc,
+                        Rhi::MemoryUsageEnum::GpuOnly,
+                        sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize,
+                        "raytrace_visualize_debug_print_buffer");
+
+        m_cpu_temp_buffer = Rhi::Buffer(&device,
+                                        Rhi::BufferUsageEnum::TransferDst,
+                                        Rhi::MemoryUsageEnum::GpuToCpu,
+                                        sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize,
+                                        "raytrace_visualize_debug_print_download_buffer");
+#endif
     }
 
     void
@@ -111,7 +141,11 @@ struct RaytraceVisualizePass
         m_cb_params.unmap();
 
         // setup descriptor spaces and bindings
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+        std::array<Rhi::DescriptorSet, 3> descriptor_sets;
+#else
         std::array<Rhi::DescriptorSet, 2> descriptor_sets;
+#endif
 
         // descriptor sets 0
         descriptor_sets[0] =
@@ -124,11 +158,14 @@ struct RaytraceVisualizePass
         // descriptor sets 1
         descriptor_sets[1] =
             Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
-        for (size_t i = 0; i < std::min(render_params.m_scene_resource->m_d_textures.size(), size_t(EngineSetting::MaxNumBindlessTextures)); i++)
+        for (size_t i = 0; i < std::min(render_params.m_scene_resource->m_d_textures.size(),
+                                        size_t(EngineSetting::MaxNumBindlessTextures));
+             i++)
         {
             descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[i], i);
         }
-        for (size_t i = render_params.m_scene_resource->m_d_textures.size(); i < EngineSetting::MaxNumBindlessTextures; i++)
+        for (size_t i = render_params.m_scene_resource->m_d_textures.size(); i < EngineSetting::MaxNumBindlessTextures;
+             i++)
         {
             descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[0], i);
         }
@@ -160,6 +197,35 @@ struct RaytraceVisualizePass
                                      sizeof(StandardMaterial),
                                      EngineSetting::MaxNumStandardMaterials)
             .update();
+
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+        // set debug cb params
+        auto * debug_params = static_cast<RaytraceVisualizeDebugPrintCbParams *>(m_debug_cb_params.map());
+        debug_params->m_selected_thread_id.x = 500;
+        debug_params->m_selected_thread_id.y = 500;
+        m_debug_cb_params.unmap();
+
+        // descriptor set
+        descriptor_sets[2] =
+            Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 2);
+        descriptor_sets[2]
+            .set_b_constant_buffer(0, m_debug_cb_params)
+            .set_u_rw_structured_buffer(0, m_debug_print_buffer, sizeof(uint32_t), DEBUG_RayTraceVisualizePrintChar4BufferSize)
+            .update();
+
+        // display the debug result (from the previos frame)
+        if (ImGui::Begin("DEBUG_RayTraceVisualizePrintClickedInfo", &p_open))
+        {
+            cmd_list.copy_buffer_region(m_cpu_temp_buffer, 0, m_debug_print_buffer, 0, sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize);
+
+            // print the result from the previous frame.
+            // might have race condition but since it's for debugging a single pixel, it should be fine.
+            const char * mapped_debug_str = static_cast<char *>(m_cpu_temp_buffer.map());
+            ImGui::Text(mapped_debug_str);
+            m_cpu_temp_buffer.unmap();
+        }
+        ImGui::End();
+#endif
 
         cmd_list.bind_raytrace_pipeline(m_rt_pipeline);
         cmd_list.bind_raytrace_descriptor_set(descriptor_sets);
