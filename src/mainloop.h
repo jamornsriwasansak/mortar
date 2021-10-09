@@ -237,14 +237,15 @@ struct MainLoop
 
         urange sponza_geometries =
             m_scene_resource.add_geometries("scenes/sponza/sponza.obj", m_staging_buffer_manager);
+            //m_scene_resource.add_geometries("tmp/Exterior/Exterior.obj", m_staging_buffer_manager);
         std::array<urange, 1> ranges = { sponza_geometries };
         size_t sponza_instance_id    = m_scene_resource.add_base_instance(ranges);
         // m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
 
         SceneDesc scene_desc;
-        for (size_t j = 0; j < 10; j++)
+        for (size_t j = 0; j < 1; j++)
         {
-            for (size_t i = 0; i < 10; i++)
+            for (size_t i = 0; i < 1; i++)
             {
                 SceneInstance instance2 = { sponza_instance_id,
                                             glm::translate(glm::identity<float4x4>(),

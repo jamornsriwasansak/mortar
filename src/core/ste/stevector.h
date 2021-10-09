@@ -53,6 +53,13 @@ struct FsVector
         return Length;
     }
 
+    void
+    resize(const size_t size)
+    {
+        assert(size < Length);
+        m_size = size;
+    }
+
 private:
     size_t m_size = 0;
     // std::array already implement assertion

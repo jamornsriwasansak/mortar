@@ -124,11 +124,11 @@ struct RaytraceVisualizePass
         // descriptor sets 1
         descriptor_sets[1] =
             Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
-        for (size_t i = 0; i < render_params.m_scene_resource->m_d_textures.length(); i++)
+        for (size_t i = 0; i < std::min(render_params.m_scene_resource->m_d_textures.size(), size_t(EngineSetting::MaxNumBindlessTextures)); i++)
         {
             descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[i], i);
         }
-        for (size_t i = render_params.m_scene_resource->m_d_textures.length(); i < 100; i++)
+        for (size_t i = render_params.m_scene_resource->m_d_textures.size(); i < EngineSetting::MaxNumBindlessTextures; i++)
         {
             descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[0], i);
         }

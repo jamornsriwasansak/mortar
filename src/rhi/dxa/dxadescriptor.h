@@ -293,8 +293,6 @@ struct DescriptorSet
     DescriptorSet &
     set_u_rw_texture(const size_t binding, const Texture & texture, const size_t i_texture = 0)
     {
-        assert(texture.m_is_storage);
-
         // alloc uav in heap
         D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
         uav_desc.Format                           = texture.get_view_format();

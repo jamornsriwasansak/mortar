@@ -3,8 +3,8 @@
 #include "shared/bindless_table.h"
 #include "shared/camera_params.h"
 #include "shared/compact_vertex.h"
-#include "shared/standard_material.h"
-#include "shared/type.h"
+#include "shared/types.h"
+#include "shared/debug_print.h"
 
 struct Payload
 {
@@ -21,19 +21,17 @@ ConstantBuffer<RaytraceVisualizeCbParams> u_cbparams : register(b0, space0);
 RWTexture2D<float4> u_output : register(u0, space0);
 
 SamplerState u_sampler : register(s0, space1);
-/*
-StructuredBuffer<uint16_t>                 u_index_buffer     REGISTER(t1, space1);
-StructuredBuffer<float3>                   u_vertex_buffer    REGISTER(t2, space1);
-StructuredBuffer<CompactVertex>            u_compactv_buffer  REGISTER(t3, space1);
-*/
 RaytracingAccelerationStructure u_scene_bvh : register(t0, space1);
 StructuredBuffer<BaseInstanceTableEntry> u_base_instance_table : register(t1, space1);
 StructuredBuffer<GeometryTableEntry> u_geometry_table : register(t2, space1);
 StructuredBuffer<uint16_t> u_indices : register(t3, space1);
 StructuredBuffer<float3> u_positions : register(t4, space1);
 StructuredBuffer<CompactVertex> u_compact_vertices : register(t5, space1);
-StructuredBuffer<StandardMaterial> u_materials : register(t6, space1);
 Texture2D<float4> u_textures[100] : register(t7, space1);
+#include "shared/standard_material.h"
+StructuredBuffer<StandardMaterial> u_materials : register(t6, space1);
+
+RWStructuredBuffer<DebugChar4> u_debug_char4 : register(u0, space2);
 
 [shader("raygeneration")] void
 RayGen()
@@ -45,8 +43,8 @@ RayGen()
     const float2 uv  = (float2(pixel) + float2(0.5f, 0.5f)) / float2(resolution);
     const float2 ndc = uv * 2.0f - 1.0f;
 
-    const float3 origin = mul(u_cbparams.m_camera_inv_view, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    const float3 lookat = mul(u_cbparams.m_camera_inv_proj, float4(ndc.x, ndc.y, 1.0f, 1.0f)).xyz;
+    const float3 origin    = mul(u_cbparams.m_camera_inv_view, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    const float3 lookat    = mul(u_cbparams.m_camera_inv_proj, float4(ndc.x, ndc.y, 1.0f, 1.0f)).xyz;
     const float3 direction = mul(u_cbparams.m_camera_inv_view, float4(normalize(lookat), 0.0f)).xyz;
 
     Payload payload;
@@ -76,15 +74,15 @@ ClosestHit(inout Payload payload, const Attributes attrib)
     const uint geometry_offset            = base_geometry_entry_offset + GeometryIndex();
     const GeometryTableEntry geometry_entry = u_geometry_table[geometry_offset];
 
-    const uint index0       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_offset];
-    const uint index1       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_offset + 1];
-    const uint index2       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_offset + 2];
-    const float3 position0  = u_positions[index0 + geometry_entry.m_vertex_offset];
-    const float3 position1  = u_positions[index1 + geometry_entry.m_vertex_offset];
-    const float3 position2  = u_positions[index2 + geometry_entry.m_vertex_offset];
-    const CompactVertex cv0 = u_compact_vertices[index0 + geometry_entry.m_vertex_offset];
-    const CompactVertex cv1 = u_compact_vertices[index1 + geometry_entry.m_vertex_offset];
-    const CompactVertex cv2 = u_compact_vertices[index2 + geometry_entry.m_vertex_offset];
+    const uint index0       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx];
+    const uint index1       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx + 1];
+    const uint index2       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx + 2];
+    const float3 position0  = u_positions[index0 + geometry_entry.m_vertex_base_idx];
+    const float3 position1  = u_positions[index1 + geometry_entry.m_vertex_base_idx];
+    const float3 position2  = u_positions[index2 + geometry_entry.m_vertex_base_idx];
+    const CompactVertex cv0 = u_compact_vertices[index0 + geometry_entry.m_vertex_base_idx];
+    const CompactVertex cv1 = u_compact_vertices[index1 + geometry_entry.m_vertex_base_idx];
+    const CompactVertex cv2 = u_compact_vertices[index2 + geometry_entry.m_vertex_base_idx];
     const float3 snormal0   = cv0.get_snormal();
     const float3 snormal1   = cv1.get_snormal();
     const float3 snormal2   = cv2.get_snormal();
@@ -95,7 +93,7 @@ ClosestHit(inout Payload payload, const Attributes attrib)
     const float2 texcoord2  = cv2.m_texcoord;
     const float2 texcoord   = texcoord0 * (1.0f - barycentric.x - barycentric.y) +
                             texcoord1 * barycentric.x + texcoord2 * barycentric.y;
-    const StandardMaterial mat = u_materials[geometry_entry.m_material_id];
+    const StandardMaterial mat = u_materials[geometry_entry.m_material_idx];
 
     const RaytraceVisualizeModeEnum mode = u_cbparams.m_mode;
 
@@ -146,15 +144,15 @@ ClosestHit(inout Payload payload, const Attributes attrib)
     }
     else if (mode == RaytraceVisualizeModeEnum::ModeDiffuseReflectance)
     {
-        payload.m_color = mat.get_diffuse_refl(u_textures, u_sampler, texcoord);
+        payload.m_color = mat.get_diffuse_refl(texcoord);
     }
     else if (mode == RaytraceVisualizeModeEnum::ModeSpecularReflectance)
     {
-        payload.m_color = mat.get_specular_refl(u_textures, u_sampler, texcoord);
+        payload.m_color = mat.get_specular_refl(texcoord);
     }
     else if (mode == RaytraceVisualizeModeEnum::ModeRoughness)
     {
-        payload.m_color = mat.get_roughness(u_textures, u_sampler, texcoord).rrr;
+        payload.m_color = mat.get_roughness(texcoord).rrr;
     }
 }
 

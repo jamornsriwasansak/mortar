@@ -125,8 +125,9 @@ struct CommandList
     }
 
     void
-    bind_vertex_buffer(const Buffer & vertex_buffer, const size_t stride)
+    bind_vertex_buffer(const Buffer & vertex_buffer, [[maybe_unused]] const size_t stride)
     {
+        // stride information has already been used in vk::VertexInputBindingDescription
         m_vk_command_buffer.bindVertexBuffers(0, { vertex_buffer.m_vma_buffer_bundle->m_vk_buffer }, { 0 });
     }
 

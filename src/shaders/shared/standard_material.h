@@ -46,11 +46,11 @@ struct StandardMaterial
 
 #ifdef __hlsl
     float3
-    get_diffuse_refl(Texture2D<float4> textures[], SamplerState sampler, const float2 texcoord)
+    get_diffuse_refl(const float2 texcoord)
     {
         if ((m_diffuse_tex_id & (1 << 24)) == 0)
         {
-            return textures[m_diffuse_tex_id].SampleLevel(sampler, texcoord, 0).rgb;
+            return u_textures[m_diffuse_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb;
         }
         else
         {
@@ -59,11 +59,11 @@ struct StandardMaterial
     }
 
     float3
-    get_specular_refl(Texture2D<float4> textures[], SamplerState sampler, const float2 texcoord)
+    get_specular_refl(const float2 texcoord)
     {
         if ((m_specular_tex_id & (1 << 24)) == 0)
         {
-            return textures[m_specular_tex_id].SampleLevel(sampler, texcoord, 0).rgb;
+            return u_textures[m_specular_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb;
         }
         else
         {
@@ -72,11 +72,11 @@ struct StandardMaterial
     }
 
     float
-    get_roughness(Texture2D<float4> textures[], SamplerState sampler, const float2 texcoord)
+    get_roughness(const float2 texcoord)
     {
         if ((m_roughness_tex_id & (1 << 24)) == 0)
         {
-            return textures[m_roughness_tex_id].SampleLevel(sampler, texcoord, 0).r;
+            return u_textures[m_roughness_tex_id].SampleLevel(u_sampler, texcoord, 0).r;
         }
         else
         {

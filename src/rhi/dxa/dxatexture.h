@@ -9,24 +9,18 @@ namespace DXA_NAME
 {
 struct Texture
 {
-    D3D12MAHandle<D3D12MA::Allocation> m_allocation             = nullptr;
-    ID3D12Resource *                   m_dx_resource            = nullptr;
-    DXGI_FORMAT                        m_dx_format              = DXGI_FORMAT_UNKNOWN;
-    D3D12_GPU_DESCRIPTOR_HANDLE        m_dx_srv_gpu_handle      = { 0 };
-    D3D12_GPU_DESCRIPTOR_HANDLE        m_dx_uav_gpu_handle      = { 0 };
-    D3D12_CPU_DESCRIPTOR_HANDLE        m_dx_dsv_rtv_cpu_handle  = { 0 };
-    int2                               m_resolution             = int2(0, 0);
-    float4                             m_clear_value            = float4(0.0f, 0.0f, 0.0f, 0.0f);
-    bool                               m_is_storage             = false;
-    bool                               m_is_color_render_target = false;
-    bool                               m_is_depth_render_target = false;
-
+    D3D12MAHandle<D3D12MA::Allocation> m_allocation     = nullptr;
+    ID3D12Resource * m_dx_resource                      = nullptr;
+    DXGI_FORMAT m_dx_format                             = DXGI_FORMAT_UNKNOWN;
+    D3D12_CPU_DESCRIPTOR_HANDLE m_dx_dsv_rtv_cpu_handle = { 0 };
+    int2 m_resolution                                   = int2(0, 0);
+    float4 m_clear_value                                = float4(0.0f, 0.0f, 0.0f, 0.0f);
     Texture() {}
 
-    Texture(Device *          device,
+    Texture(Device * device,
             const Swapchain & swapchain,
-            const size_t      i_image,
-            const float4      clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f))
+            const size_t i_image,
+            const float4 clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f))
     : m_resolution(swapchain.m_resolution), m_dx_format(swapchain.m_dx_format), m_clear_value(clear_value)
     {
         m_dx_resource = swapchain.m_dx_swapchain_resource_pointers[i_image];
@@ -34,17 +28,20 @@ struct Texture
         init_rtv(device);
     }
 
-    Texture(Device *               device,
+    Texture(Device * device,
             const TextureUsageEnum texture_usage,
             const TextureStateEnum initial_state,
-            const FormatEnum       format,
-            const int2             resolution,
-            const std::byte *      initial_data        = nullptr,
+            const FormatEnum format,
+            const int2 resolution,
+            const std::byte * initial_data             = nullptr,
             StagingBufferManager * initial_data_loader = nullptr,
-            const float4           clear_value         = float4(0.0f, 0.0f, 0.0f, 0.0f),
-            const std::string &    name                = "")
+            const float4 clear_value                   = float4(0.0f, 0.0f, 0.0f, 0.0f),
+            const std::string & name                   = "")
     : m_resolution(resolution), m_dx_format(static_cast<DXGI_FORMAT>(format)), m_clear_value(clear_value)
     {
+        bool is_color_render_target = false;
+        bool is_depth_render_target = false;
+
         D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
 
         // by default clear value is not used
@@ -62,14 +59,13 @@ struct Texture
         // is UAV aka storage image
         if (HasFlag(texture_usage, TextureUsageEnum::StorageImage))
         {
-            m_is_storage = true;
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
         // is depth attachment
         if (HasFlag(texture_usage, TextureUsageEnum::DepthAttachment))
         {
-            m_is_depth_render_target = true;
+            is_depth_render_target = true;
             flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
             p_clear_value = &dx_clear_value;
         }
@@ -77,10 +73,10 @@ struct Texture
         // is color attachment
         if (HasFlag(texture_usage, TextureUsageEnum::ColorAttachment))
         {
-            m_is_color_render_target = true;
+            is_color_render_target = true;
             flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
             p_clear_value = &dx_clear_value;
-            assert(m_is_depth_render_target == false);
+            assert(is_depth_render_target == false);
         }
 
         D3D12MA::ALLOCATION_DESC alloc_desc = {};
@@ -107,7 +103,7 @@ struct Texture
         }
 
         // allocate resource
-        ID3D12Resource *      resource   = nullptr;
+        ID3D12Resource * resource        = nullptr;
         D3D12MA::Allocation * allocation = nullptr;
         device->m_d3d12ma->CreateResource(&alloc_desc,
                                           &resource_desc,
@@ -138,7 +134,7 @@ struct Texture
 
             // update subresources
             ID3D12GraphicsCommandList4 * cmd_list = initial_data_loader->m_dx_command_list.Get();
-            D3D12_SUBRESOURCE_DATA       subresource_data;
+            D3D12_SUBRESOURCE_DATA subresource_data;
             {
                 subresource_data.pData      = reinterpret_cast<const BYTE *>(initial_data);
                 subresource_data.RowPitch   = size_in_bytes_per_row;
@@ -162,11 +158,11 @@ struct Texture
             cmd_list->ResourceBarrier(1, &barrier);
         }
 
-        if (m_is_color_render_target)
+        if (is_color_render_target)
         {
             init_rtv(device);
         }
-        else if (m_is_depth_render_target)
+        else if (is_depth_render_target)
         {
             init_dsv(device, static_cast<DXGI_FORMAT>(format));
         }
@@ -217,4 +213,4 @@ private:
             device->m_dsv_descriptor_heap.get_dsv_handle(depth_stencil_desc, m_dx_resource).m_dx_cpu_handle;
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME

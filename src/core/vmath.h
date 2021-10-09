@@ -67,6 +67,18 @@ struct urange
     urange() {}
 
     urange(const uint begin, const uint end) : m_begin(begin), m_end(end) {}
+
+    uint
+    length() const
+    {
+        return m_end - m_begin;
+    }
+
+    std::string
+    to_string() const
+    {
+        return "urange(" + std::to_string(m_begin) + ", " + std::to_string(m_end) + ")";
+    }
 };
 
 template <typename T>
