@@ -328,11 +328,6 @@ struct SceneResource
     size_t
     add_texture(const std::filesystem::path & path, const size_t desired_channel, Rhi::StagingBufferManager & staging_buffer_manager)
     {
-        if (m_d_textures.size() > 100)
-        {
-            return 0;
-        }
-
         const std::string filepath_str = path.string();
 
         // load using stbi
