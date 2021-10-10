@@ -65,6 +65,13 @@ RayGen()
     TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
 
     u_output[pixel] = float4(payload.m_color.r, payload.m_color.g, payload.m_color.b, 1.0f);
+
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+    if (any(u_debug_cbparams.m_selected_thread_id.xy == DispatchRaysIndex().xy))
+    {
+        u_output[pixel] = float4(0.5f, 0.5f, 0.5f, 0.0f);
+    }
+#endif
 }
 
 [shader("closesthit")] void
@@ -161,10 +168,6 @@ ClosestHit(inout Payload payload, const Attributes attrib)
 #ifdef DEBUG_RayTraceVisualizePrintClickedInfo
     DebugWriter dwriter;
     dwriter.init();
-    if (any(u_debug_cbparams.m_selected_thread_id.xy == DispatchRaysIndex().xy))
-    {
-        payload.m_color = float3(0.5f, 0.5f, 0.5f);
-    }
     if (all(u_debug_cbparams.m_selected_thread_id.xy == DispatchRaysIndex().xy))
     {
         dwriter.c('g'); dwriter.c('e'); dwriter.c('o'); dwriter.c('m'); dwriter.c(' '); dwriter.c('i'); dwriter.c('d'); dwriter.c(':');

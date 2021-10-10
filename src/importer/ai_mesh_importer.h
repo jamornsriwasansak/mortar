@@ -1,6 +1,5 @@
 #pragma once
 
-//#define DEBUG_PrintSplittedGeometry
 //#define DEBUG_CheckInvalidSplittedGeometry
 
 #include "core/logger.h"
@@ -164,10 +163,6 @@ struct AiScene
                 geometry.m_is_indices_reorder_needed = true;
                 geometries->push_back(geometry);
 
-#ifdef DEBUG_PrintSplittedGeometry
-                Logger::Info(__FUNCTION__, "\n", geometry.to_string());
-#endif
-
 #ifdef DEBUG_CheckInvalidSplittedGeometry
                 if (geometry.m_src_faces_range.length() == 0 || geometry.m_dst_num_indices == 0 ||
                     geometry.m_dst_num_vertices == 0)
@@ -200,10 +195,6 @@ struct AiScene
         geometry.m_src_material_index        = src_mesh.mMaterialIndex;
         geometry.m_is_indices_reorder_needed = true;
         geometries->push_back(geometry);
-
-#ifdef DEBUG_PrintSplittedGeometry
-        Logger::Info(__FUNCTION__, "\n", geometry.to_string());
-#endif
 
 #ifdef DEBUG_CheckInvalidSplittedGeometry
         if (geometry.m_src_faces_range.length() == 0 || geometry.m_dst_num_indices == 0 ||

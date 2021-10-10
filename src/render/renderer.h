@@ -87,11 +87,7 @@ struct Renderer
                                     Rhi::TextureStateEnum::ColorAttachment);
 
         // run final pass
-        m_pass_beauty.run(cmd_list,
-                          ctx,
-                          params,
-                          m_rt_results[ctx.m_flight_index % 2],
-                          m_raster_fbindings[ctx.m_image_index]);
+        m_pass_beauty.run(cmd_list, ctx, params, m_rt_results[ctx.m_flight_index % 2], m_raster_fbindings[ctx.m_image_index]);
 
         // render imgui onto swapchain
         if (params.m_should_imgui_drawn)

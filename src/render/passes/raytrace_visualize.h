@@ -201,8 +201,8 @@ struct RaytraceVisualizePass
 #ifdef DEBUG_RayTraceVisualizePrintClickedInfo
         // set debug cb params
         auto * debug_params = static_cast<RaytraceVisualizeDebugPrintCbParams *>(m_debug_cb_params.map());
-        debug_params->m_selected_thread_id.x = 500;
-        debug_params->m_selected_thread_id.y = 500;
+        debug_params->m_selected_thread_id.x = static_cast<uint>(ImGui::GetMousePos().x);
+        debug_params->m_selected_thread_id.y = static_cast<uint>(target_resolution.y - ImGui::GetMousePos().y);
         m_debug_cb_params.unmap();
 
         // descriptor set
