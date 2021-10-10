@@ -59,16 +59,17 @@ using half2 = halfN<2>;
 using half3 = halfN<3>;
 using half4 = halfN<4>;
 
-struct urange
+template<typename T>
+struct rangeT
 {
-    uint m_begin;
-    uint m_end;
+    T m_begin;
+    T m_end;
 
-    urange() {}
+    rangeT() {}
 
-    urange(const uint begin, const uint end) : m_begin(begin), m_end(end) {}
+    rangeT(const T begin, const T end) : m_begin(begin), m_end(end) {}
 
-    uint
+    T
     length() const
     {
         return m_end - m_begin;
@@ -77,9 +78,11 @@ struct urange
     std::string
     to_string() const
     {
-        return "urange(" + std::to_string(m_begin) + ", " + std::to_string(m_end) + ")";
+        return "range(" + std::to_string(m_begin) + ", " + std::to_string(m_end) + ")";
     }
 };
+using urange32_t = rangeT<uint32_t>;
+using urange64_t = rangeT<uint64_t>;
 
 template <typename T>
 constexpr const T
@@ -95,6 +98,8 @@ template <typename T, typename U>
 T
 round_up(const T size, const U min_align_size)
 {
+    static_assert(!std::is_signed<T>::value);
+    static_assert(!std::is_signed<U>::value);
     // min align size = 0, any size is ok
     if (min_align_size == 0)
     {

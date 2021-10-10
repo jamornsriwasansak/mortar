@@ -24,12 +24,12 @@ struct SceneGeometry
     BufferSizeT m_num_vertices  = 0;
     BufferSizeT m_num_indices   = 0;
     BufferSizeT m_material_idx  = 0;
-    bool m_is_updatable         = false;
+    bool        m_is_updatable  = false;
 };
 
 struct SceneBaseInstance
 {
-    std::vector<urange> m_geometry_id_ranges = {};
+    std::vector<urange32_t> m_geometry_id_ranges = {};
 };
 
 struct SceneInstance
@@ -50,38 +50,38 @@ struct SceneResource
     // command pool
     Rhi::CommandPool m_transfer_cmd_pool;
 
-    static constexpr Rhi::IndexType m_ibuf_index_type     = Rhi::GetIndexType<VertexIndexT>();
+    static constexpr Rhi::IndexType  m_ibuf_index_type    = Rhi::GetIndexType<VertexIndexT>();
     static constexpr Rhi::FormatEnum m_vbuf_position_type = Rhi::GetVertexType<float3>();
 
     // device position, packed and index information
     Rhi::Buffer m_d_vbuf_position = {};
     Rhi::Buffer m_d_vbuf_packed   = {};
     Rhi::Buffer m_d_ibuf          = {};
-    size_t m_num_vertices         = 0;
-    size_t m_num_indices          = 0;
+    size_t      m_num_vertices    = 0;
+    size_t      m_num_indices     = 0;
 
     // device & host textures and materials
-    std::vector<Rhi::Texture> m_d_textures;
-    Rhi::Buffer m_d_materials = {};
+    std::vector<Rhi::Texture>     m_d_textures;
+    Rhi::Buffer                   m_d_materials = {};
     std::vector<StandardMaterial> m_h_materials;
 
     // device & host lookup table for geometry & instance
     // look up offset into geometry table based on instance index
-    Rhi::Buffer m_d_base_instance_table      = {};
-    Rhi::Buffer m_d_geometry_table           = {};
-    size_t m_num_base_instance_table_entries = 0;
-    size_t m_num_geometry_table_entries      = 0;
+    Rhi::Buffer m_d_base_instance_table           = {};
+    Rhi::Buffer m_d_geometry_table                = {};
+    size_t      m_num_base_instance_table_entries = 0;
+    size_t      m_num_geometry_table_entries      = 0;
 
     // device & host blas (requires update)
     std::vector<Rhi::RayTracingBlas> m_rt_blases;
-    Rhi::RayTracingTlas m_rt_tlas;
+    Rhi::RayTracingTlas              m_rt_tlas;
 
     // camera
     FpsCamera m_camera;
 
     // scene graph
-    SceneGraphNode m_scene_graph_root = SceneGraphNode(false);
-    std::vector<SceneGeometry> m_geometries;
+    SceneGraphNode                 m_scene_graph_root = SceneGraphNode(false);
+    std::vector<SceneGeometry>     m_geometries;
     std::vector<SceneBaseInstance> m_base_instances;
 
     SceneResource() {}
@@ -132,10 +132,10 @@ struct SceneResource
                         "scene_m_d_geometry_table");
     }
 
-    urange
+    urange32_t
     add_geometries(const std::filesystem::path & path, Rhi::StagingBufferManager & staging_buffer_manager)
     {
-        std::optional<AiScene> ai_scene = AiScene::ReadScene(path);
+        std::optional<AiScene>      ai_scene = AiScene::ReadScene(path);
         std::vector<AiGeometryInfo> geometry_infos =
             ai_scene->get_geometry_infos(std::numeric_limits<VertexIndexT>::max());
 
@@ -149,33 +149,33 @@ struct SceneResource
         }
 
         // prepare information host vertex buffers allocation and index buffer
-        size_t num_total_vertices = 0;
-        size_t num_total_indices  = 0;
+        size_t              num_total_vertices = 0;
+        size_t              num_total_indices  = 0;
         std::vector<size_t> vertices_base_idxs(geometry_infos.size());
         std::vector<size_t> indices_base_idxs(geometry_infos.size());
         for (size_t i_geometry_info = 0; i_geometry_info < geometry_infos.size(); i_geometry_info++)
         {
             vertices_base_idxs[i_geometry_info] = num_total_vertices;
             indices_base_idxs[i_geometry_info]  = num_total_indices;
-            num_total_vertices += round_up(geometry_infos[i_geometry_info].m_dst_num_vertices, 32);
-            num_total_indices += round_up(geometry_infos[i_geometry_info].m_dst_num_indices, 32);
+            num_total_vertices += round_up(geometry_infos[i_geometry_info].m_dst_num_vertices, 32u);
+            num_total_indices += round_up(geometry_infos[i_geometry_info].m_dst_num_indices, 32u);
         }
 
         // allocate host vertex buffers and index buffer
-        std::vector<float3> vb_positions1(num_total_vertices, float3(-1, -1, -1));
+        std::vector<float3>        vb_positions1(num_total_vertices);
         std::vector<CompactVertex> vb_packed1(num_total_vertices);
-        std::vector<VertexIndexT> ib1(num_total_indices);
+        std::vector<VertexIndexT>  ib1(num_total_indices);
 
         // prepare the result
-        const urange geometries_range(m_geometries.size(), m_geometries.size() + geometry_infos.size());
+        const urange32_t geometries_range(m_geometries.size(), m_geometries.size() + geometry_infos.size());
         m_geometries.resize(geometries_range.m_end);
 
         for (size_t i_geometry_info = 0; i_geometry_info < geometry_infos.size(); i_geometry_info++)
         {
-            const AiGeometryInfo & geometry_info = geometry_infos[i_geometry_info];
-            const uint32_t vertices_base_idx     = vertices_base_idxs[i_geometry_info];
-            const uint32_t indices_base_idx      = indices_base_idxs[i_geometry_info];
-            std::span<float3> span_vb_positions(vb_positions1.begin() + vertices_base_idx,
+            const AiGeometryInfo &   geometry_info     = geometry_infos[i_geometry_info];
+            const uint32_t           vertices_base_idx = vertices_base_idxs[i_geometry_info];
+            const uint32_t           indices_base_idx  = indices_base_idxs[i_geometry_info];
+            std::span<float3>        span_vb_positions(vb_positions1.begin() + vertices_base_idx,
                                                 geometry_info.m_dst_num_vertices);
             std::span<CompactVertex> span_vb_packed(vb_packed1.begin() + vertices_base_idx,
                                                     geometry_info.m_dst_num_vertices);
@@ -249,19 +249,19 @@ struct SceneResource
     }
 
     size_t
-    add_base_instance(const std::span<urange> & geometry_ranges)
+    add_base_instance(const std::span<urange32_t> & geometry_ranges)
     {
         SceneBaseInstance base_instance;
         base_instance.m_geometry_id_ranges =
-            std::vector<urange>(geometry_ranges.begin(), geometry_ranges.end());
+            std::vector<urange32_t>(geometry_ranges.begin(), geometry_ranges.end());
         m_base_instances.push_back(base_instance);
         return m_base_instances.size() - 1;
     }
 
     StandardMaterial
     add_standard_material(const std::filesystem::path & path,
-                          const aiMaterial & ai_material,
-                          Rhi::StagingBufferManager & staging_buffer_manager)
+                          const aiMaterial &            ai_material,
+                          Rhi::StagingBufferManager &   staging_buffer_manager)
     {
         StandardMaterial standard_material;
         set_material(&standard_material.m_diffuse_tex_id,
@@ -292,18 +292,18 @@ struct SceneResource
     }
 
     void
-    set_material(uint32_t * blob,
-                 StandardMaterial * material,
+    set_material(uint32_t *                    blob,
+                 StandardMaterial *            material,
                  const std::filesystem::path & path,
-                 const aiMaterial & ai_material,
-                 const aiTextureType ai_tex_type,
-                 const char * ai_mat_key_0,
-                 int ai_mat_key_1,
-                 int ai_mat_key_2,
-                 const int num_desired_channels,
-                 Rhi::StagingBufferManager & staging_buffer_manager)
+                 const aiMaterial &            ai_material,
+                 const aiTextureType           ai_tex_type,
+                 const char *                  ai_mat_key_0,
+                 int                           ai_mat_key_1,
+                 int                           ai_mat_key_2,
+                 const int                     num_desired_channels,
+                 Rhi::StagingBufferManager &   staging_buffer_manager)
     {
-        aiString tex_name;
+        aiString  tex_name;
         aiColor4D color;
         if (ai_material.GetTexture(ai_tex_type, 0, &tex_name) == aiReturn_SUCCESS)
         {
@@ -328,6 +328,11 @@ struct SceneResource
     size_t
     add_texture(const std::filesystem::path & path, const size_t desired_channel, Rhi::StagingBufferManager & staging_buffer_manager)
     {
+        if (m_d_textures.size() > 100)
+        {
+            return 0;
+        }
+
         const std::string filepath_str = path.string();
 
         // load using stbi
@@ -376,7 +381,7 @@ struct SceneResource
                 bool is_updatable = false;
                 for (size_t i_geom = 0; i_geom < base_instance.m_geometry_id_ranges.size(); i_geom++)
                 {
-                    const urange & gid_range = base_instance.m_geometry_id_ranges[i_geom];
+                    const urange32_t & gid_range = base_instance.m_geometry_id_ranges[i_geom];
                     for (uint32_t geometry_id = gid_range.m_begin; geometry_id < gid_range.m_end; geometry_id++)
                     {
                         const SceneGeometry & geometry = m_geometries[geometry_id];
@@ -443,18 +448,14 @@ struct SceneResource
                         m_h_materials.data(),
                         m_h_materials.size() * sizeof(m_h_materials[0]));
             staging_buffer.unmap();
-            cmd_list.copy_buffer_region(m_d_materials,
-                                        0,
-                                        staging_buffer,
-                                        0,
-                                        m_h_materials.size() * sizeof(m_h_materials[0]));
+            cmd_list.copy_buffer_region(m_d_materials, 0, staging_buffer, 0, m_h_materials.size() * sizeof(m_h_materials[0]));
         }
 
         // build mesh table
         Rhi::Buffer staging_buffer2 = {};
         Rhi::Buffer staging_buffer3 = {};
         {
-            std::vector<GeometryTableEntry> geometry_table;
+            std::vector<GeometryTableEntry>     geometry_table;
             std::vector<BaseInstanceTableEntry> base_instance_table;
             for (size_t i = 0; i < m_base_instances.size(); i++)
             {
@@ -463,10 +464,10 @@ struct SceneResource
                 base_instance_table.push_back(base_instance_entry);
                 for (size_t k = 0; k < m_base_instances[i].m_geometry_id_ranges.size(); k++)
                 {
-                    const urange & gid_range = m_base_instances[i].m_geometry_id_ranges[k];
+                    const urange32_t & gid_range = m_base_instances[i].m_geometry_id_ranges[k];
                     for (size_t j = gid_range.m_begin; j < gid_range.m_end; j++)
                     {
-                        const auto & geometry = m_geometries[j];
+                        const auto &       geometry = m_geometries[j];
                         GeometryTableEntry geometry_entry;
                         geometry_entry.m_vertex_base_idx = geometry.m_vbuf_base_idx;
                         geometry_entry.m_index_base_idx  = geometry.m_ibuf_base_idx;

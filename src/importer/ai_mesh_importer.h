@@ -17,14 +17,20 @@
 
 struct AiGeometryInfo
 {
+    using aiFaceSizeT     = decltype(aiMesh::mNumFaces);
+    using aiFaceRange     = rangeT<aiFaceSizeT>;
+    using aiMeshSizeT     = decltype(aiScene::mNumMeshes);
+    using aiVertexSizeT   = std::remove_reference_t<decltype(*aiFace::mIndices)>;
+    using aiMaterialSizeT = decltype(aiMesh::mMaterialIndex);
+
     // dst means mortar's data format
-    VertexIndexT m_dst_num_vertices;
-    uint32_t m_dst_num_indices;
+    size_t m_dst_num_vertices;
+    size_t m_dst_num_indices;
 
     // src means index / range / id are referred to assimp format
-    uint32_t m_src_mesh_index;
-    urange m_src_faces_range;
-    MaterialSizeT m_src_material_index;
+    aiMeshSizeT         m_src_mesh_index;
+    rangeT<aiFaceSizeT> m_src_faces_range;
+    aiMaterialSizeT     m_src_material_index;
 
     bool m_is_indices_reorder_needed;
 
@@ -42,9 +48,15 @@ struct AiGeometryInfo
 
 struct AiScene
 {
+    using aiFaceSizeT     = decltype(aiMesh::mNumFaces);
+    using aiFaceRange     = rangeT<aiFaceSizeT>;
+    using aiMeshSizeT     = decltype(aiScene::mNumMeshes);
+    using aiVertexSizeT   = std::remove_reference_t<decltype(*aiFace::mIndices)>;
+    using aiMaterialSizeT = decltype(aiMesh::mMaterialIndex);
+
     // the scene is automatically be freed if the importer is destructed
     std::unique_ptr<Assimp::Importer> m_ai_importer;
-    const aiScene * m_ai_scene = nullptr;
+    const aiScene *                   m_ai_scene = nullptr;
 
     // read AiScene from path
     static std::optional<AiScene>
@@ -62,7 +74,7 @@ struct AiScene
 
     // split assimp scene into multiple geometries where each geometry is guaranteed to have #vertices less than user-specified max num vertices
     std::vector<AiGeometryInfo>
-    get_geometry_infos(const uint32_t max_dst_num_vertices_per_geometry) const
+    get_geometry_infos(const size_t max_dst_num_vertices_per_geometry) const
     {
         std::vector<AiGeometryInfo> result;
 
@@ -77,34 +89,35 @@ struct AiScene
     // split imported assimp mesh into multiple geometries where each geometry is guaranteed to have #vertices less than user-specified max num vertices
     void
     get_geometry_infos(std::vector<AiGeometryInfo> * geometries,
-                       const unsigned int src_mesh_index,
-                       const uint32_t max_dst_num_vertices_per_geometry) const
+                       const unsigned int            src_mesh_index,
+                       const size_t                  max_dst_num_vertices_per_geometry) const
     {
         const aiMesh & src_mesh = *m_ai_scene->mMeshes[src_mesh_index];
 
         {
             // src mesh
-            unsigned int max_vindex      = std::numeric_limits<unsigned int>::min();
-            unsigned int min_vindex      = std::numeric_limits<unsigned int>::max();
-            unsigned int num_dst_indices = 0;
-            for (unsigned int i_src_face = 0; i_src_face < src_mesh.mNumFaces; i_src_face++)
+            aiVertexSizeT max_vindex      = std::numeric_limits<aiVertexSizeT>::min();
+            aiVertexSizeT min_vindex      = std::numeric_limits<aiVertexSizeT>::max();
+            aiFaceSizeT   num_dst_indices = 0;
+            for (aiFaceSizeT i_src_face = 0; i_src_face < src_mesh.mNumFaces; i_src_face++)
             {
-                const auto & src_face = src_mesh.mFaces[i_src_face];
+                const aiFace & src_face = src_mesh.mFaces[i_src_face];
                 num_dst_indices += (src_face.mNumIndices - 2) * 3;
-                for (unsigned int i_index = 0; i_index < src_face.mNumIndices; i_index++)
+                for (aiVertexSizeT i_index = 0; i_index < src_face.mNumIndices; i_index++)
                 {
-                    unsigned int vindex = src_face.mIndices[i_index];
-                    max_vindex          = std::max(vindex, max_vindex);
-                    min_vindex          = std::min(vindex, min_vindex);
+                    const aiVertexSizeT vindex = src_face.mIndices[i_index];
+                    max_vindex                 = std::max(vindex, max_vindex);
+                    min_vindex                 = std::min(vindex, min_vindex);
                 }
             }
 
-            unsigned int num_vindices = max_vindex - min_vindex + 1;
+            aiVertexSizeT num_vindices = max_vindex - min_vindex + 1;
             if (num_vindices < max_dst_num_vertices_per_geometry)
             {
                 AiGeometryInfo geometry;
                 geometry.m_src_mesh_index            = static_cast<uint32_t>(src_mesh_index);
-                geometry.m_src_faces_range           = urange(0, src_mesh.mNumFaces);
+                geometry.m_src_faces_range.m_begin   = 0;
+                geometry.m_src_faces_range.m_end     = src_mesh.mNumFaces;
                 geometry.m_dst_num_indices           = num_dst_indices;
                 geometry.m_dst_num_vertices          = num_vindices;
                 geometry.m_src_material_index        = src_mesh.mMaterialIndex;
@@ -117,46 +130,39 @@ struct AiScene
         // since max vertices that we support per geometry could be as low as MAX_UINT16 or
         // MAX_UINT8 but number of vertices and indices in mesh could be higher to avoid this we
         // have to split mesh indices and vertices into multiple groups create list of submesh info
-        uint32_t used_num_indices = 0;
-        std::set<uint32_t> used_vertices;
-        unsigned int i_range_begin = 0;
+        size_t                  used_num_indices = 0;
+        std::set<aiVertexSizeT> used_ai_vertex_indices;
+        aiFaceSizeT             i_range_begin = 0;
 
-        for (unsigned int i_src_face = 0; i_src_face < src_mesh.mNumFaces;)
+        for (aiFaceSizeT i_src_face = 0; i_src_face < src_mesh.mNumFaces;)
         {
             // check if we can push a new face into the current dst mesh
             // if we cannot, num_indices and num_vertices along with range will be recorded as the info for submesh
-            const uint32_t num_indices_before_increment  = used_num_indices;
-            const uint32_t num_vertices_before_increment = used_vertices.size();
+            const size_t num_indices_before_increment  = used_num_indices;
+            const size_t num_vertices_before_increment = used_ai_vertex_indices.size();
 
-            // try to increment number of vertices
-            auto increment_used_vertices_and_indices = [&]() {
-                const auto & src_face = src_mesh.mFaces[i_src_face];
-
-                // in src mesh, a single face could be a triangle fan
-                // where in dst mesh, a single face is only a triangle
-                // for instance, 4 indices face -> 2 faces, 5 indices face -> 3 faces, ...
-                const uint32_t dst_num_tri_faces    = (src_face.mNumIndices - 2);
-                const uint32_t dst_num_face_indices = dst_num_tri_faces * 3;
-                used_num_indices += dst_num_face_indices;
-                for (unsigned int i_index = 0; i_index < src_face.mNumIndices; i_index++)
-                {
-                    used_vertices.insert(src_face.mIndices[i_index]);
-                }
-            };
-            increment_used_vertices_and_indices();
+            // in src mesh, a single face could be a triangle fan
+            // where in dst mesh, a single face is only a triangle
+            // for instance, 4 indices face -> 2 faces, 5 indices face -> 3 faces, ...
+            const aiFace & src_face = src_mesh.mFaces[i_src_face];
+            used_num_indices += static_cast<size_t>((src_face.mNumIndices - 2) * 3);
+            for (unsigned int i_index = 0; i_index < src_face.mNumIndices; i_index++)
+            {
+                used_ai_vertex_indices.insert(src_face.mIndices[i_index]);
+            }
 
             // if the increment fail, record num_indices and num_vertices and range as the info of a new submesh
-            const bool is_vertices_exceed = used_vertices.size() >= max_dst_num_vertices_per_geometry;
+            const bool is_vertices_exceed = used_ai_vertex_indices.size() >= max_dst_num_vertices_per_geometry;
             if (is_vertices_exceed)
             {
                 // range
-                const unsigned int i_range_end = i_src_face;
-                urange face_range(i_range_begin, i_range_end);
+                const aiFaceSizeT i_range_end = i_src_face;
 
                 // push back
                 AiGeometryInfo geometry;
                 geometry.m_src_mesh_index            = static_cast<uint32_t>(src_mesh_index);
-                geometry.m_src_faces_range           = face_range;
+                geometry.m_src_faces_range.m_begin   = i_range_begin;
+                geometry.m_src_faces_range.m_end     = i_range_end;
                 geometry.m_dst_num_indices           = num_indices_before_increment;
                 geometry.m_dst_num_vertices          = num_vertices_before_increment;
                 geometry.m_src_material_index        = src_mesh.mMaterialIndex;
@@ -177,7 +183,7 @@ struct AiScene
                 // update
                 i_range_begin    = i_range_end;
                 used_num_indices = 0;
-                used_vertices.clear();
+                used_ai_vertex_indices.clear();
             }
             else
             {
@@ -189,9 +195,9 @@ struct AiScene
         // push back the last geometry
         AiGeometryInfo geometry;
         geometry.m_src_mesh_index            = static_cast<uint32_t>(src_mesh_index);
-        geometry.m_src_faces_range           = urange(i_range_begin, src_mesh.mNumFaces);
+        geometry.m_src_faces_range           = urange32_t(i_range_begin, src_mesh.mNumFaces);
         geometry.m_dst_num_indices           = used_num_indices;
-        geometry.m_dst_num_vertices          = used_vertices.size();
+        geometry.m_dst_num_vertices          = used_ai_vertex_indices.size();
         geometry.m_src_material_index        = src_mesh.mMaterialIndex;
         geometry.m_is_indices_reorder_needed = true;
         geometries->push_back(geometry);
@@ -209,29 +215,29 @@ struct AiScene
     }
 
     void
-    write_geometry_info_reordered(std::span<float3> * positions,
+    write_geometry_info_reordered(std::span<float3> *        positions,
                                   std::span<CompactVertex> * compact_vertices,
-                                  std::span<VertexIndexT> * indices,
-                                  const AiGeometryInfo & geometry_info) const
+                                  std::span<VertexIndexT> *  indices,
+                                  const AiGeometryInfo &     geometry_info) const
     {
         // make into reference, so we can use operator[] easily
         // (operator[] usually has lower cost than ->at())
-        std::span<float3> & rpositions        = *positions;
+        std::span<float3> &        rpositions = *positions;
         std::span<CompactVertex> & rcvertices = *compact_vertices;
-        std::span<VertexIndexT> & rcindices   = *indices;
-        const aiMesh & ai_mesh = *m_ai_scene->mMeshes[geometry_info.m_src_mesh_index];
+        std::span<VertexIndexT> &  rcindices  = *indices;
+        const aiMesh &             ai_mesh = *m_ai_scene->mMeshes[geometry_info.m_src_mesh_index];
 
         // map from src vertex index in ai mesh to dst vertex index
         std::map<unsigned int, uint32_t> ai_vindex_to_dst_vindex;
 
         // for each face in ai mesh
-        const urange face_range = geometry_info.m_src_faces_range;
-        size_t num_dst_indices  = 0;
+        const urange32_t face_range      = geometry_info.m_src_faces_range;
+        size_t           num_dst_indices = 0;
         for (uint i_src_face = face_range.m_begin; i_src_face < face_range.m_end; i_src_face++)
         {
             auto get_dst_vindex = [&](const uint ai_vindex) {
                 // get dst_vindex
-                uint dst_vindex;
+                uint       dst_vindex;
                 const auto map_result = ai_vindex_to_dst_vindex.find(ai_vindex);
 
                 if (map_result == ai_vindex_to_dst_vindex.end())
@@ -247,7 +253,7 @@ struct AiScene
 
                     // write new shading normal
                     const auto & ai_normal = ai_mesh.mNormals[ai_vindex];
-                    float3 snormal(ai_normal.x, ai_normal.y, ai_normal.z);
+                    float3       snormal(ai_normal.x, ai_normal.y, ai_normal.z);
                     if (dot(snormal, snormal) == 0.0f)
                     {
                         snormal.z = 1.0f;
@@ -274,7 +280,7 @@ struct AiScene
 
             // we convert ai_indices into dst_indices
             const uint32_t dst_vindex0 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[0]);
-            uint32_t dst_vindex1       = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[1]);
+            uint32_t       dst_vindex1 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[1]);
             for (unsigned int i_index = 2; i_index < ai_mesh.mFaces[i_src_face].mNumIndices; i_index++)
             {
                 const uint32_t dst_vindex2 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[i_index]);
@@ -293,17 +299,17 @@ struct AiScene
     }
 
     void
-    write_geometry_info_simple(std::span<float3> * positions,
+    write_geometry_info_simple(std::span<float3> *        positions,
                                std::span<CompactVertex> * compact_vertices,
-                               std::span<VertexIndexT> * indices,
-                               const AiGeometryInfo & geometry_info) const
+                               std::span<VertexIndexT> *  indices,
+                               const AiGeometryInfo &     geometry_info) const
     {
         // make into reference, so we can use operator[] easily
         // (operator[] usually has lower cost than ->at())
-        std::span<float3> & rpositions        = *positions;
+        std::span<float3> &        rpositions = *positions;
         std::span<CompactVertex> & rcvertices = *compact_vertices;
-        std::span<VertexIndexT> & rcindices   = *indices;
-        const aiMesh & ai_mesh = *m_ai_scene->mMeshes[geometry_info.m_src_mesh_index];
+        std::span<VertexIndexT> &  rcindices  = *indices;
+        const aiMesh &             ai_mesh = *m_ai_scene->mMeshes[geometry_info.m_src_mesh_index];
 
         // for each vertices
         for (unsigned int i_vertex = 0; i_vertex < ai_mesh.mNumVertices; i_vertex++)
@@ -318,7 +324,7 @@ struct AiScene
 
             // write new shading normal
             const auto & ai_normal = ai_mesh.mNormals[i_vertex];
-            float3 snormal(ai_normal.x, ai_normal.y, ai_normal.z);
+            float3       snormal(ai_normal.x, ai_normal.y, ai_normal.z);
             if (dot(snormal, snormal) == 0.0f)
             {
                 snormal.z = 1.0f;
@@ -356,18 +362,18 @@ struct AiScene
 
     // write the aiScene's positions and indices into given positions and indices spans based on the given geometry_info
     void
-    write_geometry_info(std::span<float3> * positions,
+    write_geometry_info(std::span<float3> *        positions,
                         std::span<CompactVertex> * compact_vertices,
-                        std::span<VertexIndexT> * indices,
-                        const AiGeometryInfo & geometry_info) const
+                        std::span<VertexIndexT> *  indices,
+                        const AiGeometryInfo &     geometry_info) const
     {
-        //if (geometry_info.m_is_indices_reorder_needed)
+        if (geometry_info.m_is_indices_reorder_needed)
         {
             write_geometry_info_reordered(positions, compact_vertices, indices, geometry_info);
         }
-        //else
+        else
         {
-            //write_geometry_info_simple(positions, compact_vertices, indices, geometry_info);
+            write_geometry_info_simple(positions, compact_vertices, indices, geometry_info);
         }
     }
 };

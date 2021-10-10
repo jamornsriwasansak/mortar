@@ -313,7 +313,7 @@ struct RayTracingPipeline
             size_t result = 0;
             result += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
             result += num_max_inputs(stage) * 8; // 8 bytes per input
-            result = round_up(result, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+            result = round_up(result, static_cast<size_t>(D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT));
             return result;
         };
 
@@ -586,10 +586,10 @@ struct RayTracingShaderTable
         const size_t raygen_size   = pipeline.m_raygen_record_size * pipeline.m_num_raygens;
         const size_t miss_size     = pipeline.m_miss_record_size * pipeline.m_num_misses;
         const size_t hitgroup_size = pipeline.m_hit_group_record_size * pipeline.m_num_hit_groups;
-        const size_t rounded_raygen_size = round_up(raygen_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-        const size_t rounded_miss_size = round_up(miss_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        const size_t rounded_raygen_size = round_up(raygen_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+        const size_t rounded_miss_size = round_up(miss_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
         const size_t rounded_hitgroup_size =
-            round_up(hitgroup_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+            round_up(hitgroup_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
         const size_t shader_table_size = rounded_raygen_size + rounded_miss_size + rounded_hitgroup_size;
 
         // allocate resource

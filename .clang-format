@@ -8,7 +8,7 @@ AlwaysBreakAfterReturnType: All
 AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: true
 AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: false
+AlignConsecutiveDeclarations: true
 AlignConsecutiveMacros: true
 AlignEscapedNewlines: true
 AlignOperands: true

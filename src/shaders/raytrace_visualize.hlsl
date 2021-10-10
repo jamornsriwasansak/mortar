@@ -59,7 +59,7 @@ RayGen()
     ray.Origin    = origin;
     ray.Direction = direction;
     ray.TMin      = 0.1f;
-    ray.TMax      = 1000.f;
+    ray.TMax      = 100000.f;
 
     // Trace the ray
     TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
