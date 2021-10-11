@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/camera.h"
+#include "core/vmath.h"
 #include "render/render_context.h"
 #include "render/renderer.h"
 #include "rhi/rhi.h"
@@ -11,33 +12,33 @@
 struct MainLoop
 {
     Rhi::Device * m_device = nullptr;
-    Window * m_window      = nullptr;
+    Window *      m_window = nullptr;
 
-    Rhi::Swapchain m_swapchain;
-    std::vector<Rhi::Texture> m_swapchain_textures;
-    std::vector<Rhi::Fence> m_flight_fences;
-    std::vector<Rhi::CommandPool> m_graphics_command_pools;
-    std::vector<Rhi::CommandPool> m_compute_command_pools;
-    std::vector<Rhi::CommandPool> m_transfer_command_pools;
+    Rhi::Swapchain                   m_swapchain;
+    std::vector<Rhi::Texture>        m_swapchain_textures;
+    std::vector<Rhi::Fence>          m_flight_fences;
+    std::vector<Rhi::CommandPool>    m_graphics_command_pools;
+    std::vector<Rhi::CommandPool>    m_compute_command_pools;
+    std::vector<Rhi::CommandPool>    m_transfer_command_pools;
     std::vector<Rhi::DescriptorPool> m_descriptor_pools;
-    std::vector<Rhi::Semaphore> m_image_ready_semaphores;
-    std::vector<Rhi::Semaphore> m_image_presentable_semaphore;
-    size_t m_swapchain_length = 0;
-    size_t m_num_flights      = 0;
+    std::vector<Rhi::Semaphore>      m_image_ready_semaphores;
+    std::vector<Rhi::Semaphore>      m_image_presentable_semaphore;
+    size_t                           m_swapchain_length = 0;
+    size_t                           m_num_flights      = 0;
 
     Rhi::StagingBufferManager m_staging_buffer_manager;
     // TODO:: replace asset pool completely with scene
     SceneResource m_scene_resource;
-    FpsCamera m_camera;
-    Renderer m_renderer;
-    int2 m_swapchain_resolution = int2(0, 0);
+    FpsCamera     m_camera;
+    Renderer      m_renderer;
+    int2          m_swapchain_resolution = int2(0, 0);
 
-    Rhi::Buffer m_dummy_buffer;
-    Rhi::Buffer m_dummy_index_buffer;
+    Rhi::Buffer  m_dummy_buffer;
+    Rhi::Buffer  m_dummy_index_buffer;
     Rhi::Texture m_dummy_texture;
 
     Rhi::ImGuiRenderPass m_imgui_render_pass;
-    AssetBrowserQuick m_asset_browser;
+    AssetBrowserQuick    m_asset_browser;
 
     MainLoop() {}
 
@@ -235,11 +236,11 @@ struct MainLoop
     {
         size_t i_flight = 0;
 
-        urange sponza_geometries =
+        urange32_t sponza_geometries =
             m_scene_resource.add_geometries("scenes/sponza/sponza.obj", m_staging_buffer_manager);
-            //m_scene_resource.add_geometries("tmp/Exterior/Exterior.obj", m_staging_buffer_manager);
-        std::array<urange, 1> ranges = { sponza_geometries };
-        size_t sponza_instance_id    = m_scene_resource.add_base_instance(ranges);
+        // m_scene_resource.add_geometries("tmp/Exterior/Exterior.obj", m_staging_buffer_manager);
+        std::array<urange32_t, 1> ranges             = { sponza_geometries };
+        size_t                sponza_instance_id = m_scene_resource.add_base_instance(ranges);
         // m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
 
         SceneDesc scene_desc;

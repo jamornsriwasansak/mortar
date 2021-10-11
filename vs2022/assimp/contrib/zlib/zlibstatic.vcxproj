@@ -1,0 +1,197 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5E8CFFD1-47A5-3D9C-B2BA-25104B140A4F}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>zlibstatic</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)..\..\vs2022\assimp\contrib\zlib\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">zlibstatic.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">zlibstaticd</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)..\..\vs2022\assimp\contrib\zlib\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">zlibstatic.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">zlibstatic</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\vs2022\assimp\include;$(SolutionDir)..\..\vs2022\assimp;$(SolutionDir)..\..\dep\assimp\include;$(SolutionDir)..\..\dep\assimp\code;$(SolutionDir)..\..\dep\assimp\.;$(SolutionDir)..\..\dep\assimp\contrib\zlib;$(SolutionDir)..\..\vs2022\assimp\contrib\zlib;$(SolutionDir)..\..\dep\assimp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4131;4127;4244</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\Jamorn\Documents\mortar\vs2022\assimp\include;C:\Users\Jamorn\Documents\mortar\vs2022\assimp;C:\Users\Jamorn\Documents\mortar\dep\assimp\include;C:\Users\Jamorn\Documents\mortar\dep\assimp\code;C:\Users\Jamorn\Documents\mortar\dep\assimp\.;C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\contrib\zlib;C:\Users\Jamorn\Documents\mortar\dep\assimp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\Jamorn\Documents\mortar\vs2022\assimp\include;C:\Users\Jamorn\Documents\mortar\vs2022\assimp;C:\Users\Jamorn\Documents\mortar\dep\assimp\include;C:\Users\Jamorn\Documents\mortar\dep\assimp\code;C:\Users\Jamorn\Documents\mortar\dep\assimp\.;C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\contrib\zlib;C:\Users\Jamorn\Documents\mortar\dep\assimp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\vs2022\assimp\include;$(SolutionDir)..\..\vs2022\assimp;$(SolutionDir)..\..\dep\assimp\include;$(SolutionDir)..\..\dep\assimp\code;$(SolutionDir)..\..\dep\assimp\.;$(SolutionDir)..\..\dep\assimp\contrib\zlib;$(SolutionDir)..\..\vs2022\assimp\contrib\zlib;$(SolutionDir)..\..\dep\assimp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <DisableSpecificWarnings>4131;4127;4244</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;WIN32_LEAN_AND_MEAN;UNICODE;_UNICODE;NO_FSEEKO;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\Jamorn\Documents\mortar\vs2022\assimp\include;C:\Users\Jamorn\Documents\mortar\vs2022\assimp;C:\Users\Jamorn\Documents\mortar\dep\assimp\include;C:\Users\Jamorn\Documents\mortar\dep\assimp\code;C:\Users\Jamorn\Documents\mortar\dep\assimp\.;C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\contrib\zlib;C:\Users\Jamorn\Documents\mortar\dep\assimp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\Jamorn\Documents\mortar\vs2022\assimp\include;C:\Users\Jamorn\Documents\mortar\vs2022\assimp;C:\Users\Jamorn\Documents\mortar\dep\assimp\include;C:\Users\Jamorn\Documents\mortar\dep\assimp\code;C:\Users\Jamorn\Documents\mortar\dep\assimp\.;C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\contrib\zlib;C:\Users\Jamorn\Documents\mortar\dep\assimp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\CMakeLists.txt">
+      <StdOutEncoding>UTF-8</StdOutEncoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/Jamorn/Documents/mortar/dep/assimp/contrib/zlib/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Jamorn/Documents/mortar/dep/assimp -BC:/Users/Jamorn/Documents/mortar/vs2022/assimp --check-stamp-file C:/Users/Jamorn/Documents/mortar/vs2022/assimp/contrib/zlib/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.19\Modules\CheckCSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckFunctionExists.c;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckFunctionExists.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckIncludeFile.c.in;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckIncludeFileCXX.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckTypeSize.c.in;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckTypeSize.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Internal\CheckSourceCompiles.cmake;C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\zconf.h.cmakein;C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\zlib.pc.cmakein;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\CMakeFiles\CheckTypeSize\OFF64_T.c;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Jamorn\Documents\mortar\vs2022\assimp\contrib\zlib\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/Jamorn/Documents/mortar/dep/assimp/contrib/zlib/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Jamorn/Documents/mortar/dep/assimp -BC:/Users/Jamorn/Documents/mortar/vs2022/assimp --check-stamp-file C:/Users/Jamorn/Documents/mortar/vs2022/assimp/contrib/zlib/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.19\Modules\CheckCSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckFunctionExists.c;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckFunctionExists.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckIncludeFile.c.in;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckIncludeFileCXX.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckTypeSize.c.in;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckTypeSize.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Internal\CheckSourceCompiles.cmake;C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\zconf.h.cmakein;C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\zlib.pc.cmakein;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\CMakeFiles\CheckTypeSize\OFF64_T.c;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Jamorn\Documents\mortar\vs2022\assimp\contrib\zlib\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\adler32.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\compress.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\crc32.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\deflate.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\gzclose.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\gzlib.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\gzread.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\gzwrite.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\inflate.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\infback.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\inftrees.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\inffast.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\trees.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\uncompr.c" />
+    <ClCompile Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\zutil.c" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\vs2022\assimp\contrib\zlib\zconf.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\zlib.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\crc32.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\deflate.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\gzguts.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\inffast.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\inffixed.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\inflate.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\inftrees.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\trees.h" />
+    <ClInclude Include="C:\Users\Jamorn\Documents\mortar\dep\assimp\contrib\zlib\zutil.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\assimp\ZERO_CHECK.vcxproj">
+      <Project>{5A0AD606-52A2-326A-8963-34C223A64103}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

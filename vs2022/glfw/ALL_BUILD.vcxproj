@@ -1,0 +1,231 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D4817DC6-4F9F-3603-A8FB-AA0310A6D261}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>ALL_BUILD</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Jamorn\Documents\mortar\dep\glfw\CMakeLists.txt">
+      <StdOutEncoding>UTF-8</StdOutEncoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/Jamorn/Documents/mortar/dep/glfw/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Jamorn/Documents/mortar/dep/glfw -BC:/Users/Jamorn/Documents/mortar/vs2022/glfw --check-stamp-file C:/Users/Jamorn/Documents/mortar/vs2022/glfw/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Program Files\CMake\share\cmake-3.19\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeDependentOption.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckCSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Internal\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\Jamorn\Documents\mortar\dep\glfw\CMake\cmake_uninstall.cmake.in;C:\Users\Jamorn\Documents\mortar\dep\glfw\CMake\glfw3.pc.in;C:\Users\Jamorn\Documents\mortar\dep\glfw\CMake\glfw3Config.cmake.in;C:\Users\Jamorn\Documents\mortar\vs2022\glfw\CMakeFiles\3.19.3\CMakeCCompiler.cmake;C:\Users\Jamorn\Documents\mortar\vs2022\glfw\CMakeFiles\3.19.3\CMakeRCCompiler.cmake;C:\Users\Jamorn\Documents\mortar\vs2022\glfw\CMakeFiles\3.19.3\CMakeSystem.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\Jamorn\Documents\mortar\vs2022\glfw\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/Jamorn/Documents/mortar/dep/glfw/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Jamorn/Documents/mortar/dep/glfw -BC:/Users/Jamorn/Documents/mortar/vs2022/glfw --check-stamp-file C:/Users/Jamorn/Documents/mortar/vs2022/glfw/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\CMake\share\cmake-3.19\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeDependentOption.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckCSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\GNUInstallDirs.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Internal\CheckSourceCompiles.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-3.19\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\Jamorn\Documents\mortar\dep\glfw\CMake\cmake_uninstall.cmake.in;C:\Users\Jamorn\Documents\mortar\dep\glfw\CMake\glfw3.pc.in;C:\Users\Jamorn\Documents\mortar\dep\glfw\CMake\glfw3Config.cmake.in;C:\Users\Jamorn\Documents\mortar\vs2022\glfw\CMakeFiles\3.19.3\CMakeCCompiler.cmake;C:\Users\Jamorn\Documents\mortar\vs2022\glfw\CMakeFiles\3.19.3\CMakeRCCompiler.cmake;C:\Users\Jamorn\Documents\mortar\vs2022\glfw\CMakeFiles\3.19.3\CMakeSystem.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\Jamorn\Documents\mortar\vs2022\glfw\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\ZERO_CHECK.vcxproj">
+      <Project>{3EE4D20C-8D40-3505-99DC-47078F344D0A}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\boing.vcxproj">
+      <Project>{0625EC35-56A1-3D13-9287-404D41E5368C}</Project>
+      <Name>boing</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\clipboard.vcxproj">
+      <Project>{F4C3A287-F5BB-3820-A7BC-6DF04AC6DC37}</Project>
+      <Name>clipboard</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\cursor.vcxproj">
+      <Project>{B03762D5-BF72-3E9A-904E-52E3A43330B4}</Project>
+      <Name>cursor</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\empty.vcxproj">
+      <Project>{B608B043-1B95-3C04-B095-9AE0B1B3444C}</Project>
+      <Name>empty</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\events.vcxproj">
+      <Project>{6715CCA8-B3F1-3DD1-8A96-B84B2209EB72}</Project>
+      <Name>events</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\gamma.vcxproj">
+      <Project>{153F19A6-5ABA-3E25-B9F5-46DC7A76C8EE}</Project>
+      <Name>gamma</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\gears.vcxproj">
+      <Project>{A940E157-74B8-3205-88D2-DE38E2F31CA1}</Project>
+      <Name>gears</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\src\glfw.vcxproj">
+      <Project>{2E3FB810-94EA-3DF1-9CD9-87F6C0DC2FEF}</Project>
+      <Name>glfw</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\glfwinfo.vcxproj">
+      <Project>{538E2344-74A0-3522-AF17-10ADCA3385C0}</Project>
+      <Name>glfwinfo</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\heightmap.vcxproj">
+      <Project>{614F8108-3DD6-38A1-A976-CA280099EF47}</Project>
+      <Name>heightmap</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\icon.vcxproj">
+      <Project>{758363A3-A1F2-3018-BFD9-92F295E67E3C}</Project>
+      <Name>icon</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\iconify.vcxproj">
+      <Project>{687E886C-9416-3E93-BD7D-8AECCE51D6AA}</Project>
+      <Name>iconify</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\inputlag.vcxproj">
+      <Project>{3EE76DBA-6B57-329C-ADD2-D7B61DF36597}</Project>
+      <Name>inputlag</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\joysticks.vcxproj">
+      <Project>{9E7CBEBD-C082-3FAF-9C3A-3C1A5256A11A}</Project>
+      <Name>joysticks</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\monitors.vcxproj">
+      <Project>{A691134F-A934-32C5-8EDA-083B4F2EDEB4}</Project>
+      <Name>monitors</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\msaa.vcxproj">
+      <Project>{9B7169B5-BE85-3518-940A-BCA80E92EF1B}</Project>
+      <Name>msaa</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\offscreen.vcxproj">
+      <Project>{6380BF2C-ED58-3894-9E6E-B3B5CBDC5463}</Project>
+      <Name>offscreen</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\particles.vcxproj">
+      <Project>{8B9D3E0C-61D6-3F49-B495-68644FE1806F}</Project>
+      <Name>particles</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\reopen.vcxproj">
+      <Project>{BD6F1F84-4202-348B-AA80-660B13358673}</Project>
+      <Name>reopen</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\sharing.vcxproj">
+      <Project>{D434DB45-3A22-31E4-9FD0-F12AE2FC584C}</Project>
+      <Name>sharing</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\splitview.vcxproj">
+      <Project>{11BBE60F-5340-34E3-8BC4-E6B802E396A5}</Project>
+      <Name>splitview</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\tearing.vcxproj">
+      <Project>{054BD904-8E90-38FE-9D1A-0AD1270A653C}</Project>
+      <Name>tearing</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\threads.vcxproj">
+      <Project>{67311095-3DD8-36BD-9AE2-1D4E2D664E2B}</Project>
+      <Name>threads</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\timeout.vcxproj">
+      <Project>{727D65A2-74F9-3663-BA92-A607BFD6FB8E}</Project>
+      <Name>timeout</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\title.vcxproj">
+      <Project>{39147C5F-BFE2-34A9-9915-B5B3A5ED65EA}</Project>
+      <Name>title</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\triangle-opengl.vcxproj">
+      <Project>{6F33FB56-FDA5-3095-8C5C-9A4E324ACA8C}</Project>
+      <Name>triangle-opengl</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\triangle-vulkan.vcxproj">
+      <Project>{A84EA5DA-44E3-3727-B96C-24E90CB44F83}</Project>
+      <Name>triangle-vulkan</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\wave.vcxproj">
+      <Project>{EC2E529D-0169-3AD7-A875-E88DF5D5BB34}</Project>
+      <Name>wave</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\tests\window.vcxproj">
+      <Project>{7CEA3277-FCE0-30D5-9279-F8881A337F86}</Project>
+      <Name>window</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\Jamorn\Documents\mortar\vs2022\glfw\examples\windows.vcxproj">
+      <Project>{536A8EE7-85A6-3041-B42D-AA35DD98B457}</Project>
+      <Name>windows</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

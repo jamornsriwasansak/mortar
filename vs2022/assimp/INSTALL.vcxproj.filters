@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Jamorn\Documents\mortar\vs2022\assimp\CMakeFiles\73505446f211558a7b9f352dea725280\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{79A7626A-8DFB-30A5-9C10-34FECE6BC77E}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

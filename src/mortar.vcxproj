@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{a1196d7c-b316-436b-afe4-595c2ff59c25}</ProjectGuid>
+    <RootNamespace>mortar</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>C:\Users\Jamorn\Documents\mortar\sandbox</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\Jamorn\Documents\mortar\dep\D3D12MemoryAllocator\src;C:\Users\Jamorn\Documents\mortar\dep\SPIRV-Reflect;C:\Users\Jamorn\Documents\mortar\dep\DirectXShaderCompilerPrebuilt-win\inc;C:\Users\Jamorn\Documents\mortar\dep\DirectX-Headers\include;C:\Users\Jamorn\Documents\mortar\dep\imgui;C:\Users\Jamorn\Documents\mortar\dep\stb;C:\Users\Jamorn\Documents\mortar\dep\glm;C:\Users\Jamorn\Documents\mortar\dep\spdlog\include;C:\Users\Jamorn\Documents\mortar\dep\VulkanMemoryAllocator\include;C:\Users\Jamorn\Documents\mortar\dep\assimp\include;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\include;C:\Users\Jamorn\Documents\mortar\dep\glfw\include;C:\VulkanSDK\1.2.162.0\Include;$(ProjectDir);$(Vulkan_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>C:\Users\Jamorn\Documents\mortar\vs2022\glfw\src\$(Configuration)\glfw3.lib;C:\Users\Jamorn\Documents\mortar\dep\DirectXShaderCompilerPrebuilt-win\lib\x64\dxcompiler.lib;C:\VulkanSDK\1.2.162.0\Lib\vulkan-1.lib;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\lib\Release\assimp-vc142-mt.lib;d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy C:\Users\Jamorn\Documents\mortar\vs2022\assimp\bin\Release\assimp-vc142-mt.dll C:\Users\Jamorn\Documents\mortar\sandbox</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\Jamorn\Documents\mortar\dep\D3D12MemoryAllocator\src;C:\Users\Jamorn\Documents\mortar\dep\SPIRV-Reflect;C:\Users\Jamorn\Documents\mortar\dep\DirectXShaderCompilerPrebuilt-win\inc;C:\Users\Jamorn\Documents\mortar\dep\DirectX-Headers\include;C:\Users\Jamorn\Documents\mortar\dep\imgui;C:\Users\Jamorn\Documents\mortar\dep\stb;C:\Users\Jamorn\Documents\mortar\dep\glm;C:\Users\Jamorn\Documents\mortar\dep\spdlog\include;C:\Users\Jamorn\Documents\mortar\dep\VulkanMemoryAllocator\include;C:\Users\Jamorn\Documents\mortar\dep\assimp\include;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\include;C:\Users\Jamorn\Documents\mortar\dep\glfw\include;C:\VulkanSDK\1.2.162.0\Include;$(ProjectDir);$(Vulkan_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>C:\Users\Jamorn\Documents\mortar\vs2022\glfw\src\$(Configuration)\glfw3.lib;C:\Users\Jamorn\Documents\mortar\dep\DirectXShaderCompilerPrebuilt-win\lib\x64\dxcompiler.lib;C:\VulkanSDK\1.2.162.0\Lib\vulkan-1.lib;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\lib\$(Configuration)\assimp-vc142-mt.lib;d3d12.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\dep\D3D12MemoryAllocator\src\D3D12MemAlloc.cpp" />
+    <ClCompile Include="..\dep\imgui\backends\imgui_impl_dx12.cpp" />
+    <ClCompile Include="..\dep\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\dep\imgui\backends\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="..\dep\imgui\imgui.cpp" />
+    <ClCompile Include="..\dep\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\dep\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\dep\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\dep\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="core\stb\stbimage.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="rhi\vka\vkacommon.cpp" />
+    <ClCompile Include="rhi\vka\vma\vma.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\dep\imgui\backends\imgui_impl_dx12.h" />
+    <ClInclude Include="..\dep\imgui\backends\imgui_impl_vulkan.h" />
+    <ClInclude Include="assetbrowser.h" />
+    <ClInclude Include="assetbrowserquick.h" />
+    <ClInclude Include="core\camera.h" />
+    <ClInclude Include="core\file.h" />
+    <ClInclude Include="core\glfwhandler.h" />
+    <ClInclude Include="core\logger.h" />
+    <ClInclude Include="core\noncopyable.h" />
+    <ClInclude Include="core\ste\stevector.h" />
+    <ClInclude Include="core\stopwatch.h" />
+    <ClInclude Include="core\trace.h" />
+    <ClInclude Include="core\uniquehandle.h" />
+    <ClInclude Include="core\vmath.h" />
+    <ClInclude Include="engine_setting.h" />
+    <ClInclude Include="importer\ai_mesh_importer.h" />
+    <ClInclude Include="importer\img_importer.h" />
+    <ClInclude Include="mainloop.h" />
+    <ClInclude Include="render\passes\final_composite.h" />
+    <ClInclude Include="render\passes\raytrace_visualize.h" />
+    <ClInclude Include="render\renderer.h" />
+    <ClInclude Include="render\render_context.h" />
+    <ClInclude Include="render\render_params.h" />
+    <ClInclude Include="render\shader_path.h" />
+    <ClInclude Include="rhi\commontypes\rhicopyregion.h" />
+    <ClInclude Include="rhi\commontypes\rhienums.h" />
+    <ClInclude Include="rhi\commontypes\rhishadersrc.h" />
+    <ClInclude Include="rhi\dxa\dxa.h" />
+    <ClInclude Include="rhi\dxa\dxabuffer.h" />
+    <ClInclude Include="rhi\dxa\dxacommandlist.h" />
+    <ClInclude Include="rhi\dxa\dxacommandpool.h" />
+    <ClInclude Include="rhi\dxa\dxacommon.h" />
+    <ClInclude Include="rhi\dxa\dxadescriptor.h" />
+    <ClInclude Include="rhi\dxa\dxadescriptorpool.h" />
+    <ClInclude Include="rhi\dxa\dxadevice.h" />
+    <ClInclude Include="rhi\dxa\dxaentry.h" />
+    <ClInclude Include="rhi\dxa\dxafence.h" />
+    <ClInclude Include="rhi\dxa\dxaflightcontrol.h" />
+    <ClInclude Include="rhi\dxa\dxaframebufferbinding.h" />
+    <ClInclude Include="rhi\dxa\dxaimguirenderpass.h" />
+    <ClInclude Include="rhi\dxa\dxarasterpipeline.h" />
+    <ClInclude Include="rhi\dxa\dxaraytracingaccel.h" />
+    <ClInclude Include="rhi\dxa\dxaraytracingpipeline.h" />
+    <ClInclude Include="rhi\dxa\dxasampler.h" />
+    <ClInclude Include="rhi\dxa\dxasemaphore.h" />
+    <ClInclude Include="rhi\dxa\dxastagingbuffermanager.h" />
+    <ClInclude Include="rhi\dxa\dxaswapchain.h" />
+    <ClInclude Include="rhi\dxa\dxatexture.h" />
+    <ClInclude Include="rhi\dxa\dxilreflection.h" />
+    <ClInclude Include="rhi\rhi.h" />
+    <ClInclude Include="rhi\setting.h" />
+    <ClInclude Include="rhi\shadercompiler\glslcompiler.h" />
+    <ClInclude Include="rhi\shadercompiler\hlsld3dcompiler.h" />
+    <ClInclude Include="rhi\shadercompiler\hlsldxccompiler.h" />
+    <ClInclude Include="rhi\vka\spirvreflection.h" />
+    <ClInclude Include="rhi\vka\vka.h" />
+    <ClInclude Include="rhi\vka\vkabuffer.h" />
+    <ClInclude Include="rhi\vka\vkacommandlist.h" />
+    <ClInclude Include="rhi\vka\vkacommandpool.h" />
+    <ClInclude Include="rhi\vka\vkacommon.h" />
+    <ClInclude Include="rhi\vka\vkadescriptor.h" />
+    <ClInclude Include="rhi\vka\vkadescriptorpool.h" />
+    <ClInclude Include="rhi\vka\vkadevice.h" />
+    <ClInclude Include="rhi\vka\vkaentry.h" />
+    <ClInclude Include="rhi\vka\vkafence.h" />
+    <ClInclude Include="rhi\vka\vkaframebufferbinding.h" />
+    <ClInclude Include="rhi\vka\vkaimguirenderpass.h" />
+    <ClInclude Include="rhi\vka\vkarasterpipeline.h" />
+    <ClInclude Include="rhi\vka\vkaraytracingaccel.h" />
+    <ClInclude Include="rhi\vka\vkaraytracingpipeline.h" />
+    <ClInclude Include="rhi\vka\vkasampler.h" />
+    <ClInclude Include="rhi\vka\vkasemaphore.h" />
+    <ClInclude Include="rhi\vka\vkastagingbuffermanager.h" />
+    <ClInclude Include="rhi\vka\vkaswapchain.h" />
+    <ClInclude Include="rhi\vka\vkatexture.h" />
+    <ClInclude Include="scene_graph.h" />
+    <ClInclude Include="scene_resource.h" />
+    <ClInclude Include="shaders\common\color_conversion.h" />
+    <ClInclude Include="shaders\common\constant.h" />
+    <ClInclude Include="shaders\common\mapping.h" />
+    <ClInclude Include="shaders\common\onb.h" />
+    <ClInclude Include="shaders\common\reservior.h" />
+    <ClInclude Include="shaders\common\standard_bsdf.h" />
+    <ClInclude Include="shaders\direct_light_restir_params.h" />
+    <ClInclude Include="shaders\raytrace_visualize_params.h" />
+    <ClInclude Include="shaders\rng\pcg.h" />
+    <ClInclude Include="shaders\shared\bindless_table.h" />
+    <ClInclude Include="shaders\shared\camera_params.h" />
+    <ClInclude Include="shaders\shared\compact_vertex.h" />
+    <ClInclude Include="shaders\shared\debug_print.h" />
+    <ClInclude Include="shaders\shared\standard_material.h" />
+    <ClInclude Include="shaders\shared\types.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
