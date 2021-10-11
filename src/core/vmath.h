@@ -100,6 +100,9 @@ round_up(const T size, const U min_align_size)
 {
     static_assert(!std::is_signed<T>::value);
     static_assert(!std::is_signed<U>::value);
+    static_assert(std::numeric_limits<T>::max() >= std::numeric_limits<U>::max());
+    assert(std::numeric_limits<T>::max() - min_align_size + 1 > size);
+
     // min align size = 0, any size is ok
     if (min_align_size == 0)
     {

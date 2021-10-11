@@ -312,7 +312,7 @@ struct AiScene
         const aiMesh &             ai_mesh = *m_ai_scene->mMeshes[geometry_info.m_src_mesh_index];
 
         // for each vertices
-        for (unsigned int i_vertex = 0; i_vertex < ai_mesh.mNumVertices; i_vertex++)
+        for (aiVertexSizeT i_vertex = 0; i_vertex < ai_mesh.mNumVertices; i_vertex++)
         {
             // setup positions
             rpositions[i_vertex].x = ai_mesh.mVertices[i_vertex].x;
@@ -323,8 +323,8 @@ struct AiScene
             CompactVertex & vertex = rcvertices[i_vertex];
 
             // write new shading normal
-            const auto & ai_normal = ai_mesh.mNormals[i_vertex];
-            float3       snormal(ai_normal.x, ai_normal.y, ai_normal.z);
+            const aiVector3D & ai_normal = ai_mesh.mNormals[i_vertex];
+            float3             snormal(ai_normal.x, ai_normal.y, ai_normal.z);
             if (dot(snormal, snormal) == 0.0f)
             {
                 snormal.z = 1.0f;
@@ -340,8 +340,8 @@ struct AiScene
         }
 
         // for each face in ai mesh
-        unsigned int index_buffer_offset = 0;
-        for (unsigned int i_face = 0; i_face < ai_mesh.mNumFaces; i_face++)
+        size_t index_buffer_offset = 0;
+        for (aiFaceSizeT i_face = 0; i_face < ai_mesh.mNumFaces; i_face++)
         {
             const uint16_t ai_index0 = ai_mesh.mFaces[i_face].mIndices[0];
 
