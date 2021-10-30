@@ -235,7 +235,8 @@ struct AiScene
         size_t           num_dst_indices = 0;
         for (uint i_src_face = face_range.m_begin; i_src_face < face_range.m_end; i_src_face++)
         {
-            auto get_dst_vindex = [&](const uint ai_vindex) {
+            auto get_dst_vindex = [&](const uint ai_vindex)
+            {
                 // get dst_vindex
                 uint       dst_vindex;
                 const auto map_result = ai_vindex_to_dst_vindex.find(ai_vindex);

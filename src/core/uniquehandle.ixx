@@ -1,6 +1,7 @@
 #pragma once
 
 #include "noncopyable.h"
+#include <optional>
 
 struct UniquePtrHandleDefaultDeleter
 {

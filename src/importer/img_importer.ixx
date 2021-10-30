@@ -7,10 +7,10 @@
 struct ImgImporter
 {
     void
-    add_texture_from_path(Rhi::Texture * dst,
+    add_texture_from_path(Rhi::Texture *                dst,
                           const std::filesystem::path & path,
-                          const size_t desired_channel,
-                          Rhi::StagingBufferManager * staging_buffer_manager)
+                          const size_t                  desired_channel,
+                          Rhi::StagingBufferManager *   staging_buffer_manager)
     {
         const std::string filepath_str = path.string();
         // load using stbi

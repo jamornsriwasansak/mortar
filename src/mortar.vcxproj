@@ -119,6 +119,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Jamorn\Documents\mortar\dep\D3D12MemoryAllocator\src;C:\Users\Jamorn\Documents\mortar\dep\SPIRV-Reflect;C:\Users\Jamorn\Documents\mortar\dep\DirectXShaderCompilerPrebuilt-win\inc;C:\Users\Jamorn\Documents\mortar\dep\DirectX-Headers\include;C:\Users\Jamorn\Documents\mortar\dep\imgui;C:\Users\Jamorn\Documents\mortar\dep\stb;C:\Users\Jamorn\Documents\mortar\dep\glm;C:\Users\Jamorn\Documents\mortar\dep\spdlog\include;C:\Users\Jamorn\Documents\mortar\dep\VulkanMemoryAllocator\include;C:\Users\Jamorn\Documents\mortar\dep\assimp\include;C:\Users\Jamorn\Documents\mortar\vs2022\assimp\include;C:\Users\Jamorn\Documents\mortar\dep\glfw\include;C:\VulkanSDK\1.2.162.0\Include;$(ProjectDir);$(Vulkan_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -158,104 +159,15 @@
     <ClCompile Include="..\dep\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\dep\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\dep\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="core\stb\stbimage.cpp" />
+    <ClCompile Include="core\vmath.ixx" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="rhi\vka\vkacommon.cpp" />
-    <ClCompile Include="rhi\vka\vma\vma.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\dep\imgui\backends\imgui_impl_dx12.h" />
     <ClInclude Include="..\dep\imgui\backends\imgui_impl_vulkan.h" />
     <ClInclude Include="assetbrowser.h" />
     <ClInclude Include="assetbrowserquick.h" />
-    <ClInclude Include="core\camera.h" />
-    <ClInclude Include="core\file.h" />
-    <ClInclude Include="core\glfwhandler.h" />
-    <ClInclude Include="core\logger.h" />
-    <ClInclude Include="core\noncopyable.h" />
-    <ClInclude Include="core\ste\stevector.h" />
-    <ClInclude Include="core\stopwatch.h" />
-    <ClInclude Include="core\trace.h" />
-    <ClInclude Include="core\uniquehandle.h" />
-    <ClInclude Include="core\vmath.h" />
     <ClInclude Include="engine_setting.h" />
-    <ClInclude Include="importer\ai_mesh_importer.h" />
-    <ClInclude Include="importer\img_importer.h" />
-    <ClInclude Include="mainloop.h" />
-    <ClInclude Include="render\passes\final_composite.h" />
-    <ClInclude Include="render\passes\raytrace_visualize.h" />
-    <ClInclude Include="render\renderer.h" />
-    <ClInclude Include="render\render_context.h" />
-    <ClInclude Include="render\render_params.h" />
-    <ClInclude Include="render\shader_path.h" />
-    <ClInclude Include="rhi\commontypes\rhicopyregion.h" />
-    <ClInclude Include="rhi\commontypes\rhienums.h" />
-    <ClInclude Include="rhi\commontypes\rhishadersrc.h" />
-    <ClInclude Include="rhi\dxa\dxa.h" />
-    <ClInclude Include="rhi\dxa\dxabuffer.h" />
-    <ClInclude Include="rhi\dxa\dxacommandlist.h" />
-    <ClInclude Include="rhi\dxa\dxacommandpool.h" />
-    <ClInclude Include="rhi\dxa\dxacommon.h" />
-    <ClInclude Include="rhi\dxa\dxadescriptor.h" />
-    <ClInclude Include="rhi\dxa\dxadescriptorpool.h" />
-    <ClInclude Include="rhi\dxa\dxadevice.h" />
-    <ClInclude Include="rhi\dxa\dxaentry.h" />
-    <ClInclude Include="rhi\dxa\dxafence.h" />
-    <ClInclude Include="rhi\dxa\dxaflightcontrol.h" />
-    <ClInclude Include="rhi\dxa\dxaframebufferbinding.h" />
-    <ClInclude Include="rhi\dxa\dxaimguirenderpass.h" />
-    <ClInclude Include="rhi\dxa\dxarasterpipeline.h" />
-    <ClInclude Include="rhi\dxa\dxaraytracingaccel.h" />
-    <ClInclude Include="rhi\dxa\dxaraytracingpipeline.h" />
-    <ClInclude Include="rhi\dxa\dxasampler.h" />
-    <ClInclude Include="rhi\dxa\dxasemaphore.h" />
-    <ClInclude Include="rhi\dxa\dxastagingbuffermanager.h" />
-    <ClInclude Include="rhi\dxa\dxaswapchain.h" />
-    <ClInclude Include="rhi\dxa\dxatexture.h" />
-    <ClInclude Include="rhi\dxa\dxilreflection.h" />
-    <ClInclude Include="rhi\rhi.h" />
-    <ClInclude Include="rhi\setting.h" />
-    <ClInclude Include="rhi\shadercompiler\glslcompiler.h" />
-    <ClInclude Include="rhi\shadercompiler\hlsld3dcompiler.h" />
-    <ClInclude Include="rhi\shadercompiler\hlsldxccompiler.h" />
-    <ClInclude Include="rhi\vka\spirvreflection.h" />
-    <ClInclude Include="rhi\vka\vka.h" />
-    <ClInclude Include="rhi\vka\vkabuffer.h" />
-    <ClInclude Include="rhi\vka\vkacommandlist.h" />
-    <ClInclude Include="rhi\vka\vkacommandpool.h" />
-    <ClInclude Include="rhi\vka\vkacommon.h" />
-    <ClInclude Include="rhi\vka\vkadescriptor.h" />
-    <ClInclude Include="rhi\vka\vkadescriptorpool.h" />
-    <ClInclude Include="rhi\vka\vkadevice.h" />
-    <ClInclude Include="rhi\vka\vkaentry.h" />
-    <ClInclude Include="rhi\vka\vkafence.h" />
-    <ClInclude Include="rhi\vka\vkaframebufferbinding.h" />
-    <ClInclude Include="rhi\vka\vkaimguirenderpass.h" />
-    <ClInclude Include="rhi\vka\vkarasterpipeline.h" />
-    <ClInclude Include="rhi\vka\vkaraytracingaccel.h" />
-    <ClInclude Include="rhi\vka\vkaraytracingpipeline.h" />
-    <ClInclude Include="rhi\vka\vkasampler.h" />
-    <ClInclude Include="rhi\vka\vkasemaphore.h" />
-    <ClInclude Include="rhi\vka\vkastagingbuffermanager.h" />
-    <ClInclude Include="rhi\vka\vkaswapchain.h" />
-    <ClInclude Include="rhi\vka\vkatexture.h" />
-    <ClInclude Include="scene_graph.h" />
-    <ClInclude Include="scene_resource.h" />
-    <ClInclude Include="shaders\common\color_conversion.h" />
-    <ClInclude Include="shaders\common\constant.h" />
-    <ClInclude Include="shaders\common\mapping.h" />
-    <ClInclude Include="shaders\common\onb.h" />
-    <ClInclude Include="shaders\common\reservior.h" />
-    <ClInclude Include="shaders\common\standard_bsdf.h" />
-    <ClInclude Include="shaders\direct_light_restir_params.h" />
-    <ClInclude Include="shaders\raytrace_visualize_params.h" />
-    <ClInclude Include="shaders\rng\pcg.h" />
-    <ClInclude Include="shaders\shared\bindless_table.h" />
-    <ClInclude Include="shaders\shared\camera_params.h" />
-    <ClInclude Include="shaders\shared\compact_vertex.h" />
-    <ClInclude Include="shaders\shared\debug_print.h" />
-    <ClInclude Include="shaders\shared\standard_material.h" />
-    <ClInclude Include="shaders\shared\types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

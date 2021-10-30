@@ -11,7 +11,7 @@ struct File
     static std::string
     LoadFile(const std::filesystem::path & path)
     {
-        std::ifstream ifs;
+        std::ifstream         ifs;
         std::filesystem::path full_path = std::filesystem::absolute(path);
         ifs.open(full_path);
         if (!ifs.is_open())

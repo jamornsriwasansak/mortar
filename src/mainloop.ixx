@@ -1,6 +1,3 @@
-#pragma once
-
-#include "core/camera.h"
 #include "core/vmath.h"
 #include "render/render_context.h"
 #include "render/renderer.h"
@@ -8,6 +5,10 @@
 
 #include "assetbrowser.h"
 #include "assetbrowserquick.h"
+
+export module mortar.mainloop;
+
+import mortar.camera;
 
 struct MainLoop
 {

@@ -32,13 +32,13 @@ struct StopWatch
 
 struct AvgFrameTimeStopWatch
 {
-    StopWatch m_stop_watch     = StopWatch();
-    float m_average_frame_time = 0.0f;
-    float m_sum_time           = 0.0f;
-    float m_time_threshold     = 1000.0f;
-    uint16_t m_sum_tick        = 0;
-    uint16_t m_tick_threshold  = 10000;
-    bool m_just_updated        = false;
+    StopWatch m_stop_watch         = StopWatch();
+    float     m_average_frame_time = 0.0f;
+    float     m_sum_time           = 0.0f;
+    float     m_time_threshold     = 1000.0f;
+    uint16_t  m_sum_tick           = 0;
+    uint16_t  m_tick_threshold     = 10000;
+    bool      m_just_updated       = false;
 
     AvgFrameTimeStopWatch() {}
 
@@ -51,8 +51,8 @@ struct AvgFrameTimeStopWatch
     void
     tick()
     {
-        long long time_micro_sec = m_stop_watch.time_micro_sec();
-        const float frame_time   = static_cast<float>(time_micro_sec) / 1000.0f;
+        long long   time_micro_sec = m_stop_watch.time_micro_sec();
+        const float frame_time     = static_cast<float>(time_micro_sec) / 1000.0f;
         m_stop_watch.reset();
 
         // update sum

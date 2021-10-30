@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/camera.h"
 #include "core/ste/stevector.h"
 #include "engine_setting.h"
 #include "importer/ai_mesh_importer.h"
@@ -75,9 +74,6 @@ struct SceneResource
     // device & host blas (requires update)
     std::vector<Rhi::RayTracingBlas> m_rt_blases;
     Rhi::RayTracingTlas              m_rt_tlas;
-
-    // camera
-    FpsCamera m_camera;
 
     // scene graph
     SceneGraphNode                 m_scene_graph_root = SceneGraphNode(false);

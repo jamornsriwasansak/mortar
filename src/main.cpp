@@ -1,10 +1,13 @@
-#include "mainloop.h"
+// import mortar.mainloop;
+// import mortar.mainloop;
+import mortar.core.vmath;
 
 int
 main()
 {
     constexpr bool is_debug = true;
-
+    uintk          test;
+    /*
     // default parameters
     const size_t num_flights = 2;
     const int2   target_resolution(1920, 1080);
@@ -21,5 +24,6 @@ main()
     MainLoop main_loop(&device, &main_window, num_flights);
     main_loop.init();
     main_loop.run();
+    */
     return 0;
 }

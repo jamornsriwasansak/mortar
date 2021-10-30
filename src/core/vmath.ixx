@@ -1,5 +1,3 @@
-#pragma once
-
 #pragma warning(push, 0)
 #include <glm/glm.hpp>
 #include <glm/gtc/packing.hpp>
@@ -59,7 +57,7 @@ using half2 = halfN<2>;
 using half3 = halfN<3>;
 using half4 = halfN<4>;
 
-template<typename T>
+template <typename T>
 struct rangeT
 {
     T m_begin;

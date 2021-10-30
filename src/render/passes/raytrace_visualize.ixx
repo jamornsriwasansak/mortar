@@ -5,6 +5,8 @@
 #include "scene_resource.h"
 #include "shaders/raytrace_visualize_params.h"
 
+import mortar.camera;
+
 struct RaytraceVisualizePass
 {
     Rhi::RayTracingPipeline m_rt_pipeline;

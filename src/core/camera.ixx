@@ -1,16 +1,16 @@
-#pragma once
-
 #include "glfwhandler.h"
 #include "vmath.h"
 
-struct CameraProperties
+export module mortar.camera;
+
+export struct CameraProperties
 {
     float4x4 m_view;
     float4x4 m_proj;
     float4x4 m_vp;
 };
 
-struct FpsCamera
+export struct FpsCamera
 {
     float3  m_origin;
     float   m_fov_y;
