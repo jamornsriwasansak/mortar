@@ -9,17 +9,17 @@ namespace VKA_NAME
 struct RayTracingGeometryDesc
 {
     vk::AccelerationStructureGeometryTrianglesDataKHR m_geometry_trimesh_desc;
-    vk::AccelerationStructureBuildRangeInfoKHR m_build_range;
-    vk::GeometryFlagBitsKHR m_geometry_flag;
+    vk::AccelerationStructureBuildRangeInfoKHR        m_build_range;
+    vk::GeometryFlagBitsKHR                           m_geometry_flag;
 
     RayTracingGeometryDesc() {}
 
     RayTracingGeometryDesc &
-    set_vertex_buffer(const Buffer & buffer,
-                      const size_t offset_in_bytes,
+    set_vertex_buffer(const Buffer &   buffer,
+                      const size_t     offset_in_bytes,
                       const FormatEnum vk_format,
-                      const size_t stride_in_bytes,
-                      const size_t num_vertices)
+                      const size_t     stride_in_bytes,
+                      const size_t     num_vertices)
     {
         assert(num_vertices > 0);
         m_geometry_trimesh_desc.setVertexData(buffer.m_device_address + offset_in_bytes);
@@ -57,19 +57,19 @@ struct RayTracingGeometryDesc
 
 struct RayTracingBlas
 {
-    Buffer m_accel_buffer;
+    Buffer                             m_accel_buffer;
     vk::UniqueAccelerationStructureKHR m_vk_accel_struct;
 
     RayTracingBlas() {}
 
-    RayTracingBlas(const Device * device,
+    RayTracingBlas(const Device *                                  device,
                    const std::span<const RayTracingGeometryDesc> & geometry_descs,
-                   const RayTracingBuildHint hint,
+                   const RayTracingBuildHint                       hint,
                    StagingBufferManager * buf_manager, // TODO:: get rid of staging buffer manager
-                   const std::string & name = "")
+                   const std::string &    name = "")
     {
         std::vector<vk::AccelerationStructureGeometryDataKHR> tri_geometry_datas(geometry_descs.size());
-        std::vector<vk::AccelerationStructureGeometryKHR> geometries(geometry_descs.size());
+        std::vector<vk::AccelerationStructureGeometryKHR>     geometries(geometry_descs.size());
         std::vector<vk::AccelerationStructureBuildRangeInfoKHR> build_ranges(geometry_descs.size());
         std::vector<uint32_t> max_primitive_counts(geometry_descs.size());
         for (size_t i = 0; i < geometry_descs.size(); i++)
@@ -86,7 +86,8 @@ struct RayTracingBlas
             max_primitive_counts[i] = geometry_descs[i].m_build_range.primitiveCount;
         }
 
-        vk::BuildAccelerationStructureFlagsKHR build_flags(static_cast<VkBuildAccelerationStructureFlagBitsKHR>(hint));
+        vk::BuildAccelerationStructureFlagsKHR build_flags(
+            static_cast<VkBuildAccelerationStructureFlagBitsKHR>(hint));
 
         vk::AccelerationStructureBuildGeometryInfoKHR build_info;
         build_info.setMode(vk::BuildAccelerationStructureModeKHR::eBuild);
@@ -108,7 +109,7 @@ struct RayTracingBlas
         vk::BufferCreateInfo buffer_ci_tmp;
         buffer_ci_tmp.setSize(required_buffer_size);
         buffer_ci_tmp.setUsage(vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR);
-        VkBufferCreateInfo buffer_ci         = buffer_ci_tmp;
+        VkBufferCreateInfo      buffer_ci    = buffer_ci_tmp;
         VmaAllocationCreateInfo vma_alloc_ci = {};
         vma_alloc_ci.usage                   = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
 
@@ -116,8 +117,6 @@ struct RayTracingBlas
                                 BufferUsageEnum::RayTracingAccelStructBuffer,
                                 MemoryUsageEnum::GpuOnly,
                                 required_buffer_size,
-                                nullptr,
-                                nullptr,
                                 name + "_buffer");
 
         // create acceleration structure
@@ -162,31 +161,31 @@ struct RayTracingInstance
 
 struct RayTracingTlas
 {
-    Buffer m_instance_buffer;
-    Buffer m_accel_buffer;
+    Buffer                             m_instance_buffer;
+    Buffer                             m_accel_buffer;
     vk::UniqueAccelerationStructureKHR m_vk_accel_struct;
 
     RayTracingTlas() {}
 
-    RayTracingTlas(const Device * device,
-                   const std::span<const RayTracingInstance> & instance,
-                   StagingBufferManager * buf_manager,
-                   const std::string & name = "")
+    RayTracingTlas(const Device *                              device,
+                   const std::span<const RayTracingInstance> & instances,
+                   StagingBufferManager *                      buf_manager,
+                   const std::string &                         name = "")
     {
-        std::vector<vk::AccelerationStructureInstanceKHR> instances(instance.size());
-        for (size_t i_instance = 0; i_instance < instance.size(); i_instance++)
-        {
-            instances[i_instance] = instance[i_instance].m_vk_instance;
-        }
-
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
         m_instance_buffer                      = Buffer(device,
                                    BufferUsageEnum::TransferSrc,
                                    MemoryUsageEnum::CpuOnly,
-                                   sizeof(vk::AccelerationStructureInstanceKHR) * instance.size(),
-                                   reinterpret_cast<std::byte *>(instances.data()),
-                                   buf_manager,
+                                   sizeof(vk::AccelerationStructureInstanceKHR) * instances.size(),
                                    instance_buffer_name);
+
+        std::byte * instance_dst = reinterpret_cast<std::byte *>(m_instance_buffer.map());
+        for (size_t i = 0; i < instances.size(); i++)
+        {
+            size_t offset = i * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+            std::memcpy(instance_dst + offset, &instances[i].m_vk_instance, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
+        }
+        m_instance_buffer.unmap();
 
         vk::AccelerationStructureGeometryInstancesDataKHR geometry_instance_data;
         geometry_instance_data.setArrayOfPointers(VK_FALSE);
@@ -218,7 +217,7 @@ struct RayTracingTlas
         vk::BufferCreateInfo buffer_ci_tmp;
         buffer_ci_tmp.setSize(required_buffer_size);
         buffer_ci_tmp.setUsage(vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR);
-        VkBufferCreateInfo buffer_ci         = buffer_ci_tmp;
+        VkBufferCreateInfo      buffer_ci    = buffer_ci_tmp;
         VmaAllocationCreateInfo vma_alloc_ci = {};
         vma_alloc_ci.usage                   = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
 
@@ -227,8 +226,6 @@ struct RayTracingTlas
                                 BufferUsageEnum::RayTracingAccelStructBuffer,
                                 MemoryUsageEnum::GpuOnly,
                                 required_buffer_size,
-                                nullptr,
-                                nullptr,
                                 accel_buffer_name);
 
         // create acceleration structure

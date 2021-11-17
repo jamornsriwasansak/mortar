@@ -13,11 +13,11 @@ struct RayTracingGeometryDesc
     RayTracingGeometryDesc() : m_geometry_desc({}) {}
 
     RayTracingGeometryDesc &
-    set_vertex_buffer(const Buffer & buffer,
-                      const size_t offset_in_bytes,
+    set_vertex_buffer(const Buffer &   buffer,
+                      const size_t     offset_in_bytes,
                       const FormatEnum dxgi_format,
-                      const size_t stride_in_bytes,
-                      const size_t num_vertices)
+                      const size_t     stride_in_bytes,
+                      const size_t     num_vertices)
     {
         m_geometry_desc.Triangles.VertexBuffer.StartAddress =
             buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + offset_in_bytes;
@@ -60,11 +60,11 @@ struct RayTracingBlas
 
     RayTracingBlas() {}
 
-    RayTracingBlas(const Device * device,
+    RayTracingBlas(const Device *                            device,
                    const std::span<RayTracingGeometryDesc> & geometry_descs,
-                   const RayTracingBuildHint hint,
-                   StagingBufferManager * resource_loader,
-                   const std::string & name = "")
+                   const RayTracingBuildHint                 hint,
+                   StagingBufferManager *                    resource_loader,
+                   const std::string &                       name = "")
     {
         // setup input building blas
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottom_level_inputs = {};
@@ -89,8 +89,6 @@ struct RayTracingBlas
                                BufferUsageEnum::RayTracingAccelStructBuffer,
                                MemoryUsageEnum::GpuOnly,
                                bottom_level_prebuild_info.ResultDataMaxSizeInBytes,
-                               nullptr,
-                               nullptr,
                                name);
 
         auto * scratch_buffer =
@@ -128,7 +126,7 @@ struct RayTracingInstance
             {
                 m_instance_desc.Transform[r][c] = transform[c][r];
             }
-        m_instance_desc.InstanceMask        = 1;
+        m_instance_desc.InstanceMask = 1;
         m_instance_desc.AccelerationStructure =
             blas.m_blas_buffer.m_allocation->GetResource()->GetGPUVirtualAddress();
         m_instance_desc.InstanceContributionToHitGroupIndex = hit_group_index;
@@ -143,10 +141,10 @@ struct RayTracingTlas
 
     RayTracingTlas() {}
 
-    RayTracingTlas(const Device * device,
+    RayTracingTlas(const Device *                              device,
                    const std::span<const RayTracingInstance> & instances,
-                   StagingBufferManager * temp_resource_manager,
-                   const std::string & name = "")
+                   StagingBufferManager *                      temp_resource_manager,
+                   const std::string &                         name = "")
     {
         // copy description of instance into the buffer
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
@@ -154,8 +152,6 @@ struct RayTracingTlas
                                         BufferUsageEnum::None,
                                         MemoryUsageEnum::CpuOnly,
                                         sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instances.size(),
-                                        nullptr,
-                                        nullptr,
                                         instance_buffer_name);
         std::byte * instance_dst = reinterpret_cast<std::byte *>(m_instance_desc_buffer.map());
         for (size_t i = 0; i < instances.size(); i++)
@@ -191,8 +187,6 @@ struct RayTracingTlas
                                BufferUsageEnum::RayTracingAccelStructBuffer,
                                MemoryUsageEnum::GpuOnly,
                                top_level_prebuild_info.ResultDataMaxSizeInBytes,
-                               nullptr,
-                               nullptr,
                                accel_buffer_name);
 
         // tlas desc

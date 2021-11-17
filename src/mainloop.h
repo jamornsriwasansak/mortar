@@ -116,8 +116,6 @@ struct MainLoop
                                          Rhi::BufferUsageEnum::StorageBuffer,
                                      Rhi::MemoryUsageEnum::GpuOnly,
                                      sizeof(uint32_t),
-                                     nullptr,
-                                     nullptr,
                                      "dummy_vertex_buffer");
         m_dummy_texture = Rhi::Texture(m_device,
                                        Rhi::TextureUsageEnum::Sampled,
