@@ -243,12 +243,12 @@ struct MainLoop
         // m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
 
         SceneDesc scene_desc;
-        for (size_t j = 0; j < 1; j++)
+        for (size_t j = 0; j < 100; j++)
         {
-            for (size_t i = 0; i < 1; i++)
+            for (size_t i = 0; i < 100; i++)
             {
-                const glm::float4x4 scale = glm::scale(glm::identity<float4x4>(), float3(1.0f));
-                const glm::float4x4 translate =
+                const float4x4 scale = glm::scale(glm::identity<float4x4>(), float3(1.0f));
+                const float4x4 translate =
                     glm::translate(glm::identity<float4x4>(), float3(40.0f * j, 0.0f, 40.0f * i));
                 SceneInstance instance2 = { sponza_instance_id, translate * scale };
                 scene_desc.m_instances.push_back(instance2);
