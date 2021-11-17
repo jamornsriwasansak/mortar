@@ -61,9 +61,10 @@ struct SceneResource
     size_t      m_num_indices     = 0;
 
     // device & host textures and materials
-    std::vector<Rhi::Texture>     m_d_textures;
-    Rhi::Buffer                   m_d_materials = {};
-    std::vector<StandardMaterial> m_h_materials;
+    std::vector<Rhi::Texture>               m_d_textures;
+    Rhi::Buffer                             m_d_materials = {};
+    std::vector<StandardMaterial>           m_h_materials;
+    std::map<std::filesystem::path, size_t> m_texture_id_from_path;
 
     // device & host lookup table for geometry & instance
     // look up offset into geometry table based on instance index
@@ -328,6 +329,13 @@ struct SceneResource
     size_t
     add_texture(const std::filesystem::path & path, const size_t desired_channel, Rhi::StagingBufferManager & staging_buffer_manager)
     {
+        auto q = m_texture_id_from_path.find(path);
+
+        if (q != m_texture_id_from_path.end())
+        {
+            return q->second;
+        }
+        
         const std::string filepath_str = path.string();
 
         // load using stbi
@@ -354,7 +362,10 @@ struct SceneResource
 
         // emplace back
         m_d_textures.emplace_back(std::move(texture));
-        return m_d_textures.size() - 1;
+        const size_t tex_id = m_d_textures.size() - 1;
+        m_texture_id_from_path[path] = tex_id;
+
+        return tex_id;
     }
 
     void
