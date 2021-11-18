@@ -1,6 +1,9 @@
 #pragma once
 
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
 #include "vkadevice.h"
 #include "vkastagingbuffermanager.h"
 #include "vkaswapchain.h"
@@ -367,3 +370,4 @@ struct Texture
     }
 };
 } // namespace VKA_NAME
+#endif

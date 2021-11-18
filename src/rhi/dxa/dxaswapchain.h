@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxadevice.h"
 #include "dxasemaphore.h"
 
@@ -20,8 +22,8 @@ struct Swapchain
 
     Swapchain(const Device * device, const Window & window, const std::string & name = "")
     {
-        init_swapchain(device, window);
-        init_swapchain_resource_pointer(device, name);
+        init_swapchain(*device, window);
+        init_swapchain_resource_pointer(*device, name);
         update_image_index(nullptr);
     }
 
@@ -46,9 +48,25 @@ struct Swapchain
         return true;
     }
 
+    void
+    resize_to_window(const Device * device, const Window & window)
+    {
+        // release existing resource
+        for (ID3D12Resource * resource : m_dx_swapchain_resource_pointers)
+        {
+            resource->Release();
+        }
+        // resize the swapchain
+        DXCK(m_dx_swapchain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_R8G8B8A8_UNORM, check_tearing_support() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0));
+        // reinit swapchain resources
+        init_swapchain_resource_pointer(*device, "");
+        m_resolution = window.get_resolution();
+    }
+
 private:
+
     bool
-    check_tearing_support()
+    check_tearing_support() const
     {
         BOOL allowTearing = FALSE;
 
@@ -70,7 +88,7 @@ private:
     }
 
     void
-    init_swapchain(const Device * device, const Window & window)
+    init_swapchain(const Device & device, const Window & window)
     {
         // It is recommended to always allow tearing if tearing support is available.
         DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {};
@@ -89,10 +107,10 @@ private:
 
         m_dx_format = swapchain_desc.Format;
 
-        IDXGISwapChain1 *     swapchain;
-        ComPtr<IDXGIFactory4> factory4;
+        IDXGISwapChain1 *     swapchain = nullptr;
+        ComPtr<IDXGIFactory4> factory4  = nullptr;
         DXCK(CreateDXGIFactory1(IID_PPV_ARGS(&factory4)));
-        factory4->CreateSwapChainForHwnd(device->m_dx_direct_queue.Get(),
+        factory4->CreateSwapChainForHwnd(device.m_dx_direct_queue.Get(),
                                          window.get_hwnd(),
                                          &swapchain_desc,
                                          nullptr,
@@ -103,15 +121,16 @@ private:
     }
 
     void
-    init_swapchain_resource_pointer(const Device * device, const std::string & name)
+    init_swapchain_resource_pointer(const Device & device, const std::string & name)
     {
         m_dx_swapchain_resource_pointers.resize(m_num_images);
         for (uint32_t i_frame = 0; i_frame < m_num_images; i_frame++)
         {
             // get buffer into render target
             DXCK(m_dx_swapchain->GetBuffer(i_frame, IID_PPV_ARGS(&m_dx_swapchain_resource_pointers[i_frame])));
-            device->name_dx_object(m_dx_swapchain_resource_pointers[i_frame], name);
+            device.name_dx_object(m_dx_swapchain_resource_pointers[i_frame], name);
         }
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME
+#endif

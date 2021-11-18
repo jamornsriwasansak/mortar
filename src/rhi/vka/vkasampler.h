@@ -1,5 +1,9 @@
 #pragma once
+
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
 #include "vkadevice.h"
 
 namespace VKA_NAME
@@ -32,3 +36,4 @@ struct Sampler
     }
 };
 } // namespace VKA_NAME
+#endif

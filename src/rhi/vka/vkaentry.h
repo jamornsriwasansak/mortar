@@ -1,5 +1,8 @@
 #pragma once
+
 #include "vkacommon.h"
+
+#ifdef USE_VKA
 
 namespace VKA_NAME
 {
@@ -246,3 +249,4 @@ private:
     }
 };
 } // namespace VKA_NAME
+#endif

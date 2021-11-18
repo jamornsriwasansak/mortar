@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxadevice.h"
 #include "dxilreflection.h"
 
@@ -695,3 +697,4 @@ struct RayTracingShaderTable
     }
 };
 } // namespace DXA_NAME
+#endif

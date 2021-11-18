@@ -1,7 +1,9 @@
 #pragma once
 
-#include "dxabuffer.h"
 #include "dxacommon.h"
+#ifdef USE_DXA
+
+#include "dxabuffer.h"
 #include "dxadescriptor.h"
 #include "dxaentry.h"
 #include "dxafence.h"
@@ -404,3 +406,4 @@ struct CommandList
     }
 };
 } // namespace DXA_NAME
+#endif

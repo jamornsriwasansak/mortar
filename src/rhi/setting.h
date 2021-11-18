@@ -1,5 +1,8 @@
 #pragma once
 
+//#define USE_VKA
+#define USE_DXA
+
 #define VKA_NAME RhiVka
 #define DXA_NAME RhiDxa
 

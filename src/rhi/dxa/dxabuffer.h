@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxadevice.h"
 
 namespace DXA_NAME
@@ -153,3 +155,5 @@ struct Buffer
     }
 };
 } // namespace DXA_NAME
+
+#endif

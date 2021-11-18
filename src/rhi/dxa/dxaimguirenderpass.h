@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxadevice.h"
 #include "dxaswapchain.h"
 #include "dxatexture.h"
@@ -39,7 +41,7 @@ struct ImGuiRenderPass
     }
 
     void
-    init_or_resize_framebuffer(const Device * device, const Swapchain & swapchain)
+    resize_to_swapchain(const Device * device, const Swapchain & swapchain)
     {
     }
 
@@ -68,3 +70,4 @@ struct ImGuiRenderPass
     }
 };
 } // namespace DXA_NAME
+#endif

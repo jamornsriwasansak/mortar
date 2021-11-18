@@ -1,7 +1,9 @@
 #pragma once
 
-#include "core/uniquehandle.h"
 #include "dxacommon.h"
+#ifdef USE_DXA
+
+#include "core/uniquehandle.h"
 
 namespace DXA_NAME
 {
@@ -18,7 +20,7 @@ struct Fence
     };
 
     ComPtr<ID3D12Fence> m_dx_fence = nullptr;
-    UINT64 m_expected_fence_value;
+    UINT64 m_expected_fence_value = 0;
     UniquePtrHandle<HANDLE, FenceHandleDeleter> m_fence_handle;
 
     Fence() {}
@@ -58,3 +60,4 @@ struct Fence
     }
 };
 } // namespace DXA_NAME
+#endif

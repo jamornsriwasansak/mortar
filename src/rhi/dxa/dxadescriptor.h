@@ -1,5 +1,8 @@
 #pragma once
 
+#include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxabuffer.h"
 #include "dxadescriptorpool.h"
 #include "dxarasterpipeline.h"
@@ -364,3 +367,4 @@ struct DescriptorSet
     }
 };
 } // namespace DXA_NAME
+#endif

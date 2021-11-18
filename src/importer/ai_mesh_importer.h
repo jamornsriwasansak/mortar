@@ -12,6 +12,7 @@
 #include <assimp/scene.h>
 #include <filesystem>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 

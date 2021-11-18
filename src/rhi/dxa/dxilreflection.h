@@ -1,5 +1,9 @@
 #pragma once
 
+#include "rhi/setting.h"
+
+#ifdef USE_DXA
+
 #include "rhi/commontypes/rhishadersrc.h"
 //
 #include "core/logger.h"
@@ -518,3 +522,4 @@ private:
         return input_element_desc;
     }
 };
+#endif

@@ -1,7 +1,10 @@
 #pragma once
 
-#include "vkacommandlist.h"
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
+#include "vkacommandlist.h"
 #include "vkadevice.h"
 
 namespace VKA_NAME
@@ -64,3 +67,4 @@ struct CommandPool
     }
 };
 } // namespace VKA_NAME
+#endif

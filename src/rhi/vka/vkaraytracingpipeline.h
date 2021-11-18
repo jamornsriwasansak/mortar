@@ -1,6 +1,9 @@
 #pragma once
 
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
 #include "vkadevice.h"
 
 #include "../shadercompiler/hlsldxccompiler.h"
@@ -337,3 +340,4 @@ struct RayTracingShaderTable
 };
 
 } // namespace VKA_NAME
+#endif

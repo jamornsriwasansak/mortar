@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxaframebufferbinding.h"
 #include "dxilreflection.h"
 //
@@ -179,3 +181,4 @@ struct RasterPipeline
     }
 };
 } // namespace DXA_NAME
+#endif

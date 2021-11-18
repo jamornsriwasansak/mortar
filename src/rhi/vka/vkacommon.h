@@ -1,8 +1,11 @@
 #pragma once
 
+#include "rhi/setting.h"
+
+#ifdef USE_VKA
+
 #include "rhi/commontypes/rhienums.h"
 #include "rhi/commontypes/rhishadersrc.h"
-#include "rhi/setting.h"
 //
 #include "core/glfwhandler.h"
 #include "core/logger.h"
@@ -31,3 +34,4 @@ namespace VKA_NAME
 {
 using ShaderSrc = Rhi::TShaderSrc<VKA_NAME::ShaderStageEnum>;
 } // namespace VKA_NAME
+#endif

@@ -13,9 +13,6 @@ struct Renderer
     std::vector<Rhi::FramebufferBindings> m_raster_fbindings;
     std::array<Rhi::Texture, 2> m_rt_results;
 
-    // TODO:: remove
-    bool m_lskjdflksjdflkjsdlkfj = true;
-
     RaytraceVisualizePass m_pass_raytrace_visualize;
     BeautyPass m_pass_beauty;
 
@@ -25,9 +22,14 @@ struct Renderer
     init(Rhi::Device * device, const int2 resolution, const std::vector<Rhi::Texture> & swapchain_attachment)
     {
         init_or_resize_resolution(device, resolution, swapchain_attachment);
+        init_or_reload_shader(device);
+    }
 
+    void
+    init_or_reload_shader(Rhi::Device * device)
+    {
         m_pass_raytrace_visualize = RaytraceVisualizePass(*device);
-        m_pass_beauty             = BeautyPass(device);
+        m_pass_beauty             = BeautyPass(device, m_raster_fbindings[0]);
     }
 
     void
@@ -61,12 +63,9 @@ struct Renderer
         Rhi::Device * device      = ctx.m_device;
         Rhi::CommandList cmd_list = ctx.m_graphics_command_pool->get_command_list();
 
-        if (params.m_is_shaders_dirty || m_lskjdflksjdflkjsdlkfj)
+        if (params.m_is_shaders_dirty)
         {
-            m_pass_raytrace_visualize.init_or_reload(*device);
-            m_pass_beauty.init_or_reload(*device, m_raster_fbindings[0]);
-
-            m_lskjdflksjdflkjsdlkfj = false;
+            init_or_reload_shader(ctx.m_device);
         }
 
         cmd_list.begin();

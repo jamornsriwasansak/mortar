@@ -1,6 +1,9 @@
 #pragma once
 
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
 #include "vkadevice.h"
 #include "vkaswapchain.h"
 #include "vkatexture.h"
@@ -173,3 +176,4 @@ struct ImGuiRenderPass
     }
 };
 } // namespace VKA_NAME
+#endif

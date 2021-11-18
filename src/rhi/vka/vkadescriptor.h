@@ -1,8 +1,11 @@
 #pragma once
 
+#include "vkacommon.h"
+
+#ifdef USE_VKA
+
 #include "../shadercompiler/hlsldxccompiler.h"
 #include "vkabuffer.h"
-#include "vkacommon.h"
 #include "vkadescriptorpool.h"
 #include "vkadevice.h"
 #include "vkarasterpipeline.h"
@@ -259,3 +262,4 @@ struct DescriptorSet
     }
 };
 } // namespace VKA_NAME
+#endif

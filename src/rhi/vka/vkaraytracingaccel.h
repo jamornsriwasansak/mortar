@@ -1,7 +1,10 @@
 #pragma once
 
-#include "vkabuffer.h"
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
+#include "vkabuffer.h"
 #include "vkadevice.h"
 
 namespace VKA_NAME
@@ -259,3 +262,4 @@ struct RayTracingTlas
     }
 };
 } // namespace VKA_NAME
+#endif

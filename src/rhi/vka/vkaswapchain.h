@@ -1,6 +1,9 @@
 #pragma once
 
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
 #include "vkadevice.h"
 #include "vkasemaphore.h"
 
@@ -180,3 +183,4 @@ private:
     }
 };
 } // namespace VKA_NAME
+#endif

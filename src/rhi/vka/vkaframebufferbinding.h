@@ -1,6 +1,9 @@
 #pragma once
 
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
 #include "vkadevice.h"
 #include "vkatexture.h"
 
@@ -149,3 +152,4 @@ struct FramebufferBindings
     }
 };
 } // namespace VKA_NAME
+#endif

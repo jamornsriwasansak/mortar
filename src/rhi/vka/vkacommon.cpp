@@ -1,3 +1,5 @@
 #include "vkacommon.h"
 
+#ifdef USE_VKA
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+#endif

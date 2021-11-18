@@ -1,6 +1,8 @@
 #pragma once
 
 #include "vkacommon.h"
+
+#ifdef USE_VKA
 #include "vkadevice.h"
 
 namespace VKA_NAME
@@ -108,3 +110,4 @@ struct Buffer
     }
 };
 } // namespace VKA_NAME
+#endif

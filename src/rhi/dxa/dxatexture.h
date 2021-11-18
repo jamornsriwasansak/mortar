@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxadevice.h"
 #include "dxastagingbuffermanager.h"
 #include "dxaswapchain.h"
@@ -15,6 +17,7 @@ struct Texture
     D3D12_CPU_DESCRIPTOR_HANDLE m_dx_dsv_rtv_cpu_handle = { 0 };
     int2 m_resolution                                   = int2(0, 0);
     float4 m_clear_value                                = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
     Texture() {}
 
     Texture(Device * device,
@@ -194,6 +197,7 @@ struct Texture
     }
 
 private:
+
     void
     init_rtv(Device * device)
     {
@@ -214,3 +218,4 @@ private:
     }
 };
 } // namespace DXA_NAME
+#endif

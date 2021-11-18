@@ -1,6 +1,9 @@
 #pragma once
 
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
 #include "vkadevice.h"
 #include "vkaframebufferbinding.h"
 
@@ -200,3 +203,4 @@ struct RasterPipeline
     }
 };
 } // namespace VKA_NAME
+#endif

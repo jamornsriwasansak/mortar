@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxaentry.h"
 
 #ifdef USE_NSIGHT_AFTERMATH
@@ -204,3 +206,4 @@ private:
     }
 };
 } // namespace Dxa
+#endif

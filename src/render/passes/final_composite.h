@@ -8,30 +8,32 @@
 struct BeautyPass
 {
     Rhi::RasterPipeline m_raster_pipeline;
-    Rhi::Sampler m_sampler;
+    Rhi::Sampler        m_sampler;
 
     BeautyPass() {}
 
-    BeautyPass(const Rhi::Device * device) { m_sampler = Rhi::Sampler(device); }
+    BeautyPass(const Rhi::Device * device, const Rhi::FramebufferBindings & fb)
+    {
+        m_sampler = Rhi::Sampler(device);
+        init_or_reload(*device, fb);
+    }
 
     void
     init_or_reload(const Rhi::Device & device, const Rhi::FramebufferBindings & fb)
     {
         std::vector<Rhi::ShaderSrc> srcs(2);
-        srcs[0]           = Rhi::ShaderSrc(Rhi::ShaderStageEnum::Vertex,
-                                 BASE_SHADER_DIR "beauty.hlsl",
-                                 "VsMain");
-        srcs[1]           = Rhi::ShaderSrc(Rhi::ShaderStageEnum::Fragment,
-                                 BASE_SHADER_DIR "beauty.hlsl",
-                                 "FsMain");
+        srcs[0] =
+            Rhi::ShaderSrc(Rhi::ShaderStageEnum::Vertex, BASE_SHADER_DIR "beauty.hlsl", "VsMain");
+        srcs[1] =
+            Rhi::ShaderSrc(Rhi::ShaderStageEnum::Fragment, BASE_SHADER_DIR "beauty.hlsl", "FsMain");
         m_raster_pipeline = Rhi::RasterPipeline(&device, srcs, fb);
     }
 
     void
-    run(Rhi::CommandList & cmd_list,
-        const RenderContext & ctx,
-        const RenderParams & params,
-        const Rhi::Texture & tex,
+    run(Rhi::CommandList &               cmd_list,
+        const RenderContext &            ctx,
+        const RenderParams &             params,
+        const Rhi::Texture &             tex,
         const Rhi::FramebufferBindings & fb)
     {
         // begin render pass

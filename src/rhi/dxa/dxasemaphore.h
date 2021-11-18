@@ -1,7 +1,9 @@
 #pragma once
 
-#include "core/uniquehandle.h"
 #include "dxacommon.h"
+#ifdef USE_DXA
+
+#include "core/uniquehandle.h"
 
 namespace DXA_NAME
 {
@@ -44,3 +46,4 @@ struct Semaphore
     }
 };
 } // namespace DXA_NAME
+#endif

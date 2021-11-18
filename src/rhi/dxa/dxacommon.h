@@ -1,5 +1,8 @@
 #pragma once
 
+#include "rhi/setting.h"
+#ifdef USE_DXA
+
 #include "rhi/commontypes/rhienums.h"
 #include "rhi/commontypes/rhishadersrc.h"
 //
@@ -143,3 +146,4 @@ struct DescriptorHeap
     }
 };
 } // namespace DXA_NAME
+#endif

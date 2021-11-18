@@ -1,11 +1,14 @@
 #pragma once
 
+#include "vkacommon.h"
+
+#ifdef USE_VKA
+
 //#define USE_VULKAN_AFTER_CRASH
 #ifdef USE_VULKAN_AFTER_CRASH
 #include "VulkanAfterCrash.h"
 #endif
 
-#include "vkacommon.h"
 #include "vkaentry.h"
 
 #include "core/uniquehandle.h"
@@ -476,3 +479,4 @@ private:
     }
 };
 } // namespace VKA_NAME
+#endif

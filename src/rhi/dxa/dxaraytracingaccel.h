@@ -1,7 +1,9 @@
 #pragma once
 
-#include "dxabuffer.h"
 #include "dxacommon.h"
+#ifdef USE_DXA
+
+#include "dxabuffer.h"
 #include "dxastagingbuffermanager.h"
 
 namespace DXA_NAME
@@ -202,3 +204,4 @@ struct RayTracingTlas
     }
 };
 } // namespace DXA_NAME
+#endif

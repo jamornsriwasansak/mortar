@@ -1,7 +1,10 @@
 #pragma once
 
-#include "rhi/commontypes/rhicopyregion.h"
 #include "vkacommon.h"
+
+#ifdef USE_VKA
+
+#include "rhi/commontypes/rhicopyregion.h"
 #include "vkadescriptor.h"
 #include "vkadevice.h"
 #include "vkafence.h"
@@ -317,3 +320,4 @@ struct CommandList
     }
 };
 } // namespace VKA_NAME
+#endif

@@ -1,5 +1,7 @@
 #pragma once
+
 #include "dxacommon.h"
+#ifdef USE_DXA
 
 namespace DXA_NAME
 {
@@ -82,3 +84,4 @@ private:
     }
 };
 } // namespace DXA_NAME
+#endif

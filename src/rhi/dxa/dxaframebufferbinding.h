@@ -1,6 +1,8 @@
 #pragma once
 
 #include "dxacommon.h"
+#ifdef USE_DXA
+
 #include "dxaswapchain.h"
 #include "dxatexture.h"
 
@@ -25,3 +27,4 @@ struct FramebufferBindings
     }
 };
 } // namespace Dxa
+#endif
