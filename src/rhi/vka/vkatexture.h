@@ -43,10 +43,11 @@ struct Texture
 
     Texture() {}
 
-    Texture(const Device *    device,
-            const Swapchain & swapchain,
-            const size_t      i_image,
-            const float4      clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f))
+    Texture(const Device *      device,
+            const Swapchain &   swapchain,
+            const size_t        i_image,
+            const float4        clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f),
+            const std::string & name        = "")
     : m_clear_value(clear_value)
     {
         m_vk_image = device->m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain)[i_image];
@@ -86,6 +87,12 @@ struct Texture
                                     nullptr,
                                     { img_mem_barrier });
         });
+        if (!name.empty())
+        {
+            device->name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
+            device->name_vkhpp_object<vk::ImageView, vk::ImageView::CType>(*m_vk_image_view,
+                                                                           name + "_image_view");
+        }
     }
 
     Texture(const Device *         device,
@@ -145,9 +152,14 @@ struct Texture
         m_vma_image_bundle.m_value    = image_bundle;
 
         m_vk_image = vma_vk_image;
-        device->name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
         m_vk_format     = static_cast<vk::Format>(format);
         m_vk_image_view = create_image_view(device->m_vk_ldevice.get(), m_vk_image, m_vk_format);
+
+        if (!name.empty())
+        {
+            device->name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
+            device->name_vkhpp_object<vk::ImageView, vk::ImageView::CType>(*m_vk_image_view, name + "_image_view");
+        }
 
         // copy image
         if (initial_data != nullptr)

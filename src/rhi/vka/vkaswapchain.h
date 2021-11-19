@@ -28,65 +28,16 @@ struct Swapchain
     std::vector<vk::UniqueSemaphore> is_image_acquired_semaphore;
     std::vector<vk::UniqueSemaphore> is_swapchain_image_ready_for_present_semaphores;
 
-    size_t   m_flight      = 0;
-    uint32_t m_image_index = 0;
+    size_t      m_flight      = 0;
+    uint32_t    m_image_index = 0;
+    std::string m_name        = "";
 
     Swapchain() {}
 
     Swapchain(const Device * device, const Window & window, const std::string & name = "")
-    : m_device(device)
+    : m_device(device), m_name(name)
     {
-        // based on surface capabilities find out minimum number of images + 1, we can put in the
-        // swapchain also get surface transform
-        const auto capabilities = device->m_vk_pdevice.getSurfaceCapabilitiesKHR(device->m_vk_surface);
-        const uint32_t num_min_swapchain_images = capabilities.minImageCount;
-        const uint32_t num_max_swapchain_images =
-            capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max() : capabilities.maxImageCount;
-        const uint32_t num_swapchain_images = std::min(num_min_swapchain_images + 1, num_max_swapchain_images);
-
-        // get format, color_space and present mode
-        auto [format, color_space] =
-            get_surface_info(device, device->m_vk_surface, SupportedLdrSwapchainFormats, SupportedLdrSwapchainColorSpaces);
-        vk::PresentModeKHR present_mode =
-            get_present_mode(device, device->m_vk_surface, SupportedSwapchainPresentMode);
-
-        // create family indices
-        const uint32_t queue_family_indices[] = { device->m_family_indices.m_graphics,
-                                                  device->m_family_indices.m_present };
-
-        // get resolution
-        m_resolution = window.get_resolution();
-
-        // create swapchain
-        vk::SwapchainCreateInfoKHR swapchain_ci = {};
-        swapchain_ci.setSurface(device->m_vk_surface);
-        swapchain_ci.setMinImageCount(num_swapchain_images);
-        swapchain_ci.setImageFormat(format);
-        swapchain_ci.setImageColorSpace(color_space);
-        swapchain_ci.setImageExtent(vk::Extent2D(m_resolution.x, m_resolution.y));
-        swapchain_ci.setImageArrayLayers(1);
-        swapchain_ci.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
-        if (device->m_family_indices.m_graphics == device->m_family_indices.m_present)
-        {
-            swapchain_ci.setImageSharingMode(vk::SharingMode::eExclusive);
-        }
-        else
-        {
-            swapchain_ci.setImageSharingMode(vk::SharingMode::eConcurrent);
-            swapchain_ci.setQueueFamilyIndexCount(2); // present queue and graphics queue
-            swapchain_ci.setPQueueFamilyIndices(queue_family_indices);
-        }
-        swapchain_ci.setPreTransform(capabilities.currentTransform);
-        swapchain_ci.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
-        swapchain_ci.setPresentMode(present_mode);
-        swapchain_ci.setClipped(true);
-        swapchain_ci.setOldSwapchain(nullptr);
-        m_vk_swapchain = device->m_vk_ldevice->createSwapchainKHRUnique(swapchain_ci);
-        m_vk_format    = format;
-        m_num_images   = static_cast<uint32_t>(num_swapchain_images);
-
-        // name our stuff
-        device->name_vkhpp_object<vk::SwapchainKHR, vk::SwapchainKHR::CType>(m_vk_swapchain.get(), name);
+        init(*device, window);
     }
 
     void
@@ -126,7 +77,70 @@ struct Swapchain
         return result == vk::Result::eSuccess;
     }
 
+    void
+    resize_to_window(const Device & device, const Window & window)
+    {
+        init(device, window);
+    }
+
 private:
+    void
+    init(const Device & device, const Window & window)
+    {
+        // based on surface capabilities find out minimum number of images + 1, we can put in the
+        // swapchain also get surface transform
+        const auto capabilities = device.m_vk_pdevice.getSurfaceCapabilitiesKHR(device.m_vk_surface);
+        const uint32_t num_min_swapchain_images = capabilities.minImageCount;
+        const uint32_t num_max_swapchain_images =
+            capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max() : capabilities.maxImageCount;
+        const uint32_t num_swapchain_images = std::min(num_min_swapchain_images + 1, num_max_swapchain_images);
+
+        // get format, color_space and present mode
+        auto [format, color_space] =
+            get_surface_info(&device, device.m_vk_surface, SupportedLdrSwapchainFormats, SupportedLdrSwapchainColorSpaces);
+        vk::PresentModeKHR present_mode =
+            get_present_mode(&device, device.m_vk_surface, SupportedSwapchainPresentMode);
+
+        // create family indices
+        const uint32_t queue_family_indices[] = { device.m_family_indices.m_graphics,
+                                                  device.m_family_indices.m_present };
+
+        // get resolution
+        int2 resolution = window.get_resolution();
+
+        // create swapchain
+        vk::SwapchainCreateInfoKHR swapchain_ci = {};
+        swapchain_ci.setSurface(device.m_vk_surface);
+        swapchain_ci.setMinImageCount(num_swapchain_images);
+        swapchain_ci.setImageFormat(format);
+        swapchain_ci.setImageColorSpace(color_space);
+        swapchain_ci.setImageExtent(vk::Extent2D(resolution.x, resolution.y));
+        swapchain_ci.setImageArrayLayers(1);
+        swapchain_ci.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment);
+        if (device.m_family_indices.m_graphics == device.m_family_indices.m_present)
+        {
+            swapchain_ci.setImageSharingMode(vk::SharingMode::eExclusive);
+        }
+        else
+        {
+            swapchain_ci.setImageSharingMode(vk::SharingMode::eConcurrent);
+            swapchain_ci.setQueueFamilyIndexCount(2); // present queue and graphics queue
+            swapchain_ci.setPQueueFamilyIndices(queue_family_indices);
+        }
+        swapchain_ci.setPreTransform(capabilities.currentTransform);
+        swapchain_ci.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
+        swapchain_ci.setPresentMode(present_mode);
+        swapchain_ci.setClipped(true);
+        swapchain_ci.setOldSwapchain(*m_vk_swapchain);
+        m_resolution   = window.get_resolution();
+        m_vk_swapchain = device.m_vk_ldevice->createSwapchainKHRUnique(swapchain_ci);
+        m_vk_format    = format;
+        m_num_images   = static_cast<uint32_t>(num_swapchain_images);
+
+        // name our stuff
+        device.name_vkhpp_object<vk::SwapchainKHR, vk::SwapchainKHR::CType>(m_vk_swapchain.get(), m_name);
+    }
+
     std::tuple<vk::Format, vk::ColorSpaceKHR>
     get_surface_info(const Device *                      device,
                      const vk::SurfaceKHR &              surface,

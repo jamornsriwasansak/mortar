@@ -26,8 +26,6 @@ struct ImGuiRenderPass
 
     ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain)
     {
-        m_resolution = swapchain.m_resolution;
-
         vk::AttachmentDescription attachment = {};
         attachment.setFormat(swapchain.m_vk_format);
         attachment.setSamples(vk::SampleCountFlagBits::e1);
@@ -133,6 +131,7 @@ struct ImGuiRenderPass
         auto swapchain_images = device->m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain);
         m_vk_framebuffers.clear();
         m_vk_image_views.clear();
+        m_resolution = swapchain.m_resolution;
         for (uint32_t i = 0; i < swapchain.m_num_images; i++)
         {
             vk::ImageView       image_views[1];

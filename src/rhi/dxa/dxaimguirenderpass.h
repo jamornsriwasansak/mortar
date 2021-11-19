@@ -41,7 +41,7 @@ struct ImGuiRenderPass
     }
 
     void
-    resize_to_swapchain(const Device * device, const Swapchain & swapchain)
+    init_or_resize_framebuffer([[maybe_unused]] const Device * device,[[maybe_unused]] const Swapchain & swapchain)
     {
     }
 

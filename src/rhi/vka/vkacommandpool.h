@@ -6,6 +6,7 @@
 
 #include "vkacommandlist.h"
 #include "vkadevice.h"
+#include "vkafence.h"
 
 namespace VKA_NAME
 {
@@ -17,11 +18,12 @@ struct CommandPool
 
     std::vector<CommandList> m_pre_alloc_cmd_lists;
     size_t                   m_cmd_buffer_index = 0;
+    std::string              m_name;
 
     CommandPool() {}
 
-    CommandPool(const Device * device, const CommandQueueType command_queue_type)
-    : m_vk_ldevice(device->m_vk_ldevice.get())
+    CommandPool(const Device * device, const CommandQueueType command_queue_type, const std::string & name)
+    : m_vk_ldevice(device->m_vk_ldevice.get()), m_name(name)
     {
         vk::CommandPoolCreateInfo command_pool_ci;
         switch (command_queue_type)
@@ -43,6 +45,8 @@ struct CommandPool
             break;
         }
         m_vk_cmd_pool = device->m_vk_ldevice->createCommandPoolUnique(command_pool_ci);
+
+        device->name_vkhpp_object<vk::CommandPool, vk::CommandPool::CType>(m_vk_cmd_pool.get(), name);
     }
 
     CommandList
@@ -57,6 +61,13 @@ struct CommandPool
             m_pre_alloc_cmd_lists.emplace_back(m_vk_queue, command_buffer);
         }
         return m_pre_alloc_cmd_lists[m_cmd_buffer_index++];
+    }
+
+    void
+    flush(const Fence & fence) const
+    {
+        vk::SubmitInfo submit_info = {};
+        m_vk_queue.submit({ submit_info }, fence.m_vk_fence.get());
     }
 
     void

@@ -22,8 +22,7 @@ struct MainLoop
     std::vector<Rhi::DescriptorPool> m_descriptor_pools;
     std::vector<Rhi::Semaphore>      m_image_ready_semaphores;
     std::vector<Rhi::Semaphore>      m_image_presentable_semaphore;
-    size_t                           m_swapchain_length = 0;
-    size_t                           m_num_flights      = 0;
+    size_t                           m_num_flights = 0;
 
     Rhi::StagingBufferManager m_staging_buffer_manager;
     // TODO:: replace asset pool completely with scene
@@ -56,6 +55,7 @@ struct MainLoop
     void
     init_or_resize_swapchain()
     {
+        Logger::Info(__FUNCTION__, " start resizing swapchain");
         // we flush command stuck in the queue
         for (int i = 0; i < m_num_flights; i++)
         {
@@ -67,13 +67,19 @@ struct MainLoop
             m_flight_fences[i].wait();
         }
 
+        Logger::Info(__FUNCTION__, " making textures from swapchain");
         // resize swapchain and recreate textures
-        m_swapchain.resize_to_window(m_device, *m_window);
+        m_swapchain.resize_to_window(*m_device, *m_window);
         for (size_t i = 0; i < m_swapchain.m_num_images; i++)
         {
-            m_swapchain_textures[i] = Rhi::Texture(m_device, m_swapchain, i);
+            m_swapchain_textures[i] = Rhi::Texture(m_device,
+                                                   m_swapchain,
+                                                   i,
+                                                   float4(0.0f, 0.0f, 0.0f, 0.0f),
+                                                   "swapchain_tex_" + std::to_string(i));
         }
 
+        Logger::Info(__FUNCTION__, "reinitializing camera params");
         // initialize camera
         m_swapchain_resolution = m_window->get_resolution();
         m_camera.m_aspect_ratio =
@@ -83,16 +89,16 @@ struct MainLoop
     void
     init()
     {
-        // force all unique ptr to free
-        m_swapchain = Rhi::Swapchain();
-
         // create swapchain
-        m_swapchain        = Rhi::Swapchain(m_device, *m_window, "main_swapchain");
-        m_swapchain_length = m_swapchain.m_num_images;
-        m_swapchain_textures.resize(m_swapchain_length);
+        m_swapchain = Rhi::Swapchain(m_device, *m_window, "main_swapchain");
+        m_swapchain_textures.resize(m_swapchain.m_num_images);
         for (size_t i = 0; i < m_swapchain.m_num_images; i++)
         {
-            m_swapchain_textures[i] = Rhi::Texture(m_device, m_swapchain, i);
+            m_swapchain_textures[i] = Rhi::Texture(m_device,
+                                                   m_swapchain,
+                                                   i,
+                                                   float4(0.0f, 0.0f, 0.0f, 0.0f),
+                                                   "swapchain_tex_" + std::to_string(i));
         }
 
         // initialize camera
@@ -251,9 +257,9 @@ struct MainLoop
             }
 
             init_or_resize_swapchain();
-            m_imgui_render_pass.resize_to_swapchain(m_device, m_swapchain);
             m_renderer.init_or_resize_resolution(m_device, m_window->get_resolution(), m_swapchain_textures);
             m_renderer.init_or_reload_shader(m_device);
+            m_imgui_render_pass.init_or_resize_framebuffer(m_device, m_swapchain);
         }
         m_window->update();
     }

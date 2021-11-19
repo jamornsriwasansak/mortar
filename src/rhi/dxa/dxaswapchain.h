@@ -49,7 +49,7 @@ struct Swapchain
     }
 
     void
-    resize_to_window(const Device * device, const Window & window)
+    resize_to_window(const Device & device, const Window & window)
     {
         // release existing resource
         for (ID3D12Resource * resource : m_dx_swapchain_resource_pointers)
@@ -59,7 +59,7 @@ struct Swapchain
         // resize the swapchain
         DXCK(m_dx_swapchain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_R8G8B8A8_UNORM, check_tearing_support() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0));
         // reinit swapchain resources
-        init_swapchain_resource_pointer(*device, "");
+        init_swapchain_resource_pointer(device, "");
         m_resolution = window.get_resolution();
     }
 

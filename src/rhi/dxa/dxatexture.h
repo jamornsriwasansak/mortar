@@ -11,35 +11,37 @@ namespace DXA_NAME
 {
 struct Texture
 {
-    D3D12MAHandle<D3D12MA::Allocation> m_allocation     = nullptr;
-    ID3D12Resource * m_dx_resource                      = nullptr;
-    DXGI_FORMAT m_dx_format                             = DXGI_FORMAT_UNKNOWN;
-    D3D12_CPU_DESCRIPTOR_HANDLE m_dx_dsv_rtv_cpu_handle = { 0 };
-    int2 m_resolution                                   = int2(0, 0);
-    float4 m_clear_value                                = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    D3D12MAHandle<D3D12MA::Allocation> m_allocation            = nullptr;
+    ID3D12Resource *                   m_dx_resource           = nullptr;
+    DXGI_FORMAT                        m_dx_format             = DXGI_FORMAT_UNKNOWN;
+    D3D12_CPU_DESCRIPTOR_HANDLE        m_dx_dsv_rtv_cpu_handle = { 0 };
+    int2                               m_resolution            = int2(0, 0);
+    float4                             m_clear_value           = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
     Texture() {}
 
-    Texture(Device * device,
-            const Swapchain & swapchain,
-            const size_t i_image,
-            const float4 clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f))
+    Texture(Device *            device,
+            const Swapchain &   swapchain,
+            const size_t        i_image,
+            const float4        clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f),
+            const std::string & name        = "")
     : m_resolution(swapchain.m_resolution), m_dx_format(swapchain.m_dx_format), m_clear_value(clear_value)
     {
         m_dx_resource = swapchain.m_dx_swapchain_resource_pointers[i_image];
         m_dx_format   = swapchain.m_dx_format;
         init_rtv(device);
+        device->name_dx_object(m_dx_resource, name);
     }
 
-    Texture(Device * device,
+    Texture(Device *               device,
             const TextureUsageEnum texture_usage,
             const TextureStateEnum initial_state,
-            const FormatEnum format,
-            const int2 resolution,
-            const std::byte * initial_data             = nullptr,
+            const FormatEnum       format,
+            const int2             resolution,
+            const std::byte *      initial_data        = nullptr,
             StagingBufferManager * initial_data_loader = nullptr,
-            const float4 clear_value                   = float4(0.0f, 0.0f, 0.0f, 0.0f),
-            const std::string & name                   = "")
+            const float4           clear_value         = float4(0.0f, 0.0f, 0.0f, 0.0f),
+            const std::string &    name                = "")
     : m_resolution(resolution), m_dx_format(static_cast<DXGI_FORMAT>(format)), m_clear_value(clear_value)
     {
         bool is_color_render_target = false;
@@ -106,7 +108,7 @@ struct Texture
         }
 
         // allocate resource
-        ID3D12Resource * resource        = nullptr;
+        ID3D12Resource *      resource   = nullptr;
         D3D12MA::Allocation * allocation = nullptr;
         device->m_d3d12ma->CreateResource(&alloc_desc,
                                           &resource_desc,
@@ -137,7 +139,7 @@ struct Texture
 
             // update subresources
             ID3D12GraphicsCommandList4 * cmd_list = initial_data_loader->m_dx_command_list.Get();
-            D3D12_SUBRESOURCE_DATA subresource_data;
+            D3D12_SUBRESOURCE_DATA       subresource_data;
             {
                 subresource_data.pData      = reinterpret_cast<const BYTE *>(initial_data);
                 subresource_data.RowPitch   = size_in_bytes_per_row;
@@ -197,7 +199,6 @@ struct Texture
     }
 
 private:
-
     void
     init_rtv(Device * device)
     {
