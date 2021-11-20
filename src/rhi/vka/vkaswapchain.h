@@ -34,7 +34,7 @@ struct Swapchain
 
     Swapchain() {}
 
-    Swapchain(const Device * device, const Window & window, const std::string & name = "")
+    Swapchain(const std::string & name, const Device * device, const Window & window)
     : m_device(device), m_name(name)
     {
         init(*device, window);

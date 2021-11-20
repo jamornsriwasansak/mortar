@@ -90,7 +90,7 @@ struct MainLoop
     init()
     {
         // create swapchain
-        m_swapchain = Rhi::Swapchain(m_device, *m_window, "main_swapchain");
+        m_swapchain = Rhi::Swapchain("main_swapchain", m_device, *m_window);
         m_swapchain_textures.resize(m_swapchain.m_num_images);
         for (size_t i = 0; i < m_swapchain.m_num_images; i++)
         {
@@ -122,16 +122,13 @@ struct MainLoop
         m_image_presentable_semaphore.resize(m_num_flights);
         for (size_t i = 0; i < m_num_flights; i++)
         {
-            const std::string str_i          = std::to_string(i);
-            m_graphics_command_pools[i]      = Rhi::CommandPool(m_device,
-                                                           Rhi::CommandQueueType::Graphics,
-                                                           "mainloop_graphics_cmd_pool_" + str_i);
-            m_compute_command_pools[i]       = Rhi::CommandPool(m_device,
-                                                          Rhi::CommandQueueType::Compute,
-                                                          "mainloop_compute_cmd_pool_" + str_i);
-            m_transfer_command_pools[i]      = Rhi::CommandPool(m_device,
-                                                           Rhi::CommandQueueType::Transfer,
-                                                           "mainloop_transfer_cmd_pool_" + str_i);
+            const std::string str_i = std::to_string(i);
+            m_graphics_command_pools[i] =
+                Rhi::CommandPool("mainloop_graphics_cmd_pool_" + str_i, m_device, Rhi::CommandQueueType::Graphics);
+            m_compute_command_pools[i] =
+                Rhi::CommandPool("mainloop_compute_cmd_pool_" + str_i, m_device, Rhi::CommandQueueType::Compute);
+            m_transfer_command_pools[i] =
+                Rhi::CommandPool("mainloop_transfer_cmd_pool_" + str_i, m_device, Rhi::CommandQueueType::Transfer);
             m_descriptor_pools[i]            = Rhi::DescriptorPool(m_device);
             m_image_ready_semaphores[i]      = Rhi::Semaphore(m_device);
             m_image_presentable_semaphore[i] = Rhi::Semaphore(m_device);
@@ -145,12 +142,12 @@ struct MainLoop
         m_renderer.init(m_device, m_swapchain_resolution, m_swapchain_textures);
 
         // init dummy buffers and texture
-        m_dummy_buffer  = Rhi::Buffer(m_device,
+        m_dummy_buffer  = Rhi::Buffer("dummy_vertex_buffer",
+                                     m_device,
                                      Rhi::BufferUsageEnum::VertexBuffer | Rhi::BufferUsageEnum::IndexBuffer |
                                          Rhi::BufferUsageEnum::StorageBuffer,
                                      Rhi::MemoryUsageEnum::GpuOnly,
-                                     sizeof(uint32_t),
-                                     "dummy_vertex_buffer");
+                                     sizeof(uint32_t));
         m_dummy_texture = Rhi::Texture(m_device,
                                        Rhi::TextureUsageEnum::Sampled,
                                        Rhi::TextureStateEnum::AllShaderVisible,

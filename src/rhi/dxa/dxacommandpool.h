@@ -10,17 +10,17 @@ namespace DXA_NAME
 {
 struct CommandPool
 {
-    ComPtr<ID3D12CommandAllocator> m_dx_command_allocator;
-    ComPtr<ID3D12CommandQueue>     m_dx_command_queue;
-    D3D12_COMMAND_LIST_TYPE        m_command_list_type;
-    std::vector<CommandList>       m_pre_alloc_cmd_lists;
-    size_t                         m_cmd_buffer_index = 0;
-    const Device *                 m_device;
-    std::string                    m_name;
+    ComPtr<ID3D12CommandAllocator> m_dx_command_allocator = nullptr;
+    ComPtr<ID3D12CommandQueue>     m_dx_command_queue     = nullptr;
+    D3D12_COMMAND_LIST_TYPE        m_command_list_type    = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    std::vector<CommandList>       m_pre_alloc_cmd_lists  = {};
+    size_t                         m_cmd_buffer_index     = 0;
+    const Device *                 m_device               = nullptr;
+    std::string                    m_name                 = {};
 
     CommandPool() {}
 
-    CommandPool(const Device * device, const CommandQueueType command_queue_type, const std::string & name = "")
+    CommandPool(const std::string & name, const Device * device, const CommandQueueType command_queue_type)
     : m_device(device),
       m_command_list_type(static_cast<D3D12_COMMAND_LIST_TYPE>(command_queue_type)),
       m_name(name)

@@ -12,18 +12,19 @@ struct Swapchain
 {
     static constexpr size_t m_num_images = 3;
 
-    IDXGISwapChain4 *             m_dx_swapchain = nullptr;
-    DXGI_FORMAT                   m_dx_format    = DXGI_FORMAT_UNKNOWN;
-    std::vector<ID3D12Resource *> m_dx_swapchain_resource_pointers;
-    size_t                        m_image_index;
-    int2                          m_resolution;
+    IDXGISwapChain4 *             m_dx_swapchain                   = nullptr;
+    DXGI_FORMAT                   m_dx_format                      = DXGI_FORMAT_UNKNOWN;
+    std::vector<ID3D12Resource *> m_dx_swapchain_resource_pointers = {};
+    size_t                        m_image_index                    = 0;
+    int2                          m_resolution                     = { 0, 0 };
+    std::string                   m_name                           = "";
 
     Swapchain() {}
 
-    Swapchain(const Device * device, const Window & window, const std::string & name = "")
+    Swapchain(const std::string & name, const Device * device, const Window & window) : m_name(name)
     {
         init_swapchain(*device, window);
-        init_swapchain_resource_pointer(*device, name);
+        init_swapchain_resource_pointer(*device);
         update_image_index(nullptr);
     }
 
@@ -56,15 +57,18 @@ struct Swapchain
         {
             resource->Release();
         }
+
         // resize the swapchain
         DXCK(m_dx_swapchain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_R8G8B8A8_UNORM, check_tearing_support() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0));
+
         // reinit swapchain resources
-        init_swapchain_resource_pointer(device, "");
+        init_swapchain_resource_pointer(device);
+
+        // set new resolution
         m_resolution = window.get_resolution();
     }
 
 private:
-
     bool
     check_tearing_support() const
     {
@@ -121,14 +125,20 @@ private:
     }
 
     void
-    init_swapchain_resource_pointer(const Device & device, const std::string & name)
+    init_swapchain_resource_pointer(const Device & device)
     {
         m_dx_swapchain_resource_pointers.resize(m_num_images);
         for (uint32_t i_frame = 0; i_frame < m_num_images; i_frame++)
         {
             // get buffer into render target
             DXCK(m_dx_swapchain->GetBuffer(i_frame, IID_PPV_ARGS(&m_dx_swapchain_resource_pointers[i_frame])));
-            device.name_dx_object(m_dx_swapchain_resource_pointers[i_frame], name);
+
+            // name the buffer
+            if (!m_name.empty())
+            {
+                device.name_dx_object(m_dx_swapchain_resource_pointers[i_frame],
+                                      m_name + "_" + std::to_string(i_frame));
+            }
         }
     }
 };

@@ -32,12 +32,20 @@ struct Device
 
     Device() {}
 
-    Device(const PhysicalDevice & physical_device)
+    Device(const std::string & name, const PhysicalDevice & physical_device)
     {
+        // setup debug mode
+        m_debug = physical_device.m_enable_debug;
+
+        // create device and command queues
         m_dx_device = create_device(physical_device.m_dx_adapter.Get(), physical_device.m_enable_debug);
         m_dx_direct_queue  = create_command_queue(D3D12_COMMAND_LIST_TYPE_DIRECT);
         m_dx_compute_queue = create_command_queue(D3D12_COMMAND_LIST_TYPE_COMPUTE);
         m_dx_copy_queue    = create_command_queue(D3D12_COMMAND_LIST_TYPE_COPY);
+        name_dx_object(m_dx_device, name);
+        name_dx_object(m_dx_direct_queue, name + "_direct_queue");
+        name_dx_object(m_dx_copy_queue, name + "_copy_queue");
+        name_dx_object(m_dx_compute_queue, name + "_compute_queue");
 
         // create dxma allocator
         D3D12MA::Allocator *    dxma_allocator = nullptr;
@@ -95,8 +103,6 @@ struct Device
         AFTERMATH_CHECK_ERROR(
             GFSDK_Aftermath_DX12_Initialize(GFSDK_Aftermath_Version_API, aftermathFlags, m_dx_device.Get()));
 #endif
-
-        m_debug = physical_device.m_enable_debug;
     }
 
     inline bool
@@ -205,5 +211,5 @@ private:
         return options5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME
 #endif

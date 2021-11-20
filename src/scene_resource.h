@@ -89,48 +89,49 @@ struct SceneResource
 
     SceneResource(const Rhi::Device & device) : m_device(&device)
     {
-        m_transfer_cmd_pool = Rhi::CommandPool(&device, Rhi::CommandQueueType::Transfer, "scene_resource_transfer_cmd_pool");
+        m_transfer_cmd_pool =
+            Rhi::CommandPool("scene_resource_transfer_cmd_pool", &device, Rhi::CommandQueueType::Transfer);
 
         // index buffer vertex buffer
-        m_d_vbuf_position = Rhi::Buffer(m_device,
+        m_d_vbuf_position = Rhi::Buffer("scene_m_d_vbuf_position",
+                                        m_device,
                                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
                                             Rhi::BufferUsageEnum::VertexBuffer,
                                         Rhi::MemoryUsageEnum::GpuOnly,
-                                        sizeof(float3) * EngineSetting::MaxNumVertices,
-                                        "scene_m_d_vbuf_position");
-        m_d_vbuf_packed   = Rhi::Buffer(m_device,
+                                        sizeof(float3) * EngineSetting::MaxNumVertices);
+        m_d_vbuf_packed   = Rhi::Buffer("scene_m_d_vbuf_packed",
+                                      m_device,
                                       Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
                                           Rhi::BufferUsageEnum::VertexBuffer,
                                       Rhi::MemoryUsageEnum::GpuOnly,
-                                      sizeof(CompactVertex) * EngineSetting::MaxNumVertices,
-                                      "scene_m_d_vbuf_packed");
-        m_d_ibuf          = Rhi::Buffer(m_device,
+                                      sizeof(CompactVertex) * EngineSetting::MaxNumVertices);
+        m_d_ibuf          = Rhi::Buffer("scene_m_d_ibuf",
+                               m_device,
                                Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
                                    Rhi::BufferUsageEnum::IndexBuffer,
                                Rhi::MemoryUsageEnum::GpuOnly,
-                               Rhi::GetSizeInBytes(m_ibuf_index_type) * EngineSetting::MaxNumIndices,
-                               "scene_m_d_ibuf");
+                               Rhi::GetSizeInBytes(m_ibuf_index_type) * EngineSetting::MaxNumIndices);
 
         // materials
-        m_d_materials = Rhi::Buffer(m_device,
+        m_d_materials = Rhi::Buffer("scene_m_d_materials",
+                                    m_device,
                                     Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                                     Rhi::MemoryUsageEnum::GpuOnly,
-                                    sizeof(StandardMaterial) * EngineSetting::MaxNumStandardMaterials,
-                                    "scene_m_d_materials");
+                                    sizeof(StandardMaterial) * EngineSetting::MaxNumStandardMaterials);
 
         // geometry table and geometry offset table
         m_d_base_instance_table =
-            Rhi::Buffer(m_device,
+            Rhi::Buffer("scene_m_d_base_instance_table",
+                        m_device,
                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                         Rhi::MemoryUsageEnum::GpuOnly,
-                        sizeof(BaseInstanceTableEntry) * EngineSetting::MaxNumGeometryOffsetTableEntry,
-                        "scene_m_d_base_instance_table");
+                        sizeof(BaseInstanceTableEntry) * EngineSetting::MaxNumGeometryOffsetTableEntry);
         m_d_geometry_table =
-            Rhi::Buffer(m_device,
+            Rhi::Buffer("scene_m_d_geometry_table",
+                        m_device,
                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                         Rhi::MemoryUsageEnum::GpuOnly,
-                        sizeof(GeometryTableEntry) * EngineSetting::MaxNumGeometryTableEntry,
-                        "scene_m_d_geometry_table");
+                        sizeof(GeometryTableEntry) * EngineSetting::MaxNumGeometryTableEntry);
     }
 
     urange32_t
@@ -197,15 +198,18 @@ struct SceneResource
 
         Rhi::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
 
-        Rhi::Buffer staging_buffer(m_device,
+        Rhi::Buffer staging_buffer("scene_staging_buffer_vb",
+                                   m_device,
                                    Rhi::BufferUsageEnum::TransferSrc,
                                    Rhi::MemoryUsageEnum::CpuOnly,
                                    vb_positions1.size() * sizeof(vb_positions1[0]));
-        Rhi::Buffer staging_buffer2(m_device,
+        Rhi::Buffer staging_buffer2("scene_staging_buffer_ib",
+                                    m_device,
                                     Rhi::BufferUsageEnum::TransferSrc,
                                     Rhi::MemoryUsageEnum::CpuOnly,
                                     ib1.size() * sizeof(ib1[0]));
-        Rhi::Buffer staging_buffer3(m_device,
+        Rhi::Buffer staging_buffer3("scene_staging_buffer_vb_packed",
+                                    m_device,
                                     Rhi::BufferUsageEnum::TransferSrc,
                                     Rhi::MemoryUsageEnum::CpuOnly,
                                     vb_packed1.size() * sizeof(vb_packed1[0]));
@@ -335,7 +339,7 @@ struct SceneResource
         {
             return q->second;
         }
-        
+
         const std::string filepath_str = path.string();
 
         // load using stbi
@@ -362,7 +366,7 @@ struct SceneResource
 
         // emplace back
         m_d_textures.emplace_back(std::move(texture));
-        const size_t tex_id = m_d_textures.size() - 1;
+        const size_t tex_id          = m_d_textures.size() - 1;
         m_texture_id_from_path[path] = tex_id;
 
         return tex_id;
@@ -445,7 +449,8 @@ struct SceneResource
         cmd_list.begin();
 
         // build material buffer
-        Rhi::Buffer staging_buffer(m_device,
+        Rhi::Buffer staging_buffer("scene_staging_buffer_material",
+                                   m_device,
                                    Rhi::BufferUsageEnum::TransferSrc,
                                    Rhi::MemoryUsageEnum::CpuOnly,
                                    m_h_materials.size() * sizeof(m_h_materials[0]));
@@ -483,11 +488,13 @@ struct SceneResource
                 }
             }
 
-            staging_buffer2 = Rhi::Buffer(m_device,
+            staging_buffer2 = Rhi::Buffer("scene_staging_buffer_geometry_table",
+                                          m_device,
                                           Rhi::BufferUsageEnum::TransferSrc,
                                           Rhi::MemoryUsageEnum::CpuOnly,
                                           sizeof(GeometryTableEntry) * geometry_table.size());
-            staging_buffer3 = Rhi::Buffer(m_device,
+            staging_buffer3 = Rhi::Buffer("scene_staging_buffer_base_instance",
+                                          m_device,
                                           Rhi::BufferUsageEnum::TransferSrc,
                                           Rhi::MemoryUsageEnum::CpuOnly,
                                           sizeof(BaseInstanceTableEntry) * base_instance_table.size());

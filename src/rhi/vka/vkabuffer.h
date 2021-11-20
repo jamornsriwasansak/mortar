@@ -11,10 +11,10 @@ struct Buffer
 {
     struct VmaBufferBundle
     {
-        VmaAllocator m_vma_allocator;
-        VmaAllocation m_vma_allocation;
+        VmaAllocator      m_vma_allocator;
+        VmaAllocation     m_vma_allocation;
         VmaAllocationInfo m_vma_alloc_info;
-        VkBuffer m_vk_buffer = nullptr;
+        VkBuffer          m_vk_buffer = nullptr;
     };
 
     struct VmaBufferBundleDeleter
@@ -28,16 +28,16 @@ struct Buffer
     };
 
     UniqueVarHandle<VmaBufferBundle, VmaBufferBundleDeleter> m_vma_buffer_bundle;
-    size_t m_size_in_bytes;
+    size_t                                                   m_size_in_bytes;
     vk::DeviceAddress m_device_address = std::numeric_limits<vk::DeviceAddress>::max();
 
     Buffer() {}
 
-    Buffer(const Device * device,
+    Buffer(const std::string &   name,
+           const Device *        device,
            const BufferUsageEnum buffer_usage_,
            const MemoryUsageEnum memory_usage,
-           const size_t buffer_size_in_bytes,
-           const std::string & name                   = "")
+           const size_t          buffer_size_in_bytes)
     : m_size_in_bytes(buffer_size_in_bytes)
     {
         BufferUsageEnum buffer_usage = buffer_usage_;
@@ -46,12 +46,12 @@ struct Buffer
         buffer_ci_tmp.setSize(buffer_size_in_bytes == 0 ? 32 : buffer_size_in_bytes);
         buffer_ci_tmp.setUsage(static_cast<vk::BufferUsageFlagBits>(buffer_usage) |
                                vk::BufferUsageFlagBits::eShaderDeviceAddress);
-        VkBufferCreateInfo buffer_ci         = buffer_ci_tmp;
+        VkBufferCreateInfo      buffer_ci    = buffer_ci_tmp;
         VmaAllocationCreateInfo vma_alloc_ci = {};
         vma_alloc_ci.usage                   = static_cast<VmaMemoryUsage>(memory_usage);
 
-        VkBuffer vma_vk_buffer;
-        VmaAllocation vma_allocation;
+        VkBuffer          vma_vk_buffer;
+        VmaAllocation     vma_allocation;
         VmaAllocationInfo vma_alloc_info;
         VKCK(vmaCreateBuffer(*device->m_vma_allocator, &buffer_ci, &vma_alloc_ci, &vma_vk_buffer, &vma_allocation, &vma_alloc_info));
 
@@ -85,8 +85,8 @@ struct Buffer
     void *
     map()
     {
-        void * mapped_data     = m_vma_buffer_bundle->m_vma_alloc_info.pMappedData;
-        bool directly_mappable = mapped_data != nullptr;
+        void * mapped_data       = m_vma_buffer_bundle->m_vma_alloc_info.pMappedData;
+        bool   directly_mappable = mapped_data != nullptr;
         if (!directly_mappable)
         {
             VkResult result = vmaMapMemory(m_vma_buffer_bundle->m_vma_allocator,

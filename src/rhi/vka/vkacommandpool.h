@@ -22,7 +22,7 @@ struct CommandPool
 
     CommandPool() {}
 
-    CommandPool(const Device * device, const CommandQueueType command_queue_type, const std::string & name)
+    CommandPool(const std::string & name, const Device * device, const CommandQueueType command_queue_type)
     : m_vk_ldevice(device->m_vk_ldevice.get()), m_name(name)
     {
         vk::CommandPoolCreateInfo command_pool_ci;

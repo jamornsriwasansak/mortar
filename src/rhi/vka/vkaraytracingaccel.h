@@ -116,11 +116,11 @@ struct RayTracingBlas
         VmaAllocationCreateInfo vma_alloc_ci = {};
         vma_alloc_ci.usage                   = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
 
-        m_accel_buffer = Buffer(device,
+        m_accel_buffer = Buffer(name + "_buffer",
+                                device,
                                 BufferUsageEnum::RayTracingAccelStructBuffer,
                                 MemoryUsageEnum::GpuOnly,
-                                required_buffer_size,
-                                name + "_buffer");
+                                required_buffer_size);
 
         // create acceleration structure
         vk::AccelerationStructureCreateInfoKHR accel_ci = {};
@@ -173,14 +173,13 @@ struct RayTracingTlas
     RayTracingTlas(const Device *                              device,
                    const std::span<const RayTracingInstance> & instances,
                    StagingBufferManager *                      buf_manager,
-                   const std::string &                         name = "")
+                   const std::string &                         name)
     {
-        const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
-        m_instance_buffer                      = Buffer(device,
+        m_instance_buffer = Buffer(name + "_instance_buffer",
+                                   device,
                                    BufferUsageEnum::TransferSrc,
                                    MemoryUsageEnum::CpuOnly,
-                                   sizeof(vk::AccelerationStructureInstanceKHR) * instances.size(),
-                                   instance_buffer_name);
+                                   sizeof(vk::AccelerationStructureInstanceKHR) * instances.size());
 
         std::byte * instance_dst = reinterpret_cast<std::byte *>(m_instance_buffer.map());
         for (size_t i = 0; i < instances.size(); i++)
@@ -224,12 +223,11 @@ struct RayTracingTlas
         VmaAllocationCreateInfo vma_alloc_ci = {};
         vma_alloc_ci.usage                   = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
 
-        const std::string accel_buffer_name = name.empty() ? "" : name + "_accel_buffer";
-        m_accel_buffer                      = Buffer(device,
+        m_accel_buffer = Buffer(name + "_accel_buffer",
+                                device,
                                 BufferUsageEnum::RayTracingAccelStructBuffer,
                                 MemoryUsageEnum::GpuOnly,
-                                required_buffer_size,
-                                accel_buffer_name);
+                                required_buffer_size);
 
         // create acceleration structure
         vk::AccelerationStructureCreateInfoKHR accel_ci = {};

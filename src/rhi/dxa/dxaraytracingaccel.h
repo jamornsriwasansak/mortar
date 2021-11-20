@@ -87,11 +87,11 @@ struct RayTracingBlas
         }
 
         // setup blas buffer
-        m_blas_buffer = Buffer(device,
+        m_blas_buffer = Buffer(name + "_buffer",
+                               device,
                                BufferUsageEnum::RayTracingAccelStructBuffer,
                                MemoryUsageEnum::GpuOnly,
-                               bottom_level_prebuild_info.ResultDataMaxSizeInBytes,
-                               name);
+                               bottom_level_prebuild_info.ResultDataMaxSizeInBytes);
 
         auto * scratch_buffer =
             resource_loader->get_scratch_buffer(bottom_level_prebuild_info.ResultDataMaxSizeInBytes);
@@ -150,11 +150,11 @@ struct RayTracingTlas
     {
         // copy description of instance into the buffer
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
-        m_instance_desc_buffer                 = Buffer(device,
+        m_instance_desc_buffer                 = Buffer(instance_buffer_name,
+                                        device,
                                         BufferUsageEnum::None,
                                         MemoryUsageEnum::CpuOnly,
-                                        sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instances.size(),
-                                        instance_buffer_name);
+                                        sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instances.size());
         std::byte * instance_dst = reinterpret_cast<std::byte *>(m_instance_desc_buffer.map());
         for (size_t i = 0; i < instances.size(); i++)
         {
@@ -185,11 +185,11 @@ struct RayTracingTlas
             temp_resource_manager->get_scratch_buffer(top_level_prebuild_info.ResultDataMaxSizeInBytes);
 
         const std::string accel_buffer_name = name.empty() ? "" : name + "_accel_buffer";
-        m_tlas_buffer                       = Buffer(device,
+        m_tlas_buffer                       = Buffer(accel_buffer_name,
+                               device,
                                BufferUsageEnum::RayTracingAccelStructBuffer,
                                MemoryUsageEnum::GpuOnly,
-                               top_level_prebuild_info.ResultDataMaxSizeInBytes,
-                               accel_buffer_name);
+                               top_level_prebuild_info.ResultDataMaxSizeInBytes);
 
         // tlas desc
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC tlas_build_desc = {};

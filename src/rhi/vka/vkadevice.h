@@ -81,7 +81,8 @@ struct Device
 
     Device() {}
 
-    Device(const PhysicalDevice & physical_device) : m_debug(physical_device.m_enable_debug)
+    Device(const std::string & name, const PhysicalDevice & physical_device)
+    : m_debug(physical_device.m_enable_debug)
     {
         m_vk_instance = physical_device.m_vk_instance;
         m_vk_pdevice  = physical_device.m_vk_pdevice;
@@ -90,7 +91,7 @@ struct Device
 
         if (m_debug)
         {
-            m_features.m_support_debug_marker = false;
+            m_features.m_support_debug_marker = true;
         }
 
         // find queues
@@ -106,6 +107,7 @@ struct Device
                                      physical_device.m_device_extensions,
                                      m_features,
                                      queue_family_indices);
+        name_vkhpp_object<vk::Device, vk::Device::CType>(m_vk_ldevice.get(), name + "_ldevice");
 
         // init default dispatcher
         VULKAN_HPP_DEFAULT_DISPATCHER.init(m_vk_ldevice.get());
@@ -115,10 +117,18 @@ struct Device
         m_vk_present_queue  = m_vk_ldevice->getQueue(m_family_indices.m_present, 0);
         m_vk_compute_queue  = m_vk_ldevice->getQueue(m_family_indices.m_compute, 0);
         m_vk_transfer_queue = m_vk_ldevice->getQueue(m_family_indices.m_transfer, 0);
+        name_vkhpp_object<vk::Queue, vk::Queue::CType>(m_vk_graphics_queue,
+                                                       name + "_graphics_queue");
+        name_vkhpp_object<vk::Queue, vk::Queue::CType>(m_vk_present_queue, name + "_present_queue");
+        name_vkhpp_object<vk::Queue, vk::Queue::CType>(m_vk_compute_queue, name + "_compute_queue");
+        name_vkhpp_object<vk::Queue, vk::Queue::CType>(m_vk_transfer_queue,
+                                                       name + "_transfer_queue");
         Logger::Info(__FUNCTION__, " get all necessary queues");
 
         // create command pool for one time submit
         m_vk_graphics_command_pool = create_command_pool(m_vk_ldevice.get(), m_family_indices.m_graphics);
+        name_vkhpp_object<vk::CommandPool, vk::CommandPool::CType>(m_vk_graphics_command_pool.get(),
+                                                                   name + "_graphics_command_pool");
 
         // allocate vma
         VmaAllocatorCreateInfo vma_allocator_ci = {};

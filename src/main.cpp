@@ -3,7 +3,11 @@
 int
 main()
 {
+#ifdef NDEBUG
+    constexpr bool is_debug = false;
+#else
     constexpr bool is_debug = true;
+#endif
 
     // default parameters
     const size_t num_flights = 2;
@@ -15,7 +19,7 @@ main()
     // create device
     Rhi::Entry          entry(main_window, is_debug);
     Rhi::PhysicalDevice physical_device = entry.get_graphics_devices()[0];
-    Rhi::Device         device(physical_device);
+    Rhi::Device         device("main_device", physical_device);
 
     // create renderer
     MainLoop main_loop(&device, &main_window, num_flights);

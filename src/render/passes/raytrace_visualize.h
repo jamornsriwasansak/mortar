@@ -7,10 +7,10 @@
 
 struct RaytraceVisualizePass
 {
-    Rhi::RayTracingPipeline m_rt_pipeline;
+    Rhi::RayTracingPipeline    m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
-    Rhi::Buffer m_cb_params;
-    Rhi::Sampler m_common_sampler;
+    Rhi::Buffer                m_cb_params;
+    Rhi::Sampler               m_common_sampler;
 
 #ifdef DEBUG_RayTraceVisualizePrintClickedInfo
     Rhi::Buffer m_debug_cb_params;
@@ -25,11 +25,11 @@ struct RaytraceVisualizePass
         init_or_reload(device);
 
         // constant params for rtvisualize
-        m_cb_params = Rhi::Buffer(&device,
+        m_cb_params = Rhi::Buffer("raytrace_visualize_cbparams",
+                                  &device,
                                   Rhi::BufferUsageEnum::ConstantBuffer,
                                   Rhi::MemoryUsageEnum::CpuToGpu,
-                                  sizeof(RaytraceVisualizeCbParams),
-            "raytrace_visualize_cbparams");
+                                  sizeof(RaytraceVisualizeCbParams));
 
         // sampler
         m_common_sampler = Rhi::Sampler(&device);
@@ -65,19 +65,19 @@ struct RaytraceVisualizePass
         Rhi::RayTracingPipelineConfig rt_config;
 
         // raygen
-        const Rhi::ShaderSrc raygen_shader(Rhi::ShaderStageEnum::RayGen,
+        const Rhi::ShaderSrc          raygen_shader(Rhi::ShaderStageEnum::RayGen,
                                            BASE_SHADER_DIR "raytrace_visualize.hlsl",
                                            "RayGen");
         [[maybe_unused]] const size_t raygen_id = rt_config.add_shader(raygen_shader);
 
         // miss
-        const Rhi::ShaderSrc miss_shader(Rhi::ShaderStageEnum::Miss,
+        const Rhi::ShaderSrc          miss_shader(Rhi::ShaderStageEnum::Miss,
                                          BASE_SHADER_DIR "raytrace_visualize.hlsl",
                                          "Miss");
         [[maybe_unused]] const size_t miss_id = rt_config.add_shader(miss_shader);
 
         // hitgroup
-        const Rhi::ShaderSrc hit_shader(Rhi::ShaderStageEnum::ClosestHit,
+        const Rhi::ShaderSrc    hit_shader(Rhi::ShaderStageEnum::ClosestHit,
                                         BASE_SHADER_DIR "raytrace_visualize.hlsl",
                                         "ClosestHit");
         Rhi::RayTracingHitGroup hit_group;
@@ -92,13 +92,13 @@ struct RaytraceVisualizePass
     }
 
     void
-    run(Rhi::CommandList & cmd_list,
+    run(Rhi::CommandList &    cmd_list,
         const RenderContext & render_ctx,
-        const RenderParams & render_params,
-        const Rhi::Texture & target_texture_buffer,
-        const uint2 target_resolution)
+        const RenderParams &  render_params,
+        const Rhi::Texture &  target_texture_buffer,
+        const uint2           target_resolution)
     {
-        bool p_open           = true;
+        bool       p_open     = true;
         static int rtvis_mode = 0;
         if (ImGui::Begin(typeid(*this).name(), &p_open))
         {
@@ -133,10 +133,10 @@ struct RaytraceVisualizePass
         ImGui::End();
 
         RaytraceVisualizeCbParams cb_params;
-        CameraProperties cam_props  = render_params.m_fps_camera->get_camera_props();
-        cb_params.m_camera_inv_proj = inverse(cam_props.m_proj);
-        cb_params.m_camera_inv_view = inverse(cam_props.m_view);
-        cb_params.m_mode            = static_cast<RaytraceVisualizeModeEnum>(rtvis_mode);
+        CameraProperties          cam_props = render_params.m_fps_camera->get_camera_props();
+        cb_params.m_camera_inv_proj         = inverse(cam_props.m_proj);
+        cb_params.m_camera_inv_view         = inverse(cam_props.m_view);
+        cb_params.m_mode                    = static_cast<RaytraceVisualizeModeEnum>(rtvis_mode);
         std::memcpy(m_cb_params.map(), &cb_params, sizeof(RaytraceVisualizeCbParams));
         m_cb_params.unmap();
 
@@ -202,7 +202,8 @@ struct RaytraceVisualizePass
         // set debug cb params
         auto * debug_params = static_cast<RaytraceVisualizeDebugPrintCbParams *>(m_debug_cb_params.map());
         debug_params->m_selected_thread_id.x = static_cast<uint>(ImGui::GetMousePos().x);
-        debug_params->m_selected_thread_id.y = static_cast<uint>(target_resolution.y - ImGui::GetMousePos().y);
+        debug_params->m_selected_thread_id.y =
+            static_cast<uint>(target_resolution.y - ImGui::GetMousePos().y);
         m_debug_cb_params.unmap();
 
         // descriptor set
