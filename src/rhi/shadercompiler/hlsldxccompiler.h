@@ -24,7 +24,7 @@ struct HlslDxcCompiler
     template <typename T>
     using ComPtr = Microsoft::WRL::ComPtr<T>;
 
-    ComPtr<IDxcUtils> m_utils;
+    ComPtr<IDxcUtils>    m_utils;
     ComPtr<IDxcCompiler> m_compiler;
 
     HlslDxcCompiler()
@@ -47,21 +47,95 @@ struct HlslDxcCompiler
     }
 
     template <typename ShaderStageEnum>
-    ComPtr<IDxcBlob>
-    dxc_compile(const std::string & shader_name,
-                const std::string & shader_string,
-                const std::string & shader_access_point,
-                const ShaderStageEnum shader_stage,
-                const std::filesystem::path & path,
-                const std::vector<std::string> & defines,
-                const bool as_spirv) const
+    static const wchar_t *
+    get_target_profile(const ShaderStageEnum shader_stage)
     {
-        std::map<ShaderStageEnum, LPCWSTR> TargetProfile = {
-            { ShaderStageEnum::Vertex, L"vs_6_2" },  { ShaderStageEnum::Fragment, L"ps_6_2" },
-            { ShaderStageEnum::RayGen, L"lib_6_5" }, { ShaderStageEnum::Miss, L"lib_6_5" },
-            { ShaderStageEnum::AnyHit, L"lib_6_5" }, { ShaderStageEnum::ClosestHit, L"lib_6_5" }
-        };
+        switch (shader_stage)
+        {
+        case ShaderStageEnum::Vertex:
+            return L"vs_6_2";
+        case ShaderStageEnum::Fragment:
+            return L"ps_6_2";
+        default:
+            return L"lib_6_5";
+        }
+    }
 
+    template <bool AsSpirV>
+    static std::vector<LPCWSTR> *
+    get_compiling_argument()
+    {
+        static std::vector<LPCWSTR> arguments = [&]() {
+            std::vector<LPCWSTR> result;
+            result.push_back(DXC_ARG_DEBUG);
+            result.push_back(DXC_ARG_ALL_RESOURCES_BOUND);
+            result.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
+            result.push_back(DXC_ARG_WARNINGS_ARE_ERRORS);
+            result.push_back(L"-enable-16bit-types");
+            // result.push_back(L"-enable-templates");
+            result.push_back(L"-HV 2018");
+            result.push_back(L"-T *s_6_2");
+
+            // compile as spirv if needed
+            if constexpr (AsSpirV)
+            {
+                static const std::wstring bshift = std::to_wstring(BShift);
+                static const std::wstring ushift = std::to_wstring(UShift);
+                static const std::wstring tshift = std::to_wstring(TShift);
+                static const std::wstring sshift = std::to_wstring(SShift);
+
+                result.push_back(L"-fvk-auto-shift-bindings");
+                result.push_back(L"-fspv-reflect");
+                result.push_back(L"-spirv");
+                result.push_back(L"-fspv-target-env=vulkan1.2");
+
+                // force storage buffer and constant buffer to not use std140 and std430
+                // and simply use dx-like (VK_EXT_scalar_block_layout) standard instead
+                // this renders padding unnecessary.
+                // note: this requires vk::Device::setScalarBlockLayout(VK_TRUE)
+                result.push_back(L"-fvk-use-scalar-layout");
+
+                // constant buffer - 0
+                result.push_back(L"-fvk-b-shift");
+                result.push_back(bshift.c_str());
+                result.push_back(L"all");
+
+                // sampler - 10
+                result.push_back(L"-fvk-u-shift");
+                result.push_back(ushift.c_str());
+                result.push_back(L"all");
+
+                // srv - 20
+                result.push_back(L"-fvk-t-shift");
+                result.push_back(tshift.c_str());
+                result.push_back(L"all");
+
+                // sampler - 30
+                result.push_back(L"-fvk-s-shift");
+                result.push_back(sshift.c_str());
+                result.push_back(L"all");
+
+                // hlsl in general
+                result.push_back(L"-fspv-extension=SPV_GOOGLE_hlsl_functionality1");
+                result.push_back(L"-fspv-extension=SPV_GOOGLE_user_type");
+                result.push_back(L"-fspv-extension=KHR");
+            }
+            return result;
+        }();
+
+        return &arguments;
+    }
+
+    template <typename ShaderStageEnum>
+    ComPtr<IDxcBlob>
+    dxc_compile(const std::string &              shader_name,
+                const std::string &              shader_string,
+                const std::string &              shader_access_point,
+                const ShaderStageEnum            shader_stage,
+                const std::filesystem::path &    path,
+                const std::vector<std::string> & defines,
+                const bool                       as_spirv) const
+    {
         HRESULT hr;
 
         // name of dxc must be path so includer knows relative path
@@ -110,69 +184,26 @@ struct HlslDxcCompiler
 
         // default dxc defines
         DxcDefine dxc_preprocessor;
-        dxc_preprocessor.Name = L"__dxc";
+        dxc_preprocessor.Name  = L"__dxc";
         dxc_preprocessor.Value = nullptr;
         dxc_defines.push_back(dxc_preprocessor);
 
         DxcDefine hlsl_preprocessor;
-        hlsl_preprocessor.Name = L"__hlsl";
+        hlsl_preprocessor.Name  = L"__hlsl";
         hlsl_preprocessor.Value = nullptr;
         dxc_defines.push_back(hlsl_preprocessor);
 
         // populate arguments (dxc command-line arguments)
-        std::vector<LPCWSTR> arguments;
-        arguments.push_back(DXC_ARG_DEBUG);
-        arguments.push_back(DXC_ARG_ALL_RESOURCES_BOUND);
-        arguments.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
-        arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS);
-        arguments.push_back(L"-enable-16bit-types");
-        //arguments.push_back(L"-enable-templates");
-        arguments.push_back(L"-HV 2018");
-        arguments.push_back(L"-T *s_6_2");
-
-        // compile as spirv if needed
-        const std::wstring bshift = std::to_wstring(BShift);
-        const std::wstring ushift = std::to_wstring(UShift);
-        const std::wstring tshift = std::to_wstring(TShift);
-        const std::wstring sshift = std::to_wstring(SShift);
+        std::vector<LPCWSTR> * arguments;
         if (as_spirv)
         {
-            arguments.push_back(L"-fvk-auto-shift-bindings");
-            arguments.push_back(L"-fspv-reflect");
-            arguments.push_back(L"-spirv");
-            arguments.push_back(L"-fspv-target-env=vulkan1.2");
-
-            // force storage buffer and constant buffer to not use std140 and std430
-            // and simply use dx-like (VK_EXT_scalar_block_layout) standard instead
-            // this renders padding unnecessary.
-            // note: this requires vk::Device::setScalarBlockLayout(VK_TRUE)
-            arguments.push_back(L"-fvk-use-scalar-layout");
-
-            // constant buffer - 0
-            arguments.push_back(L"-fvk-b-shift");
-            arguments.push_back(bshift.c_str());
-            arguments.push_back(L"all");
-
-            // sampler - 10
-            arguments.push_back(L"-fvk-u-shift");
-            arguments.push_back(ushift.c_str());
-            arguments.push_back(L"all");
-
-            // srv - 20
-            arguments.push_back(L"-fvk-t-shift");
-            arguments.push_back(tshift.c_str());
-            arguments.push_back(L"all");
-
-            // sampler - 30
-            arguments.push_back(L"-fvk-s-shift");
-            arguments.push_back(sshift.c_str());
-            arguments.push_back(L"all");
-
-            // hlsl in general
-            arguments.push_back(L"-fspv-extension=SPV_GOOGLE_hlsl_functionality1");
-            arguments.push_back(L"-fspv-extension=SPV_GOOGLE_user_type");
-            arguments.push_back(L"-fspv-extension=KHR");
+            arguments = get_compiling_argument<true>();
         }
+        else
+        {
+            arguments = get_compiling_argument<false>();
+        }
+
 
         std::wstring wshader_access_point(shader_access_point.begin(), shader_access_point.end());
 
@@ -182,8 +213,8 @@ struct HlslDxcCompiler
             ComPtr<IDxcOperationResult> preprocess_result;
             hr = m_compiler->Preprocess(source_blob.Get(),
                                         wshader_path.c_str(),
-                                        arguments.data(),
-                                        static_cast<UINT32>(arguments.size()),
+                                        arguments->data(),
+                                        static_cast<UINT32>(arguments->size()),
                                         dxc_defines.data(),
                                         static_cast<UINT32>(dxc_defines.size()),
                                         includer.Get(),
@@ -198,7 +229,7 @@ struct HlslDxcCompiler
                 if (preprocess_result)
                 {
                     ComPtr<IDxcBlobEncoding> error_blob;
-                    HRESULT hr2 = preprocess_result->GetErrorBuffer(&error_blob);
+                    HRESULT                  hr2 = preprocess_result->GetErrorBuffer(&error_blob);
                     if (SUCCEEDED(hr2) && error_blob)
                     {
                         Logger::Error<true>(__FUNCTION__,
@@ -235,15 +266,12 @@ struct HlslDxcCompiler
         {
             ComPtr<IDxcOperationResult> compilation_result;
 
-            auto iter = TargetProfile.find(shader_stage);
-            assert(iter != TargetProfile.end());
-
             hr = m_compiler->Compile(preprocessed_source_blob.Get(),
                                      wshader_name.c_str(),
                                      wshader_access_point.c_str(),
-                                     iter->second,
-                                     arguments.data(),
-                                     static_cast<UINT32>(arguments.size()),
+                                     get_target_profile(shader_stage),
+                                     arguments->data(),
+                                     static_cast<UINT32>(arguments->size()),
                                      dxc_defines.data(),
                                      static_cast<UINT32>(dxc_defines.size()),
                                      includer.Get(),
@@ -258,7 +286,7 @@ struct HlslDxcCompiler
                 if (compilation_result)
                 {
                     ComPtr<IDxcBlobEncoding> error_blob;
-                    HRESULT hr2 = compilation_result->GetErrorBuffer(&error_blob);
+                    HRESULT                  hr2 = compilation_result->GetErrorBuffer(&error_blob);
                     if (SUCCEEDED(hr2) && error_blob)
                     {
                         Logger::Error<true>(__FUNCTION__,
@@ -294,7 +322,7 @@ struct HlslDxcCompiler
     template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
     compile_as_dxil(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
-                    const std::vector<std::string> & defines = {}) const
+                    const std::vector<std::string> &         defines = {}) const
     {
         Logger::Info(__FUNCTION__ " compiling dxil from path : " + shader_src.m_file_path.string());
         return dxc_compile(shader_src.m_file_path.string(),
@@ -309,7 +337,7 @@ struct HlslDxcCompiler
     template <typename ShaderStageEnum>
     std::vector<uint32_t>
     compile_as_spirv(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
-                     const std::vector<std::string> & defines = {}) const
+                     const std::vector<std::string> &         defines = {}) const
     {
         Logger::Info(__FUNCTION__ " compiling spirv from path : " + shader_src.m_file_path.string());
 
