@@ -7,21 +7,21 @@
 #include "vkadevice.h"
 #include "vkaframebufferbinding.h"
 
-#include "../shadercompiler/hlsldxccompiler.h"
+#include "rhi/shadercompiler/shader_manager.h"
 #include "spirvreflection.h"
 
 namespace VKA_NAME
 {
 struct RasterPipelineState
 {
-    int2 m_resolution;
-    vk::Viewport m_viewport;
-    vk::Rect2D m_scissor;
+    int2                                     m_resolution;
+    vk::Viewport                             m_viewport;
+    vk::Rect2D                               m_scissor;
     vk::PipelineRasterizationStateCreateInfo m_rasterizer;
-    vk::PipelineMultisampleStateCreateInfo m_multi_sample;
+    vk::PipelineMultisampleStateCreateInfo   m_multi_sample;
     vk::PipelineInputAssemblyStateCreateInfo m_input_assembly;
-    vk::PipelineColorBlendStateCreateInfo m_color_blend;
-    std::vector<vk::DynamicState> m_dynamic_states;
+    vk::PipelineColorBlendStateCreateInfo    m_color_blend;
+    std::vector<vk::DynamicState>            m_dynamic_states;
 
     RasterPipelineState(const int2 & resolution) : m_resolution(resolution)
     {
@@ -86,27 +86,30 @@ struct RasterPipelineState
 
 struct RasterPipeline
 {
-    vk::UniquePipeline m_vk_pipeline;
-    vk::UniquePipelineLayout m_vk_pipeline_layout;
+    vk::UniquePipeline                         m_vk_pipeline;
+    vk::UniquePipelineLayout                   m_vk_pipeline_layout;
     std::vector<vk::UniqueDescriptorSetLayout> m_vk_descriptor_set_layouts;
+
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
 
     RasterPipeline() {}
 
-    RasterPipeline(const Device * device,
+    RasterPipeline(const Device *               device,
                    const std::span<ShaderSrc> & shader_srcs,
-                   const FramebufferBindings & framebuffer_bindings,
-                   const std::string & name = "")
+                   const FramebufferBindings &  framebuffer_bindings,
+                   const std::string &          name = "")
     {
         // compile all shader srcs
-        HlslDxcCompiler hlsl_compiler;
-        std::vector<std::vector<uint32_t>> spirv_codes(shader_srcs.size());
+        HlslDxcCompiler               hlsl_compiler;
+        std::vector<ComPtr<IDxcBlob>> spirv_codes(shader_srcs.size());
         for (size_t i = 0; i < shader_srcs.size(); i++)
         {
             spirv_codes[i] = hlsl_compiler.compile_as_spirv(shader_srcs[i]);
         }
 
         // reflection
-        SpirvReflector spirv_reflector;
+        SpirvReflector     spirv_reflector;
         VkReflectionResult reflection = spirv_reflector.reflect(shader_srcs, spirv_codes);
 
         // vertex input state
@@ -130,7 +133,8 @@ struct RasterPipeline
         for (size_t i = 0; i < reflection.m_shader_stage_flags.size(); i++)
         {
             vk::ShaderModuleCreateInfo shader_module_ci;
-            shader_module_ci.setCode(spirv_codes[i]);
+            shader_module_ci.setPCode(static_cast<uint32_t*>(spirv_codes[i]->GetBufferPointer()));
+            shader_module_ci.setCodeSize(spirv_codes[i]->GetBufferSize());
             shader_modules.emplace_back(device->m_vk_ldevice->createShaderModuleUnique(shader_module_ci));
         }
 
@@ -145,7 +149,7 @@ struct RasterPipeline
         }
 
         // per pipeline state
-        RasterPipelineState per_pipeline_state(framebuffer_bindings.m_resolution);
+        RasterPipelineState                 per_pipeline_state(framebuffer_bindings.m_resolution);
         vk::PipelineViewportStateCreateInfo viewport_state{};
         viewport_state.setViewportCount(1);
         viewport_state.setPViewports(&per_pipeline_state.m_viewport);

@@ -11,7 +11,6 @@
 #include "core/vmath.h"
 //
 #include <filesystem>
-#include <map>
 #include <string>
 
 struct HlslDxcCompiler
@@ -335,7 +334,7 @@ struct HlslDxcCompiler
     }
 
     template <typename ShaderStageEnum>
-    std::vector<uint32_t>
+    ComPtr<IDxcBlob>
     compile_as_spirv(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
                      const std::vector<std::string> &         defines = {}) const
     {
@@ -349,8 +348,6 @@ struct HlslDxcCompiler
                                             defines,
                                             true);
         assert(blob->GetBufferSize() % 4 == 0);
-        std::vector<uint32_t> code(div_ceil(blob->GetBufferSize(), 4), 0);
-        std::memcpy(code.data(), blob->GetBufferPointer(), blob->GetBufferSize());
-        return code;
+        return blob;
     }
 };

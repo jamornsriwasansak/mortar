@@ -11,25 +11,28 @@
 
 struct VkReflectionResult
 {
-    std::vector<vk::VertexInputBindingDescription> m_vertex_input_binding_descriptions;
-    std::vector<vk::VertexInputAttributeDescription> m_vertex_input_attribs;
-    std::vector<std::string> m_vertex_input_attrib_names;
+    std::vector<vk::VertexInputBindingDescription>           m_vertex_input_binding_descriptions;
+    std::vector<vk::VertexInputAttributeDescription>         m_vertex_input_attribs;
+    std::vector<std::string>                                 m_vertex_input_attrib_names;
     std::vector<std::vector<vk::DescriptorSetLayoutBinding>> m_descriptor_set_bindings;
-    std::vector<std::vector<std::string>> m_descriptor_set_binding_names;
-    std::vector<vk::PushConstantRange> m_push_constant_ranges;
-    std::vector<vk::ShaderStageFlagBits> m_shader_stage_flags;
-    std::vector<std::string> m_attachment_names;
-    std::vector<uint32_t> m_attachment_locations;
-    std::vector<vk::Format> m_attachment_formats;
+    std::vector<std::vector<std::string>>                    m_descriptor_set_binding_names;
+    std::vector<vk::PushConstantRange>                       m_push_constant_ranges;
+    std::vector<vk::ShaderStageFlagBits>                     m_shader_stage_flags;
+    std::vector<std::string>                                 m_attachment_names;
+    std::vector<uint32_t>                                    m_attachment_locations;
+    std::vector<vk::Format>                                  m_attachment_formats;
 };
 
 struct SpirvReflector
 {
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
+
     SpirvReflector() {}
 
     VkReflectionResult
     reflect(const std::span<const VKA_NAME::ShaderSrc> & shader_srcs,
-            const std::vector<std::vector<uint32_t>> & spirv_codes)
+            const std::vector<ComPtr<IDxcBlob>> &      spirv_codes)
     {
         assert(shader_srcs.size() == spirv_codes.size());
 
@@ -51,7 +54,8 @@ struct SpirvReflector
                 static_cast<vk::ShaderStageFlagBits>(shader_srcs[i_spirv_code].m_shader_stage);
             result.m_shader_stage_flags[i_spirv_code] = shader_stage;
 
-            spv_reflect::ShaderModule shader_module(spirv_codes[i_spirv_code]);
+            spv_reflect::ShaderModule shader_module(spirv_codes[i_spirv_code]->GetBufferSize(),
+                                                    spirv_codes[i_spirv_code]->GetBufferPointer());
 
             // reflect push constants
             reflect_push_constant_blocks(&result,
@@ -172,9 +176,9 @@ private:
     }
 
     void
-    reflect_push_constant_blocks(VkReflectionResult * compile_result,
+    reflect_push_constant_blocks(VkReflectionResult *              compile_result,
                                  const spv_reflect::ShaderModule & shader_module,
-                                 const std::string & source_name) const
+                                 const std::string &               source_name) const
     {
         // push constants
         uint32_t num_push_constant_blocks = 0;
@@ -193,7 +197,7 @@ private:
         for (uint32_t i_push_constant_block = 0; i_push_constant_block < num_push_constant_blocks;
              i_push_constant_block++)
         {
-            auto & push_constant = push_constants[i_push_constant_block];
+            auto &                push_constant = push_constants[i_push_constant_block];
             vk::PushConstantRange vk_push_constant;
             {
                 vk_push_constant.setOffset(push_constant->offset);
@@ -231,8 +235,8 @@ private:
     void
     reflect_descriptor_set(std::map<std::pair<uint32_t, uint32_t>, std::pair<vk::DescriptorSetLayoutBinding, std::string>> * vk_bindings,
                            const spv_reflect::ShaderModule & shader_module,
-                           const vk::ShaderStageFlagBits vk_shader_stage,
-                           const std::string & source_name) const
+                           const vk::ShaderStageFlagBits     vk_shader_stage,
+                           const std::string &               source_name) const
     {
         // descriptor sets
         uint32_t num_descriptor_sets = 0;
@@ -256,8 +260,8 @@ private:
 
                 const uint32_t i_set     = reflected_sets->set;
                 const uint32_t i_binding = reflected_sets->bindings[binding_cnt]->binding;
-                const char * name        = reflected_sets->bindings[binding_cnt]->name;
-                const auto key           = std::make_pair(i_set, i_binding);
+                const char *   name      = reflected_sets->bindings[binding_cnt]->name;
+                const auto     key       = std::make_pair(i_set, i_binding);
 
                 const auto find_result = vk_bindings->find(key);
                 if (find_result == vk_bindings->end())

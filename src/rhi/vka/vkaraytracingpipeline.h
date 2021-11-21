@@ -23,7 +23,7 @@ struct RayTracingPipelineConfig
 {
     RayTracingPipelineConfig() {}
 
-    std::vector<ShaderSrc> m_shader_srcs;
+    std::vector<ShaderSrc>          m_shader_srcs;
     std::vector<RayTracingHitGroup> m_hit_groups;
     // std::vector<vk::PipelineShaderStageCreateInfo>      m_shader_stages;
     // std::vector<vk::RayTracingShaderGroupCreateInfoKHR> m_shader_groups;
@@ -59,28 +59,31 @@ struct RayTracingPipelineConfig
 
 struct RayTracingPipeline
 {
-    vk::UniquePipeline m_vk_pipeline;
-    vk::UniquePipelineLayout m_vk_pipeline_layout;
+    vk::UniquePipeline                         m_vk_pipeline;
+    vk::UniquePipelineLayout                   m_vk_pipeline_layout;
     std::vector<vk::UniqueDescriptorSetLayout> m_vk_descriptor_set_layouts;
-    size_t m_num_raygens;
-    size_t m_num_misses;
-    size_t m_num_hit_groups;
+    size_t                                     m_num_raygens;
+    size_t                                     m_num_misses;
+    size_t                                     m_num_hit_groups;
+
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
 
     RayTracingPipeline() {}
 
-    RayTracingPipeline(const Device * device,
+    RayTracingPipeline(const Device *                   device,
                        const RayTracingPipelineConfig & rt_lib,
-                       [[maybe_unused]] const size_t attribute_size,
-                       [[maybe_unused]] const size_t payload_size,
-                       const size_t recursion_depth = 1,
-                       const std::string & name     = "")
+                       [[maybe_unused]] const size_t    attribute_size,
+                       [[maybe_unused]] const size_t    payload_size,
+                       const size_t                     recursion_depth = 1,
+                       const std::string &              name            = "")
     : m_num_raygens(rt_lib.get_num_shaders(ShaderStageEnum::RayGen)),
       m_num_misses(rt_lib.get_num_shaders(ShaderStageEnum::Miss)),
       m_num_hit_groups(rt_lib.m_hit_groups.size())
     {
         // compile all shader srcs
-        HlslDxcCompiler hlsl_compiler;
-        std::vector<std::vector<uint32_t>> spirv_codes(rt_lib.m_shader_srcs.size());
+        HlslDxcCompiler                     hlsl_compiler;
+        std::vector<ComPtr<IDxcBlob>>       spirv_codes(rt_lib.m_shader_srcs.size());
         std::vector<vk::UniqueShaderModule> shader_module(rt_lib.m_shader_srcs.size());
         for (size_t i = 0; i < rt_lib.m_shader_srcs.size(); i++)
         {
@@ -89,12 +92,13 @@ struct RayTracingPipeline
 
             // create shader module
             vk::ShaderModuleCreateInfo shader_module_ci;
-            shader_module_ci.setCode(spirv_codes[i]);
+            shader_module_ci.setPCode(static_cast<uint32_t*>(spirv_codes[i]->GetBufferPointer()));
+            shader_module_ci.setCodeSize(spirv_codes[i]->GetBufferSize());
             shader_module[i] = device->m_vk_ldevice->createShaderModuleUnique(shader_module_ci);
         }
 
         // reflection
-        SpirvReflector spirv_reflector;
+        SpirvReflector     spirv_reflector;
         VkReflectionResult reflection = spirv_reflector.reflect(rt_lib.m_shader_srcs, spirv_codes);
 
         // descriptor layout
@@ -134,8 +138,8 @@ struct RayTracingPipeline
         for (size_t i = 0; i < rt_lib.m_shader_srcs.size(); i++)
         {
             // id is the same as array index
-            const uint32_t shader_id = static_cast<uint32_t>(i);
-            const auto & shader_src  = rt_lib.m_shader_srcs[i];
+            const uint32_t shader_id  = static_cast<uint32_t>(i);
+            const auto &   shader_src = rt_lib.m_shader_srcs[i];
             if (shader_src.m_shader_stage == ShaderStageEnum::RayGen ||
                 shader_src.m_shader_stage == ShaderStageEnum::Miss)
             {
@@ -194,9 +198,9 @@ struct RayTracingShaderTable
 {
     struct VmaSbtBundle
     {
-        VmaAllocator m_vma_allocator;
+        VmaAllocator  m_vma_allocator;
         VmaAllocation m_vma_allocation;
-        VkBuffer m_vk_buffer;
+        VkBuffer      m_vk_buffer;
     };
 
     struct VmaSbtBundleDeleter
@@ -210,16 +214,16 @@ struct RayTracingShaderTable
     };
 
     UniqueVarHandle<VmaSbtBundle, VmaSbtBundleDeleter> m_vma_sbt_bundle;
-    vk::StridedDeviceAddressRegionKHR m_raygen_device_region;
-    vk::StridedDeviceAddressRegionKHR m_miss_device_region;
-    vk::StridedDeviceAddressRegionKHR m_hitgroup_device_region;
-    vk::StridedDeviceAddressRegionKHR m_callable_device_region;
+    vk::StridedDeviceAddressRegionKHR                  m_raygen_device_region;
+    vk::StridedDeviceAddressRegionKHR                  m_miss_device_region;
+    vk::StridedDeviceAddressRegionKHR                  m_hitgroup_device_region;
+    vk::StridedDeviceAddressRegionKHR                  m_callable_device_region;
 
     RayTracingShaderTable() {}
 
-    RayTracingShaderTable(const Device * device,
+    RayTracingShaderTable(const Device *             device,
                           const RayTracingPipeline & pipeline,
-                          const std::string & name = "")
+                          const std::string &        name = "")
     {
         // compute shader handle size
         const auto full_properties2 =
@@ -238,7 +242,7 @@ struct RayTracingShaderTable
         const uint32_t aligned_miss_size     = round_up(miss_size, handle_alignment);
         const uint32_t aligned_hitgroup_size = round_up(hit_group_size, handle_alignment);
         const uint32_t data_size = aligned_raygen_size + aligned_miss_size + aligned_hitgroup_size;
-        vk::Pipeline rt_pipeline = pipeline.m_vk_pipeline.get();
+        vk::Pipeline   rt_pipeline = pipeline.m_vk_pipeline.get();
         std::vector<uint8_t> rt_group_handle(data_size);
         VKCK(device->m_vk_ldevice->getRayTracingShaderGroupHandlesKHR(rt_pipeline,
                                                                       0u,
@@ -251,13 +255,13 @@ struct RayTracingShaderTable
         buffer_ci_tmp.setUsage(vk::BufferUsageFlagBits::eShaderDeviceAddress |
                                vk::BufferUsageFlagBits::eShaderBindingTableKHR);
         buffer_ci_tmp.setSize(data_size);
-        VkBufferCreateInfo buffer_ci         = buffer_ci_tmp;
+        VkBufferCreateInfo      buffer_ci    = buffer_ci_tmp;
         VmaAllocationCreateInfo vma_alloc_ci = {};
         vma_alloc_ci.usage                   = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_ONLY;
 
         // create buffer
-        VkBuffer vma_vk_buffer;
-        VmaAllocation vma_allocation;
+        VkBuffer          vma_vk_buffer;
+        VmaAllocation     vma_allocation;
         VmaAllocationInfo vma_alloc_info;
         VKCK(vmaCreateBuffer(*device->m_vma_allocator, &buffer_ci, &vma_alloc_ci, &vma_vk_buffer, &vma_allocation, &vma_alloc_info));
 
