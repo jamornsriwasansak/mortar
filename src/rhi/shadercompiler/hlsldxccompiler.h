@@ -127,13 +127,13 @@ struct HlslDxcCompiler
 
     template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
-    dxc_compile(const std::string &              shader_name,
-                const std::string &              shader_string,
-                const std::string &              shader_access_point,
-                const ShaderStageEnum            shader_stage,
-                const std::filesystem::path &    path,
-                const std::vector<std::string> & defines,
-                const bool                       as_spirv) const
+    dxc_compile(const std::string &                  shader_name,
+                const std::string &                  shader_string,
+                const std::string &                  shader_access_point,
+                const ShaderStageEnum                shader_stage,
+                const std::filesystem::path &        path,
+                const std::span<const std::string> & defines,
+                const bool                           as_spirv) const
     {
         HRESULT hr;
 
@@ -321,7 +321,7 @@ struct HlslDxcCompiler
     template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
     compile_as_dxil(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
-                    const std::vector<std::string> &         defines = {}) const
+                    const std::span<const std::string> &     defines = {}) const
     {
         Logger::Info(__FUNCTION__ " compiling dxil from path : " + shader_src.m_file_path.string());
         return dxc_compile(shader_src.m_file_path.string(),
@@ -336,7 +336,7 @@ struct HlslDxcCompiler
     template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
     compile_as_spirv(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src,
-                     const std::vector<std::string> &         defines = {}) const
+                     const std::span<const std::string> &     defines = {}) const
     {
         Logger::Info(__FUNCTION__ " compiling spirv from path : " + shader_src.m_file_path.string());
 

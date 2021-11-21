@@ -92,7 +92,7 @@ struct RayTracingPipeline
 
             // create shader module
             vk::ShaderModuleCreateInfo shader_module_ci;
-            shader_module_ci.setPCode(static_cast<uint32_t*>(spirv_codes[i]->GetBufferPointer()));
+            shader_module_ci.setPCode(static_cast<uint32_t *>(spirv_codes[i]->GetBufferPointer()));
             shader_module_ci.setCodeSize(spirv_codes[i]->GetBufferSize());
             shader_module[i] = device->m_vk_ldevice->createShaderModuleUnique(shader_module_ci);
         }
