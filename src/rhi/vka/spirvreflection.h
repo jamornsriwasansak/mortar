@@ -25,14 +25,11 @@ struct VkReflectionResult
 
 struct SpirvReflector
 {
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
-
     SpirvReflector() {}
 
     VkReflectionResult
     reflect(const std::span<const VKA_NAME::ShaderSrc> & shader_srcs,
-            const std::vector<ComPtr<IDxcBlob>> &      spirv_codes)
+            const std::vector<std::vector<std::byte>> &  spirv_codes)
     {
         assert(shader_srcs.size() == spirv_codes.size());
 
@@ -54,8 +51,8 @@ struct SpirvReflector
                 static_cast<vk::ShaderStageFlagBits>(shader_srcs[i_spirv_code].m_shader_stage);
             result.m_shader_stage_flags[i_spirv_code] = shader_stage;
 
-            spv_reflect::ShaderModule shader_module(spirv_codes[i_spirv_code]->GetBufferSize(),
-                                                    spirv_codes[i_spirv_code]->GetBufferPointer());
+            spv_reflect::ShaderModule shader_module(spirv_codes[i_spirv_code].size(),
+                                                    spirv_codes[i_spirv_code].data());
 
             // reflect push constants
             reflect_push_constant_blocks(&result,

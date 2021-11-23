@@ -4,47 +4,45 @@
 #include "passes/final_composite.h"
 #include "passes/raytrace_visualize.h"
 #include "render_context.h"
-#include "render_params.h"
 #include "rhi/rhi.h"
 #include "scene_resource.h"
 
 struct Renderer
 {
     std::vector<Rhi::FramebufferBindings> m_raster_fbindings;
-    std::array<Rhi::Texture, 2> m_rt_results;
+    std::array<Rhi::Texture, 2>           m_rt_results;
 
     RaytraceVisualizePass m_pass_raytrace_visualize;
-    BeautyPass m_pass_beauty;
+    BeautyPass            m_pass_beauty;
 
     Renderer() {}
 
     void
-    init(Rhi::Device * device, const int2 resolution, const std::vector<Rhi::Texture> & swapchain_attachment)
+    init(const Rhi::Device & device, const int2 resolution, const std::vector<Rhi::Texture> & swapchain_attachment)
     {
         init_or_resize_resolution(device, resolution, swapchain_attachment);
-        init_or_reload_shader(device);
     }
 
     void
-    init_or_reload_shader(Rhi::Device * device)
+    init_or_reload_shader(const RenderContext & ctx)
     {
-        m_pass_raytrace_visualize = RaytraceVisualizePass(*device);
-        m_pass_beauty             = BeautyPass(device, m_raster_fbindings[0]);
+        m_pass_raytrace_visualize = RaytraceVisualizePass(ctx.m_device, ctx.m_shader_manager);
+        m_pass_beauty             = BeautyPass(ctx.m_device, ctx.m_shader_manager, m_raster_fbindings[0]);
     }
 
     void
-    init_or_resize_resolution(Rhi::Device * device, const int2 resolution, const std::vector<Rhi::Texture> & swapchain_attachment)
+    init_or_resize_resolution(const Rhi::Device & device, const int2 resolution, const std::vector<Rhi::Texture> & swapchain_attachment)
     {
         m_raster_fbindings.resize(swapchain_attachment.size());
         for (size_t i = 0; i < swapchain_attachment.size(); i++)
         {
-            m_raster_fbindings[i] = Rhi::FramebufferBindings(device, { &swapchain_attachment[i] });
+            m_raster_fbindings[i] = Rhi::FramebufferBindings(&device, { &swapchain_attachment[i] });
         }
 
         for (size_t i = 0; i < 2; i++)
         {
             m_rt_results[i] =
-                Rhi::Texture(device,
+                Rhi::Texture(&device,
                              Rhi::TextureUsageEnum::StorageImage |
                                  Rhi::TextureUsageEnum::ColorAttachment | Rhi::TextureUsageEnum::Sampled,
                              Rhi::TextureStateEnum::NonFragmentShaderVisible,
@@ -58,14 +56,13 @@ struct Renderer
     }
 
     void
-    loop(const RenderContext & ctx, const RenderParams & params)
+    loop(const RenderContext & ctx)
     {
-        Rhi::Device * device      = ctx.m_device;
-        Rhi::CommandList cmd_list = ctx.m_graphics_command_pool->get_command_list();
+        Rhi::CommandList cmd_list = ctx.m_graphics_command_pool.get_command_list();
 
-        if (params.m_is_shaders_dirty)
+        if (ctx.m_is_shaders_dirty)
         {
-            init_or_reload_shader(ctx.m_device);
+            init_or_reload_shader(ctx);
         }
 
         cmd_list.begin();
@@ -73,29 +70,28 @@ struct Renderer
         // visualize
         m_pass_raytrace_visualize.run(cmd_list,
                                       ctx,
-                                      params,
                                       m_rt_results[ctx.m_flight_index % 2],
-                                      params.m_resolution);
+                                      ctx.m_resolution);
 
         // transition
         cmd_list.transition_texture(m_rt_results[ctx.m_flight_index % 2],
                                     Rhi::TextureStateEnum::NonFragmentShaderVisible,
                                     Rhi::TextureStateEnum::FragmentShaderVisible);
-        cmd_list.transition_texture(*ctx.m_swapchain_texture,
+        cmd_list.transition_texture(ctx.m_swapchain_texture,
                                     Rhi::TextureStateEnum::Present,
                                     Rhi::TextureStateEnum::ColorAttachment);
 
         // run final pass
-        m_pass_beauty.run(cmd_list, ctx, params, m_rt_results[ctx.m_flight_index % 2], m_raster_fbindings[ctx.m_image_index]);
+        m_pass_beauty.run(cmd_list, ctx, m_rt_results[ctx.m_flight_index % 2], m_raster_fbindings[ctx.m_image_index]);
 
         // render imgui onto swapchain
-        if (params.m_should_imgui_drawn)
+        if (ctx.m_should_imgui_drawn)
         {
-            cmd_list.render_imgui(*ctx.m_imgui_render_pass, ctx.m_image_index);
+            cmd_list.render_imgui(ctx.m_imgui_render_pass, ctx.m_image_index);
         }
 
         // transition
-        cmd_list.transition_texture(*ctx.m_swapchain_texture,
+        cmd_list.transition_texture(ctx.m_swapchain_texture,
                                     Rhi::TextureStateEnum::ColorAttachment,
                                     Rhi::TextureStateEnum::Present);
         cmd_list.transition_texture(m_rt_results[ctx.m_flight_index % 2],
@@ -103,6 +99,6 @@ struct Renderer
                                     Rhi::TextureStateEnum::NonFragmentShaderVisible);
 
         cmd_list.end();
-        cmd_list.submit(ctx.m_flight_fence, ctx.m_image_ready_semaphore, ctx.m_image_presentable_semaphore);
+        cmd_list.submit(&ctx.m_flight_fence, &ctx.m_image_ready_semaphore, &ctx.m_image_presentable_semaphore);
     }
 };

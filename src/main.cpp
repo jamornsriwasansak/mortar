@@ -22,7 +22,7 @@ main()
     Rhi::Device         device("main_device", physical_device);
 
     // create renderer
-    MainLoop main_loop(&device, &main_window, num_flights);
+    MainLoop main_loop(device, main_window, num_flights);
     main_loop.init();
     main_loop.run();
     return 0;

@@ -34,7 +34,7 @@ struct Buffer
     Buffer() {}
 
     Buffer(const std::string &   name,
-           const Device *        device,
+           const Device &        device,
            const BufferUsageEnum buffer_usage_,
            const MemoryUsageEnum memory_usage,
            const size_t          buffer_size_in_bytes)
@@ -53,21 +53,21 @@ struct Buffer
         VkBuffer          vma_vk_buffer;
         VmaAllocation     vma_allocation;
         VmaAllocationInfo vma_alloc_info;
-        VKCK(vmaCreateBuffer(*device->m_vma_allocator, &buffer_ci, &vma_alloc_ci, &vma_vk_buffer, &vma_allocation, &vma_alloc_info));
+        VKCK(vmaCreateBuffer(device.m_vma_allocator.get(), &buffer_ci, &vma_alloc_ci, &vma_vk_buffer, &vma_allocation, &vma_alloc_info));
 
         VmaBufferBundle vma_buffer_bundle;
         vma_buffer_bundle.m_vk_buffer      = vma_vk_buffer;
         vma_buffer_bundle.m_vma_allocation = vma_allocation;
         vma_buffer_bundle.m_vma_alloc_info = vma_alloc_info;
-        vma_buffer_bundle.m_vma_allocator  = *device->m_vma_allocator;
+        vma_buffer_bundle.m_vma_allocator  = device.m_vma_allocator.get();
         m_vma_buffer_bundle                = vma_buffer_bundle;
 
         // get device address
         vk::BufferDeviceAddressInfo device_address_info;
         device_address_info.setBuffer(vk::Buffer(m_vma_buffer_bundle->m_vk_buffer));
-        m_device_address = device->m_vk_ldevice->getBufferAddress(device_address_info);
+        m_device_address = device.m_vk_ldevice->getBufferAddress(device_address_info);
 
-        device->name_vkhpp_object<vk::Buffer, vk::Buffer::CType>(vk::Buffer(vma_vk_buffer), name);
+        device.name_vkhpp_object<vk::Buffer, vk::Buffer::CType>(vk::Buffer(vma_vk_buffer), name);
     }
 
     bool

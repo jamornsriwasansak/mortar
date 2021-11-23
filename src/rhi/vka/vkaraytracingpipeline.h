@@ -62,17 +62,28 @@ struct RayTracingPipeline
     vk::UniquePipeline                         m_vk_pipeline;
     vk::UniquePipelineLayout                   m_vk_pipeline_layout;
     std::vector<vk::UniqueDescriptorSetLayout> m_vk_descriptor_set_layouts;
-    size_t                                     m_num_raygens;
-    size_t                                     m_num_misses;
-    size_t                                     m_num_hit_groups;
+    size_t                                     m_num_raygens    = 0;
+    size_t                                     m_num_misses     = 0;
+    size_t                                     m_num_hit_groups = 0;
 
     template <typename T>
     using ComPtr = Microsoft::WRL::ComPtr<T>;
+
+    std::vector<std::byte>
+    to_byte_vector(IDxcBlob & blob) const
+    {
+        const size_t           size = static_cast<size_t>(blob.GetBufferSize());
+        std::vector<std::byte> result(size);
+        std::memcpy(&result[0], blob.GetBufferPointer(), size);
+        return result;
+    }
+
 
     RayTracingPipeline() {}
 
     RayTracingPipeline(const Device *                   device,
                        const RayTracingPipelineConfig & rt_lib,
+                       const ShaderManager &            shader_manager,
                        [[maybe_unused]] const size_t    attribute_size,
                        [[maybe_unused]] const size_t    payload_size,
                        const size_t                     recursion_depth = 1,
@@ -83,17 +94,17 @@ struct RayTracingPipeline
     {
         // compile all shader srcs
         HlslDxcCompiler                     hlsl_compiler;
-        std::vector<ComPtr<IDxcBlob>>       spirv_codes(rt_lib.m_shader_srcs.size());
+        std::vector<std::vector<std::byte>> spirv_codes(rt_lib.m_shader_srcs.size());
         std::vector<vk::UniqueShaderModule> shader_module(rt_lib.m_shader_srcs.size());
         for (size_t i = 0; i < rt_lib.m_shader_srcs.size(); i++)
         {
             // spirv code
-            spirv_codes[i] = hlsl_compiler.compile_as_spirv(rt_lib.m_shader_srcs[i]);
+            spirv_codes[i] = shader_manager.get_cached_shader(rt_lib.m_shader_srcs[i]);
 
             // create shader module
             vk::ShaderModuleCreateInfo shader_module_ci;
-            shader_module_ci.setPCode(static_cast<uint32_t *>(spirv_codes[i]->GetBufferPointer()));
-            shader_module_ci.setCodeSize(spirv_codes[i]->GetBufferSize());
+            shader_module_ci.setPCode(reinterpret_cast<uint32_t *>(spirv_codes[i].data()));
+            shader_module_ci.setCodeSize(spirv_codes[i].size());
             shader_module[i] = device->m_vk_ldevice->createShaderModuleUnique(shader_module_ci);
         }
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "render/render_params.h"
 #include "rhi/rhi.h"
 #include "scene_resource.h"
 #include "shaders/raytrace_visualize_params.h"
@@ -20,13 +19,13 @@ struct RaytraceVisualizePass
 
     RaytraceVisualizePass() {}
 
-    RaytraceVisualizePass(const Rhi::Device & device)
+    RaytraceVisualizePass(const Rhi::Device & device, const ShaderManager & shader_manager)
     {
-        init_or_reload(device);
+        init_or_reload(device, shader_manager);
 
         // constant params for rtvisualize
         m_cb_params = Rhi::Buffer("raytrace_visualize_cbparams",
-                                  &device,
+                                  device,
                                   Rhi::BufferUsageEnum::ConstantBuffer,
                                   Rhi::MemoryUsageEnum::CpuToGpu,
                                   sizeof(RaytraceVisualizeCbParams));
@@ -36,7 +35,7 @@ struct RaytraceVisualizePass
 
 #ifdef DEBUG_RayTraceVisualizePrintClickedInfo
         // constant params for debug
-        m_debug_cb_params = Rhi::Buffer(&device,
+        m_debug_cb_params = Rhi::Buffer(device,
                                         Rhi::BufferUsageEnum::ConstantBuffer,
                                         Rhi::MemoryUsageEnum::CpuToGpu,
                                         sizeof(RaytraceVisualizeDebugPrintCbParams),
@@ -44,13 +43,13 @@ struct RaytraceVisualizePass
 
         // print buffer
         m_debug_print_buffer =
-            Rhi::Buffer(&device,
+            Rhi::Buffer(device,
                         Rhi::BufferUsageEnum::StorageBuffer | Rhi::BufferUsageEnum::TransferSrc,
                         Rhi::MemoryUsageEnum::GpuOnly,
                         sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize,
                         "raytrace_visualize_debug_print_buffer");
 
-        m_cpu_temp_buffer = Rhi::Buffer(&device,
+        m_cpu_temp_buffer = Rhi::Buffer(device,
                                         Rhi::BufferUsageEnum::TransferDst,
                                         Rhi::MemoryUsageEnum::GpuToCpu,
                                         sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize,
@@ -59,7 +58,7 @@ struct RaytraceVisualizePass
     }
 
     void
-    init_or_reload(const Rhi::Device & device)
+    init_or_reload(const Rhi::Device & device, const ShaderManager & shader_manager)
     {
         // create pipeline for ssao
         Rhi::RayTracingPipelineConfig rt_config;
@@ -86,17 +85,18 @@ struct RaytraceVisualizePass
         // all raygen and all hit groups
         [[maybe_unused]] const size_t hitgroup_id = rt_config.add_hit_group(hit_group);
 
-        m_rt_pipeline =
-            Rhi::RayTracingPipeline(&device, rt_config, 16, 64, 2, "raytrace_visualize_pipeline");
+        m_rt_pipeline = Rhi::RayTracingPipeline(&device,
+                                                rt_config,
+                                                shader_manager,
+                                                16,
+                                                64,
+                                                2,
+                                                "raytrace_visualize_pipeline");
         m_rt_sbt = Rhi::RayTracingShaderTable(&device, m_rt_pipeline, "raytrace_visualize_sbt");
     }
 
     void
-    run(Rhi::CommandList &    cmd_list,
-        const RenderContext & render_ctx,
-        const RenderParams &  render_params,
-        const Rhi::Texture &  target_texture_buffer,
-        const uint2           target_resolution)
+    run(Rhi::CommandList & cmd_list, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const uint2 target_resolution)
     {
         bool       p_open     = true;
         static int rtvis_mode = 0;
@@ -133,7 +133,7 @@ struct RaytraceVisualizePass
         ImGui::End();
 
         RaytraceVisualizeCbParams cb_params;
-        CameraProperties          cam_props = render_params.m_fps_camera->get_camera_props();
+        CameraProperties          cam_props = ctx.m_fps_camera.get_camera_props();
         cb_params.m_camera_inv_proj         = inverse(cam_props.m_proj);
         cb_params.m_camera_inv_view         = inverse(cam_props.m_view);
         cb_params.m_mode                    = static_cast<RaytraceVisualizeModeEnum>(rtvis_mode);
@@ -148,54 +148,48 @@ struct RaytraceVisualizePass
 #endif
 
         // descriptor sets 0
-        descriptor_sets[0] =
-            Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 0);
+        descriptor_sets[0] = Rhi::DescriptorSet(&ctx.m_device, m_rt_pipeline, &ctx.m_descriptor_pool, 0);
         descriptor_sets[0]
             .set_u_rw_texture(0, target_texture_buffer)
             .set_b_constant_buffer(0, m_cb_params)
             .update();
 
         // descriptor sets 1
-        descriptor_sets[1] =
-            Rhi::DescriptorSet(render_ctx.m_device, m_rt_pipeline, render_ctx.m_descriptor_pool, 1);
-        for (size_t i = 0; i < std::min(render_params.m_scene_resource->m_d_textures.size(),
+        descriptor_sets[1] = Rhi::DescriptorSet(&ctx.m_device, m_rt_pipeline, &ctx.m_descriptor_pool, 1);
+        for (size_t i = 0; i < std::min(ctx.m_scene_resource.m_d_textures.size(),
                                         size_t(EngineSetting::MaxNumBindlessTextures));
              i++)
         {
-            descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[i], i);
+            descriptor_sets[1].set_t_texture(7, ctx.m_scene_resource.m_d_textures[i], i);
         }
-        for (size_t i = render_params.m_scene_resource->m_d_textures.size(); i < EngineSetting::MaxNumBindlessTextures;
-             i++)
+        for (size_t i = ctx.m_scene_resource.m_d_textures.size(); i < EngineSetting::MaxNumBindlessTextures; i++)
         {
-            descriptor_sets[1].set_t_texture(7, render_params.m_scene_resource->m_d_textures[0], i);
+            descriptor_sets[1].set_t_texture(7, ctx.m_scene_resource.m_d_textures[0], i);
         }
         descriptor_sets[1]
             .set_s_sampler(0, m_common_sampler)
-            .set_t_ray_tracing_accel(0, render_params.m_scene_resource->m_rt_tlas)
+            .set_t_ray_tracing_accel(0, ctx.m_scene_resource.m_rt_tlas)
             .set_t_structured_buffer(1,
-                                     render_params.m_scene_resource->m_d_base_instance_table,
+                                     ctx.m_scene_resource.m_d_base_instance_table,
                                      sizeof(BaseInstanceTableEntry),
-                                     render_params.m_scene_resource->m_num_base_instance_table_entries)
+                                     ctx.m_scene_resource.m_num_base_instance_table_entries)
             .set_t_structured_buffer(2,
-                                     render_params.m_scene_resource->m_d_geometry_table,
+                                     ctx.m_scene_resource.m_d_geometry_table,
                                      sizeof(GeometryTableEntry),
-                                     render_params.m_scene_resource->m_num_geometry_table_entries)
+                                     ctx.m_scene_resource.m_num_geometry_table_entries)
             .set_t_structured_buffer(3,
-                                     render_params.m_scene_resource->m_d_ibuf,
+                                     ctx.m_scene_resource.m_d_ibuf,
                                      sizeof(uint16_t),
-                                     render_params.m_scene_resource->m_num_indices)
+                                     ctx.m_scene_resource.m_num_indices)
             .set_t_structured_buffer(4,
-                                     render_params.m_scene_resource->m_d_vbuf_position,
+                                     ctx.m_scene_resource.m_d_vbuf_position,
                                      sizeof(float3),
-                                     render_params.m_scene_resource->m_num_vertices)
+                                     ctx.m_scene_resource.m_num_vertices)
             .set_t_structured_buffer(5,
-                                     render_params.m_scene_resource->m_d_vbuf_packed,
+                                     ctx.m_scene_resource.m_d_vbuf_packed,
                                      sizeof(CompactVertex),
-                                     render_params.m_scene_resource->m_num_vertices)
-            .set_t_structured_buffer(6,
-                                     render_params.m_scene_resource->m_d_materials,
-                                     sizeof(StandardMaterial),
-                                     EngineSetting::MaxNumStandardMaterials)
+                                     ctx.m_scene_resource.m_num_vertices)
+            .set_t_structured_buffer(6, ctx.m_scene_resource.m_d_materials, sizeof(StandardMaterial), EngineSetting::MaxNumStandardMaterials)
             .update();
 
 #ifdef DEBUG_RayTraceVisualizePrintClickedInfo

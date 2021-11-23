@@ -65,7 +65,7 @@ struct RayTracingBlas
 
     RayTracingBlas() {}
 
-    RayTracingBlas(const Device *                                  device,
+    RayTracingBlas(const Device &                                  device,
                    const std::span<const RayTracingGeometryDesc> & geometry_descs,
                    const RayTracingBuildHint                       hint,
                    StagingBufferManager * buf_manager, // TODO:: get rid of staging buffer manager
@@ -101,9 +101,9 @@ struct RayTracingBlas
 
         // get size requirement
         vk::AccelerationStructureBuildSizesInfoKHR size_info =
-            device->m_vk_ldevice->getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice,
-                                                                        build_info,
-                                                                        max_primitive_counts);
+            device.m_vk_ldevice->getAccelerationStructureBuildSizesKHR(vk::AccelerationStructureBuildTypeKHR::eDevice,
+                                                                       build_info,
+                                                                       max_primitive_counts);
 
         const vk::DeviceSize required_scratch_size = size_info.buildScratchSize;
         const vk::DeviceSize required_buffer_size  = size_info.accelerationStructureSize;
@@ -127,7 +127,7 @@ struct RayTracingBlas
         accel_ci.setBuffer(m_accel_buffer.m_vma_buffer_bundle->m_vk_buffer);
         accel_ci.setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
         accel_ci.setSize(required_buffer_size);
-        m_vk_accel_struct = device->m_vk_ldevice->createAccelerationStructureKHRUnique(accel_ci);
+        m_vk_accel_struct = device.m_vk_ldevice->createAccelerationStructureKHRUnique(accel_ci);
 
         auto * scratch_buffer = buf_manager->get_scratch_buffer(required_scratch_size);
         build_info.setDstAccelerationStructure(m_vk_accel_struct.get());
@@ -170,7 +170,7 @@ struct RayTracingTlas
 
     RayTracingTlas() {}
 
-    RayTracingTlas(const Device *                              device,
+    RayTracingTlas(const Device &                              device,
                    const std::span<const RayTracingInstance> & instances,
                    StagingBufferManager *                      buf_manager,
                    const std::string &                         name)
@@ -207,7 +207,7 @@ struct RayTracingTlas
 
         // get size requirement
         vk::AccelerationStructureBuildSizesInfoKHR size_info =
-            device->m_vk_ldevice->getAccelerationStructureBuildSizesKHR(
+            device.m_vk_ldevice->getAccelerationStructureBuildSizesKHR(
                 vk::AccelerationStructureBuildTypeKHR::eDevice,
                 build_info,
                 { static_cast<uint32_t>(instances.size()) });
@@ -234,8 +234,8 @@ struct RayTracingTlas
         accel_ci.setBuffer(m_accel_buffer.m_vma_buffer_bundle->m_vk_buffer);
         accel_ci.setType(vk::AccelerationStructureTypeKHR::eTopLevel);
         accel_ci.setSize(required_buffer_size);
-        m_vk_accel_struct = device->m_vk_ldevice->createAccelerationStructureKHRUnique(accel_ci);
-        device->name_vkhpp_object<vk::AccelerationStructureKHR, vk::AccelerationStructureKHR::CType>(
+        m_vk_accel_struct = device.m_vk_ldevice->createAccelerationStructureKHRUnique(accel_ci);
+        device.name_vkhpp_object<vk::AccelerationStructureKHR, vk::AccelerationStructureKHR::CType>(
             m_vk_accel_struct.get(),
             name);
 

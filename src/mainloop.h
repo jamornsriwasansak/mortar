@@ -4,14 +4,15 @@
 #include "render/render_context.h"
 #include "render/renderer.h"
 #include "rhi/rhi.h"
+#include "rhi/shadercompiler/shader_manager.h"
 
 #include "assetbrowser.h"
 #include "assetbrowserquick.h"
 
 struct MainLoop
 {
-    Rhi::Device * m_device = nullptr;
-    Window *      m_window = nullptr;
+    Rhi::Device & m_device;
+    Window &      m_window;
 
     Rhi::Swapchain                   m_swapchain;
     std::vector<Rhi::Texture>        m_swapchain_textures;
@@ -22,6 +23,7 @@ struct MainLoop
     std::vector<Rhi::DescriptorPool> m_descriptor_pools;
     std::vector<Rhi::Semaphore>      m_image_ready_semaphores;
     std::vector<Rhi::Semaphore>      m_image_presentable_semaphore;
+    ShaderManager                    m_shader_manager;
     size_t                           m_num_flights = 0;
 
     Rhi::StagingBufferManager m_staging_buffer_manager;
@@ -38,22 +40,25 @@ struct MainLoop
     Rhi::ImGuiRenderPass m_imgui_render_pass;
     AssetBrowserQuick    m_asset_browser;
 
-    MainLoop() {}
+    bool m_is_reload_shader_needed = true;
 
-    MainLoop(Rhi::Device * device, Window * window, const size_t num_flights)
-    : m_device(device), m_window(window), m_num_flights(num_flights)
+    MainLoop(Rhi::Device & device, Window & window, const size_t num_flights)
+    : m_device(device),
+      m_scene_resource(device),
+      m_window(window),
+      m_num_flights(num_flights),
+      m_shader_manager(EngineSetting::ShaderCachePath())
     {
-        const int2 resolution = m_window->get_resolution();
+        const int2 resolution = m_window.get_resolution();
         m_camera              = FpsCamera(float3(10.0f, 10.0f, 10.0f),
                              float3(0, 0, 0),
                              float3(0, 1, 0),
                              radians(60.0f),
                              float(resolution.x) / float(resolution.y));
-        m_scene_resource      = SceneResource(*device);
     }
 
     void
-    init_or_resize_swapchain()
+    resize_swapchain()
     {
         Logger::Info(__FUNCTION__, " start resizing swapchain");
         // we flush command stuck in the queue
@@ -69,10 +74,10 @@ struct MainLoop
 
         Logger::Info(__FUNCTION__, " making textures from swapchain");
         // resize swapchain and recreate textures
-        m_swapchain.resize_to_window(*m_device, *m_window);
+        m_swapchain.resize_to_window(m_device, m_window);
         for (size_t i = 0; i < m_swapchain.m_num_images; i++)
         {
-            m_swapchain_textures[i] = Rhi::Texture(m_device,
+            m_swapchain_textures[i] = Rhi::Texture(&m_device,
                                                    m_swapchain,
                                                    i,
                                                    float4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -81,7 +86,7 @@ struct MainLoop
 
         Logger::Info(__FUNCTION__, "reinitializing camera params");
         // initialize camera
-        m_swapchain_resolution = m_window->get_resolution();
+        m_swapchain_resolution = m_window.get_resolution();
         m_camera.m_aspect_ratio =
             static_cast<float>(m_swapchain_resolution.x) / static_cast<float>(m_swapchain_resolution.y);
     }
@@ -90,11 +95,11 @@ struct MainLoop
     init()
     {
         // create swapchain
-        m_swapchain = Rhi::Swapchain("main_swapchain", m_device, *m_window);
+        m_swapchain = Rhi::Swapchain("main_swapchain", &m_device, m_window);
         m_swapchain_textures.resize(m_swapchain.m_num_images);
         for (size_t i = 0; i < m_swapchain.m_num_images; i++)
         {
-            m_swapchain_textures[i] = Rhi::Texture(m_device,
+            m_swapchain_textures[i] = Rhi::Texture(&m_device,
                                                    m_swapchain,
                                                    i,
                                                    float4(0.0f, 0.0f, 0.0f, 0.0f),
@@ -102,7 +107,7 @@ struct MainLoop
         }
 
         // initialize camera
-        m_swapchain_resolution = m_window->get_resolution();
+        m_swapchain_resolution = m_window.get_resolution();
         m_camera.m_aspect_ratio =
             static_cast<float>(m_swapchain_resolution.x) / static_cast<float>(m_swapchain_resolution.y);
 
@@ -110,7 +115,7 @@ struct MainLoop
         m_flight_fences.resize(m_num_flights);
         for (int i = 0; i < m_num_flights; i++)
         {
-            m_flight_fences[i] = Rhi::Fence(m_device, "flight_fence" + std::to_string(i));
+            m_flight_fences[i] = Rhi::Fence(&m_device, "flight_fence" + std::to_string(i));
         }
 
         // create command pool and descriptor pool
@@ -124,19 +129,19 @@ struct MainLoop
         {
             const std::string str_i = std::to_string(i);
             m_graphics_command_pools[i] =
-                Rhi::CommandPool("mainloop_graphics_cmd_pool_" + str_i, m_device, Rhi::CommandQueueType::Graphics);
+                Rhi::CommandPool("mainloop_graphics_cmd_pool_" + str_i, &m_device, Rhi::CommandQueueType::Graphics);
             m_compute_command_pools[i] =
-                Rhi::CommandPool("mainloop_compute_cmd_pool_" + str_i, m_device, Rhi::CommandQueueType::Compute);
+                Rhi::CommandPool("mainloop_compute_cmd_pool_" + str_i, &m_device, Rhi::CommandQueueType::Compute);
             m_transfer_command_pools[i] =
-                Rhi::CommandPool("mainloop_transfer_cmd_pool_" + str_i, m_device, Rhi::CommandQueueType::Transfer);
-            m_descriptor_pools[i]            = Rhi::DescriptorPool(m_device);
-            m_image_ready_semaphores[i]      = Rhi::Semaphore(m_device);
-            m_image_presentable_semaphore[i] = Rhi::Semaphore(m_device);
+                Rhi::CommandPool("mainloop_transfer_cmd_pool_" + str_i, &m_device, Rhi::CommandQueueType::Transfer);
+            m_descriptor_pools[i]            = Rhi::DescriptorPool(&m_device);
+            m_image_ready_semaphores[i]      = Rhi::Semaphore(&m_device);
+            m_image_presentable_semaphore[i] = Rhi::Semaphore(&m_device);
         }
 
         // staging buffer manager
         m_staging_buffer_manager =
-            Rhi::StagingBufferManager(m_device, "main_staging_buffer_manager");
+            Rhi::StagingBufferManager(&m_device, "main_staging_buffer_manager");
 
         // initialize renderer
         m_renderer.init(m_device, m_swapchain_resolution, m_swapchain_textures);
@@ -148,7 +153,7 @@ struct MainLoop
                                          Rhi::BufferUsageEnum::StorageBuffer,
                                      Rhi::MemoryUsageEnum::GpuOnly,
                                      sizeof(uint32_t));
-        m_dummy_texture = Rhi::Texture(m_device,
+        m_dummy_texture = Rhi::Texture(&m_device,
                                        Rhi::TextureUsageEnum::Sampled,
                                        Rhi::TextureStateEnum::AllShaderVisible,
                                        Rhi::FormatEnum::R8G8B8A8_UNorm,
@@ -166,7 +171,7 @@ struct MainLoop
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto/Roboto-Medium.ttf", 15);
-        m_imgui_render_pass = Rhi::ImGuiRenderPass(m_device, *m_window, m_swapchain);
+        m_imgui_render_pass = Rhi::ImGuiRenderPass(&m_device, m_window, m_swapchain);
 
         m_asset_browser.init();
     }
@@ -176,7 +181,7 @@ struct MainLoop
     {
         GlfwHandler::Inst().poll_events();
 
-        int2 current_resolution = m_window->get_resolution();
+        int2 current_resolution = m_window.get_resolution();
         if (current_resolution.y == 0)
         {
             return;
@@ -185,9 +190,9 @@ struct MainLoop
         // wait for resource in this flight to be ready
         m_flight_fences[i_flight].wait();
 
-        bool reload_shader = false;
-        if (m_window->m_R.m_event == KeyEventEnum::JustPress &&
-            m_window->m_LEFT_CONTROL.m_event == KeyEventEnum::Hold)
+        bool reload_shader = m_is_reload_shader_needed;
+        if (m_window.m_R.m_event == KeyEventEnum::JustPress &&
+            m_window.m_LEFT_CONTROL.m_event == KeyEventEnum::Hold)
         {
             reload_shader = true;
             for (size_t i = 0; i < m_flight_fences.size(); i++)
@@ -195,6 +200,7 @@ struct MainLoop
                 m_flight_fences[i].wait();
             }
         }
+        m_is_reload_shader_needed = false;
 
         // reset all resource
         m_flight_fences[i_flight].reset();
@@ -204,42 +210,39 @@ struct MainLoop
         // update image index
         m_swapchain.update_image_index(&m_image_ready_semaphores[i_flight]);
 
-        // setup context
-        RenderContext ctx;
-        ctx.m_device                      = m_device;
-        ctx.m_graphics_command_pool       = &m_graphics_command_pools[i_flight];
-        ctx.m_descriptor_pool             = &m_descriptor_pools[i_flight];
-        ctx.m_image_ready_semaphore       = &m_image_ready_semaphores[i_flight];
-        ctx.m_image_presentable_semaphore = &m_image_presentable_semaphore[i_flight];
-        ctx.m_flight_fence                = &m_flight_fences[i_flight];
-        ctx.m_flight_index                = i_flight;
-        ctx.m_image_index                 = m_swapchain.m_image_index;
-        ctx.m_swapchain_texture           = &m_swapchain_textures[m_swapchain.m_image_index];
-        ctx.m_staging_buffer_manager      = &m_staging_buffer_manager;
-        ctx.m_dummy_buffer                = &m_dummy_buffer;
-        ctx.m_dummy_texture               = &m_dummy_texture;
-        ctx.m_imgui_render_pass           = &m_imgui_render_pass;
+        // context parameters for each frame
+        RenderContext ctx(m_device,
+                          m_graphics_command_pools[i_flight],
+                          m_descriptor_pools[i_flight],
+                          m_image_ready_semaphores[i_flight],
+                          m_image_presentable_semaphore[i_flight],
+                          m_flight_fences[i_flight],
+                          m_swapchain_textures[m_swapchain.m_image_index],
+                          m_staging_buffer_manager,
+                          m_dummy_buffer,
+                          m_dummy_texture,
+                          m_imgui_render_pass,
+                          m_shader_manager,
+                          i_flight,
+                          m_swapchain.m_image_index,
+                          m_swapchain_resolution,
+                          m_scene_resource,
+                          m_camera,
+                          reload_shader,
+                          true);
 
-        RenderParams render_params;
-        render_params.m_resolution           = m_swapchain_resolution;
-        render_params.m_scene_resource       = &m_scene_resource;
-        render_params.m_is_static_mesh_dirty = false;
-        render_params.m_fps_camera           = &m_camera;
-        render_params.m_is_shaders_dirty     = reload_shader;
-        render_params.m_should_imgui_drawn   = true;
-
-        if (render_params.m_should_imgui_drawn)
+        if (ctx.m_should_imgui_drawn)
         {
             m_imgui_render_pass.new_frame();
         }
 
         const bool is_imgui_used =
             ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused() || ImGui::IsAnyItemHovered();
-        m_camera.update(m_window, std::min(m_window->m_stop_watch.m_average_frame_time * 0.01f, 1.0f), !is_imgui_used);
+        m_camera.update(&m_window, std::min(m_window.m_stop_watch.m_average_frame_time * 0.01f, 1.0f), !is_imgui_used);
 
         // m_asset_browser.loop();
-        m_renderer.loop(ctx, render_params);
-        if (render_params.m_should_imgui_drawn)
+        m_renderer.loop(ctx);
+        if (ctx.m_should_imgui_drawn)
         {
             m_imgui_render_pass.end_frame();
         }
@@ -253,12 +256,12 @@ struct MainLoop
                 m_flight_fences[i].wait();
             }
 
-            init_or_resize_swapchain();
-            m_renderer.init_or_resize_resolution(m_device, m_window->get_resolution(), m_swapchain_textures);
-            m_renderer.init_or_reload_shader(m_device);
-            m_imgui_render_pass.init_or_resize_framebuffer(m_device, m_swapchain);
+            resize_swapchain();
+            m_renderer.init_or_resize_resolution(m_device, m_window.get_resolution(), m_swapchain_textures);
+            m_imgui_render_pass.init_or_resize_framebuffer(&m_device, m_swapchain);
+            m_is_reload_shader_needed = true;
         }
-        m_window->update();
+        m_window.update();
     }
 
     void
@@ -289,8 +292,8 @@ struct MainLoop
 
         // int2 salle = m_asset_manager.add_standard_object("salle_de_bain/salle_de_bain.obj");
 
-        m_window->m_stop_watch.reset();
-        while (!m_window->should_close_window())
+        m_window.m_stop_watch.reset();
+        while (!m_window.should_close_window())
         {
             loop(i_flight);
             i_flight = (i_flight + 1) % m_num_flights;

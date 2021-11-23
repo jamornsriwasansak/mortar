@@ -8,3 +8,4 @@ sandbox/lib/
 *.ilk
 *.pdb
 sandbox/tmp/
+sandbox/shadercache/

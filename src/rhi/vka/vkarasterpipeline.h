@@ -90,22 +90,19 @@ struct RasterPipeline
     vk::UniquePipelineLayout                   m_vk_pipeline_layout;
     std::vector<vk::UniqueDescriptorSetLayout> m_vk_descriptor_set_layouts;
 
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
-
     RasterPipeline() {}
 
-    RasterPipeline(const Device *               device,
-                   const std::span<ShaderSrc> & shader_srcs,
-                   const FramebufferBindings &  framebuffer_bindings,
-                   const std::string &          name = "")
+    RasterPipeline(const Device &                     device,
+                   const std::span<const ShaderSrc> & shader_srcs,
+                   const ShaderManager &              shader_manager,
+                   const FramebufferBindings &        framebuffer_bindings,
+                   const std::string &                name = "")
     {
         // compile all shader srcs
-        HlslDxcCompiler               hlsl_compiler;
-        std::vector<ComPtr<IDxcBlob>> spirv_codes(shader_srcs.size());
+        std::vector<std::vector<std::byte>> spirv_codes(shader_srcs.size());
         for (size_t i = 0; i < shader_srcs.size(); i++)
         {
-            spirv_codes[i] = hlsl_compiler.compile_as_spirv(shader_srcs[i]);
+            spirv_codes[i] = shader_manager.get_cached_shader(shader_srcs[i]);
         }
 
         // reflection
@@ -129,13 +126,13 @@ struct RasterPipeline
         color_blend_Attachment.setBlendEnable(VK_FALSE);
 
         // create shader modules
-        std::vector<vk::UniqueShaderModule> shader_modules;
+        std::vector<vk::UniqueShaderModule> shader_modules(reflection.m_shader_stage_flags.size());
         for (size_t i = 0; i < reflection.m_shader_stage_flags.size(); i++)
         {
             vk::ShaderModuleCreateInfo shader_module_ci;
-            shader_module_ci.setPCode(static_cast<uint32_t*>(spirv_codes[i]->GetBufferPointer()));
-            shader_module_ci.setCodeSize(spirv_codes[i]->GetBufferSize());
-            shader_modules.emplace_back(device->m_vk_ldevice->createShaderModuleUnique(shader_module_ci));
+            shader_module_ci.setPCode(reinterpret_cast<uint32_t *>(spirv_codes[i].data()));
+            shader_module_ci.setCodeSize(spirv_codes[i].size());
+            shader_modules[i] = device.m_vk_ldevice->createShaderModuleUnique(shader_module_ci);
         }
 
         // attach shader stages
@@ -170,7 +167,7 @@ struct RasterPipeline
             vk::DescriptorSetLayoutCreateInfo desc_layout_info_ci;
             desc_layout_info_ci.setBindings(bindings);
             m_vk_descriptor_set_layouts.emplace_back(
-                device->m_vk_ldevice->createDescriptorSetLayoutUnique(desc_layout_info_ci));
+                device.m_vk_ldevice->createDescriptorSetLayoutUnique(desc_layout_info_ci));
         }
 
         std::vector<vk::DescriptorSetLayout> descriptor_layout = vk::uniqueToRaw(m_vk_descriptor_set_layouts);
@@ -179,7 +176,7 @@ struct RasterPipeline
         pipeline_layout_ci.setPSetLayouts(descriptor_layout.data());
         pipeline_layout_ci.setPushConstantRangeCount(0);
         pipeline_layout_ci.setPPushConstantRanges(nullptr);
-        m_vk_pipeline_layout = device->m_vk_ldevice->createPipelineLayoutUnique(pipeline_layout_ci);
+        m_vk_pipeline_layout = device.m_vk_ldevice->createPipelineLayoutUnique(pipeline_layout_ci);
 
         // create pipeline info
         vk::GraphicsPipelineCreateInfo pipelineInfo;
@@ -199,11 +196,11 @@ struct RasterPipeline
         pipelineInfo.setBasePipelineIndex(-1);
 
         Logger::Info(__FUNCTION__ " creating graphics pipeline");
-        auto result = device->m_vk_ldevice->createGraphicsPipelineUnique(nullptr, pipelineInfo);
+        auto result = device.m_vk_ldevice->createGraphicsPipelineUnique(nullptr, pipelineInfo);
         VKCK(result.result);
         m_vk_pipeline = std::move(result.value);
 
-        device->name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
+        device.name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
     }
 };
 } // namespace VKA_NAME
