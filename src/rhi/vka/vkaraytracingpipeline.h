@@ -66,19 +66,6 @@ struct RayTracingPipeline
     size_t                                     m_num_misses     = 0;
     size_t                                     m_num_hit_groups = 0;
 
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
-
-    std::vector<std::byte>
-    to_byte_vector(IDxcBlob & blob) const
-    {
-        const size_t           size = static_cast<size_t>(blob.GetBufferSize());
-        std::vector<std::byte> result(size);
-        std::memcpy(&result[0], blob.GetBufferPointer(), size);
-        return result;
-    }
-
-
     RayTracingPipeline() {}
 
     RayTracingPipeline(const Device *                   device,

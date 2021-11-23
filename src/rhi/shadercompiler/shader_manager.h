@@ -45,12 +45,6 @@ struct ShaderManager
 
     HlslDxcCompiler m_hlsl_compiler;
 
-    struct ShaderInfo
-    {
-        ShaderSrc                m_shader_src;
-        std::vector<std::string> m_defines;
-    };
-
     struct ShaderCacheFileHeader
     {
         uint32_t m_version;
@@ -69,7 +63,6 @@ struct ShaderManager
         ShaderCacheFileBody   m_body;
     };
 
-    std::vector<ShaderInfo> m_shader_infos;
     std::filesystem::path   m_cache_folder;
 
     ShaderManager() {}
@@ -98,22 +91,23 @@ struct ShaderManager
         {
             // read header and body
             const ShaderCacheFileHeader header = read_header(ifs);
-            const ShaderCacheFileBody   body   = read_body(header, ifs);
-            return body.m_data;
+            if (header.m_src_last_modified_time == src_modified_time)
+            {
+                const ShaderCacheFileBody body = read_body(header, ifs);
+                return body.m_data;
+            }
         }
-        else
-        {
-            // cached dxc blob is invalid.
-            // we have to recompile and rewrite the cache
-            ComPtr<IDxcBlob> dxc_blob = m_hlsl_compiler.compile_as_spirv(shader_src);
 
-            // write header and body
-            std::ofstream ofs(cached_file_path, std::ios::binary);
-            write_header(ofs, src_modified_time, dxc_blob.Get());
-            write_body(ofs, dxc_blob.Get());
+        // cached dxc blob is invalid.
+        // we have to recompile and rewrite the cache
+        ComPtr<IDxcBlob> dxc_blob = m_hlsl_compiler.compile_as_spirv(shader_src);
 
-            return to_byte_vector(*dxc_blob.Get());
-        }
+        // write header and body
+        std::ofstream ofs(cached_file_path, std::ios::binary);
+        write_header(ofs, src_modified_time, dxc_blob.Get());
+        write_body(ofs, dxc_blob.Get());
+
+        return to_byte_vector(*dxc_blob.Get());
     }
 
 private:
@@ -135,7 +129,7 @@ private:
     std::vector<std::byte>
     to_byte_vector(IDxcBlob & blob) const
     {
-        const size_t                 size = static_cast<size_t>(blob.GetBufferSize());
+        const size_t           size = static_cast<size_t>(blob.GetBufferSize());
         std::vector<std::byte> result(size);
         std::memcpy(&result[0], blob.GetBufferPointer(), size);
         return result;
