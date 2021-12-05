@@ -4,28 +4,31 @@
 #include "rhi/rhi.h"
 #include "scene_resource.h"
 
-struct BeautyPass
+struct RenderToFramebufferPass
 {
     Rhi::RasterPipeline m_raster_pipeline;
     Rhi::Sampler        m_sampler;
 
-    BeautyPass() {}
-
-    BeautyPass(const Rhi::Device & device, const ShaderManager & shader_manager, const Rhi::FramebufferBindings & fb)
+    RenderToFramebufferPass(const Rhi::Device &              device,
+                            const ShaderBinaryManager &      shader_binary_manager,
+                            const Rhi::FramebufferBindings & fb)
+    : m_sampler("render_to_framebuffer_sampler", device)
     {
-        m_sampler = Rhi::Sampler(&device);
-        init_or_reload(device, shader_manager, fb);
+        init_or_reload(device, shader_binary_manager, fb);
     }
 
     void
-    init_or_reload(const Rhi::Device & device, const ShaderManager & shader_manager, const Rhi::FramebufferBindings & fb)
+    init_or_reload(const Rhi::Device &              device,
+                   const ShaderBinaryManager &      shader_binary_manager,
+                   const Rhi::FramebufferBindings & fb)
     {
         std::array<Rhi::ShaderSrc, 2> srcs;
         srcs[0] =
             Rhi::ShaderSrc(Rhi::ShaderStageEnum::Vertex, BASE_SHADER_DIR "beauty.hlsl", "VsMain");
         srcs[1] =
             Rhi::ShaderSrc(Rhi::ShaderStageEnum::Fragment, BASE_SHADER_DIR "beauty.hlsl", "FsMain");
-        m_raster_pipeline = Rhi::RasterPipeline(device, srcs, shader_manager, fb, "final_composite_pipeline");
+        m_raster_pipeline =
+            Rhi::RasterPipeline(device, srcs, shader_binary_manager, fb, "final_composite_pipeline");
     }
 
     void

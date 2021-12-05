@@ -66,18 +66,20 @@ struct RayTracingPipeline
     size_t                                     m_num_misses     = 0;
     size_t                                     m_num_hit_groups = 0;
 
-    RayTracingPipeline() {}
+    // for shader reloading
+    const RayTracingPipelineConfig m_rt_lib;
 
-    RayTracingPipeline(const Device *                   device,
+    RayTracingPipeline(const std::string &              name,
+                       const Device &                   device,
                        const RayTracingPipelineConfig & rt_lib,
-                       const ShaderManager &            shader_manager,
+                       const ShaderBinaryManager &      shader_binary_manager,
                        [[maybe_unused]] const size_t    attribute_size,
                        [[maybe_unused]] const size_t    payload_size,
-                       const size_t                     recursion_depth = 1,
-                       const std::string &              name            = "")
+                       const size_t                     recursion_depth = 1)
     : m_num_raygens(rt_lib.get_num_shaders(ShaderStageEnum::RayGen)),
       m_num_misses(rt_lib.get_num_shaders(ShaderStageEnum::Miss)),
-      m_num_hit_groups(rt_lib.m_hit_groups.size())
+      m_num_hit_groups(rt_lib.m_hit_groups.size()),
+      m_rt_lib(rt_lib)
     {
         // compile all shader srcs
         HlslDxcCompiler                     hlsl_compiler;
@@ -86,13 +88,13 @@ struct RayTracingPipeline
         for (size_t i = 0; i < rt_lib.m_shader_srcs.size(); i++)
         {
             // spirv code
-            spirv_codes[i] = shader_manager.get_cached_shader(rt_lib.m_shader_srcs[i]);
+            spirv_codes[i] = shader_binary_manager.get_cached_shader(rt_lib.m_shader_srcs[i]);
 
             // create shader module
             vk::ShaderModuleCreateInfo shader_module_ci;
             shader_module_ci.setPCode(reinterpret_cast<uint32_t *>(spirv_codes[i].data()));
             shader_module_ci.setCodeSize(spirv_codes[i].size());
-            shader_module[i] = device->m_vk_ldevice->createShaderModuleUnique(shader_module_ci);
+            shader_module[i] = device.m_vk_ldevice->createShaderModuleUnique(shader_module_ci);
         }
 
         // reflection
@@ -107,7 +109,7 @@ struct RayTracingPipeline
             vk::DescriptorSetLayoutCreateInfo desc_layout_info_ci;
             desc_layout_info_ci.setBindings(bindings);
             m_vk_descriptor_set_layouts.emplace_back(
-                device->m_vk_ldevice->createDescriptorSetLayoutUnique(desc_layout_info_ci));
+                device.m_vk_ldevice->createDescriptorSetLayoutUnique(desc_layout_info_ci));
         }
 
         // pipeline create info
@@ -117,7 +119,7 @@ struct RayTracingPipeline
         pipeline_layout_ci.setSetLayoutCount(static_cast<uint32_t>(descriptor_layouts.size()));
         pipeline_layout_ci.setPushConstantRangeCount(0);
         pipeline_layout_ci.setPPushConstantRanges(nullptr);
-        m_vk_pipeline_layout = device->m_vk_ldevice->createPipelineLayoutUnique(pipeline_layout_ci);
+        m_vk_pipeline_layout = device.m_vk_ldevice->createPipelineLayoutUnique(pipeline_layout_ci);
 
         // shader stage create infos
         std::vector<vk::PipelineShaderStageCreateInfo> shader_stage_cis(rt_lib.m_shader_srcs.size());
@@ -130,16 +132,16 @@ struct RayTracingPipeline
         }
 
         // shader group create infos pass for raygen shader and miss shader
-        std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_cis(
-            m_num_raygens + m_num_misses + m_num_hit_groups);
-        size_t i_group = 0;
+        std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_cis(m_num_raygens + m_num_misses
+                                                                             + m_num_hit_groups);
+        size_t                                              i_group = 0;
         for (size_t i = 0; i < rt_lib.m_shader_srcs.size(); i++)
         {
             // id is the same as array index
             const uint32_t shader_id  = static_cast<uint32_t>(i);
             const auto &   shader_src = rt_lib.m_shader_srcs[i];
-            if (shader_src.m_shader_stage == ShaderStageEnum::RayGen ||
-                shader_src.m_shader_stage == ShaderStageEnum::Miss)
+            if (shader_src.m_shader_stage == ShaderStageEnum::RayGen
+                || shader_src.m_shader_stage == ShaderStageEnum::Miss)
             {
                 vk::RayTracingShaderGroupCreateInfoKHR & shader_group_ci = shader_group_cis[i_group];
                 shader_group_ci.setType(vk::RayTracingShaderGroupTypeKHR::eGeneral);
@@ -185,10 +187,10 @@ struct RayTracingPipeline
         ray_pipeline_ci.setGroups(shader_group_cis);
         ray_pipeline_ci.setMaxPipelineRayRecursionDepth(static_cast<uint32_t>(recursion_depth));
         ray_pipeline_ci.setLayout(m_vk_pipeline_layout.get());
-        auto result = device->m_vk_ldevice->createRayTracingPipelineKHRUnique(nullptr, nullptr, ray_pipeline_ci);
+        auto result = device.m_vk_ldevice->createRayTracingPipelineKHRUnique(nullptr, nullptr, ray_pipeline_ci);
         VKCK(result.result);
         m_vk_pipeline = std::move(result.value);
-        device->name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
+        device.name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
     }
 };
 
@@ -219,13 +221,11 @@ struct RayTracingShaderTable
 
     RayTracingShaderTable() {}
 
-    RayTracingShaderTable(const Device *             device,
-                          const RayTracingPipeline & pipeline,
-                          const std::string &        name = "")
+    RayTracingShaderTable(const std::string & name, const Device & device, const RayTracingPipeline & pipeline)
     {
         // compute shader handle size
         const auto full_properties2 =
-            device->m_vk_pdevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesNV>();
+            device.m_vk_pdevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesNV>();
         const auto & rt_properties = full_properties2.get<vk::PhysicalDeviceRayTracingPropertiesNV>();
         const uint32_t handle_size      = rt_properties.shaderGroupHandleSize;
         const uint32_t handle_alignment = rt_properties.shaderGroupBaseAlignment;
@@ -242,16 +242,16 @@ struct RayTracingShaderTable
         const uint32_t data_size = aligned_raygen_size + aligned_miss_size + aligned_hitgroup_size;
         vk::Pipeline   rt_pipeline = pipeline.m_vk_pipeline.get();
         std::vector<uint8_t> rt_group_handle(data_size);
-        VKCK(device->m_vk_ldevice->getRayTracingShaderGroupHandlesKHR(rt_pipeline,
-                                                                      0u,
-                                                                      num_groups,
-                                                                      data_size,
-                                                                      rt_group_handle.data()));
+        VKCK(device.m_vk_ldevice->getRayTracingShaderGroupHandlesKHR(rt_pipeline,
+                                                                     0u,
+                                                                     num_groups,
+                                                                     data_size,
+                                                                     rt_group_handle.data()));
 
         // buffer create info
         vk::BufferCreateInfo buffer_ci_tmp;
-        buffer_ci_tmp.setUsage(vk::BufferUsageFlagBits::eShaderDeviceAddress |
-                               vk::BufferUsageFlagBits::eShaderBindingTableKHR);
+        buffer_ci_tmp.setUsage(vk::BufferUsageFlagBits::eShaderDeviceAddress
+                               | vk::BufferUsageFlagBits::eShaderBindingTableKHR);
         buffer_ci_tmp.setSize(data_size);
         VkBufferCreateInfo      buffer_ci    = buffer_ci_tmp;
         VmaAllocationCreateInfo vma_alloc_ci = {};
@@ -261,19 +261,19 @@ struct RayTracingShaderTable
         VkBuffer          vma_vk_buffer;
         VmaAllocation     vma_allocation;
         VmaAllocationInfo vma_alloc_info;
-        VKCK(vmaCreateBuffer(*device->m_vma_allocator, &buffer_ci, &vma_alloc_ci, &vma_vk_buffer, &vma_allocation, &vma_alloc_info));
+        VKCK(vmaCreateBuffer(*device.m_vma_allocator, &buffer_ci, &vma_alloc_ci, &vma_vk_buffer, &vma_allocation, &vma_alloc_info));
 
         // bundle
         VmaSbtBundle sbt_bundle;
         sbt_bundle.m_vk_buffer      = vma_vk_buffer;
         sbt_bundle.m_vma_allocation = vma_allocation;
-        sbt_bundle.m_vma_allocator  = device->m_vma_allocator.get();
+        sbt_bundle.m_vma_allocator  = device.m_vma_allocator.get();
         m_vma_sbt_bundle.m_value    = sbt_bundle;
 
         void * mapped_data = vma_alloc_info.pMappedData;
         if (vma_alloc_info.pMappedData == nullptr)
         {
-            vmaMapMemory(*device->m_vma_allocator, vma_allocation, &mapped_data);
+            vmaMapMemory(*device.m_vma_allocator, vma_allocation, &mapped_data);
         }
         // copy raygen
         uint8_t * write_ptr = reinterpret_cast<uint8_t *>(mapped_data);
@@ -290,15 +290,15 @@ struct RayTracingShaderTable
 
         if (vma_alloc_info.pMappedData == nullptr)
         {
-            vmaUnmapMemory(*device->m_vma_allocator, vma_allocation);
+            vmaUnmapMemory(*device.m_vma_allocator, vma_allocation);
         }
 
         // set name for buffer
-        device->name_vkhpp_object<vk::Buffer, vk::Buffer::CType>(vk::Buffer(vma_vk_buffer), name);
+        device.name_vkhpp_object<vk::Buffer, vk::Buffer::CType>(vk::Buffer(vma_vk_buffer), name);
 
         vk::BufferDeviceAddressInfo device_address_info;
         device_address_info.setBuffer(vk::Buffer(vma_vk_buffer));
-        vk::DeviceAddress buffer_address = device->m_vk_ldevice->getBufferAddress(device_address_info);
+        vk::DeviceAddress buffer_address = device.m_vk_ldevice->getBufferAddress(device_address_info);
 
         m_raygen_device_region.setDeviceAddress(buffer_address);
         m_raygen_device_region.setStride(handle_size);

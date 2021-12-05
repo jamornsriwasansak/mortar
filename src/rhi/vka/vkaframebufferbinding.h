@@ -18,14 +18,13 @@ struct FramebufferBindings
     vk::UniqueFramebuffer m_vk_framebuffer;
     int2                  m_resolution = int2(0, 0);
 
-    FramebufferBindings() {}
-
-    FramebufferBindings(const Device *                       device,
-                        const std::vector<const Texture *> & colors,
-                        const std::optional<const Texture *> depth = std::nullopt)
+    FramebufferBindings(const std::string &                    name,
+                        const Device &                         device,
+                        const std::span<const Texture * const> colors,
+                        const Texture * const                  depth = nullptr)
     {
-        const size_t num_attachments = colors.size() + depth.has_value() ? 1 : 0;
-        size_t       i_attachment    = 0;
+        const size_t                           num_attachments = colors.size() + depth ? 1 : 0;
+        size_t                                 i_attachment    = 0u;
         std::vector<vk::AttachmentDescription> descs(num_attachments);
         std::vector<vk::ImageView>             image_views(num_attachments);
         std::vector<vk::AttachmentReference>   color_refs(colors.size());
@@ -64,7 +63,7 @@ struct FramebufferBindings
 
         if (depth)
         {
-            const auto dattach = depth.value();
+            const auto dattach = depth;
             const auto loadop  = vk::AttachmentLoadOp::eLoad;
 
             vk::ImageLayout attachment_layout = dattach->get_attachment_image_layout(false);
@@ -137,7 +136,9 @@ struct FramebufferBindings
         render_pass_ci.setDependencyCount(1u);
         render_pass_ci.setPDependencies(&subpass_dependency);
 
-        m_vk_render_pass = device->m_vk_ldevice->createRenderPassUnique(render_pass_ci);
+        m_vk_render_pass = device.m_vk_ldevice->createRenderPassUnique(render_pass_ci);
+        device.name_vkhpp_object<vk::RenderPass, vk::RenderPass::CType>(m_vk_render_pass.get(),
+                                                                        name + "_render_pass");
 
         vk::FramebufferCreateInfo framebuffer_ci = {};
         framebuffer_ci.setRenderPass(m_vk_render_pass.get());
@@ -147,8 +148,11 @@ struct FramebufferBindings
         framebuffer_ci.setHeight(resolution.y);
         framebuffer_ci.setLayers(1u);
 
-        m_vk_framebuffer = device->m_vk_ldevice->createFramebufferUnique(framebuffer_ci);
-        m_resolution     = resolution;
+        m_vk_framebuffer = device.m_vk_ldevice->createFramebufferUnique(framebuffer_ci);
+        device.name_vkhpp_object<vk::Framebuffer, vk::Framebuffer::CType>(m_vk_framebuffer.get(),
+                                                                          name + "_framebuffer");
+
+        m_resolution = resolution;
     }
 };
 } // namespace VKA_NAME

@@ -1,10 +1,6 @@
 #pragma once
 
-#include <sstream>
-
-#pragma warning(push, 0)
-#include "spdlog/spdlog.h"
-#pragma warning(pop)
+#include "pch/pch.h"
 
 struct Logger
 {
@@ -18,7 +14,8 @@ struct Logger
         std::ostringstream oss;
         using List = int[];
         (void)List{ 0, ((void)(oss << args), 0)... };
-        spdlog::info(oss.str());
+        //spdlog::info(oss.str());
+        std::cout << oss.str() << std::endl;
     }
 
     // warning
@@ -29,7 +26,8 @@ struct Logger
         std::ostringstream oss;
         using List = int[];
         (void)List{ 0, ((void)(oss << args), 0)... };
-        spdlog::warn(oss.str());
+        //spdlog::warn(oss.str());
+        std::cout << oss.str() << std::endl;
     }
 
     // unexpected (e.g. file not found)
@@ -40,7 +38,8 @@ struct Logger
         std::ostringstream oss;
         using List = int[];
         (void)List{ 0, ((void)(oss << args), 0)... };
-        spdlog::error(oss.str());
+        //spdlog::error(oss.str());
+        std::cout << oss.str() << std::endl;
         if (IsThrow)
         {
             throw std::runtime_error(oss.str());
@@ -55,7 +54,8 @@ struct Logger
         std::ostringstream oss;
         using List = int[];
         (void)List{ 0, ((void)(oss << args), 0)... };
-        spdlog::critical(oss.str());
+        //spdlog::critical(oss.str());
+        std::cout << oss.str() << std::endl;
         if (IsThrow)
         {
             throw std::runtime_error(oss.str());
@@ -67,7 +67,7 @@ struct Logger
     static void
     Debug(const Args &... args)
     {
-#ifndef NDEBUG
+    #if 0
         std::ostringstream oss;
         using List = int[];
         (void)List{ 0, ((void)(oss << args), 0)... };
@@ -79,6 +79,6 @@ struct Logger
             spdlog::set_level(spdlog::level::level_enum::debug);
         }
         spdlog::debug(oss.str());
-#endif
+    #endif
     }
 };

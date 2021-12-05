@@ -57,7 +57,7 @@ struct AvgFrameTimeStopWatch
 
         // update sum
         m_sum_time     = m_sum_time + frame_time;
-        m_sum_tick     = m_sum_tick + 1;
+        m_sum_tick     = m_sum_tick + 1u;
         m_just_updated = false;
 
         // update average_time if sum_time or sum_tick is beyond the threshold

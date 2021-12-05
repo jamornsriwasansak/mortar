@@ -14,10 +14,11 @@ struct Semaphore
 
     Semaphore() {}
 
-    Semaphore(const Device * device)
+    Semaphore(const std::string & name, const Device & device)
     {
         vk::SemaphoreCreateInfo semaphore_ci = {};
-        m_vk_semaphore = device->m_vk_ldevice->createSemaphoreUnique(semaphore_ci);
+        m_vk_semaphore = device.m_vk_ldevice->createSemaphoreUnique(semaphore_ci);
+        device.name_vkhpp_object<vk::Semaphore, vk::Semaphore::CType>(m_vk_semaphore.get(), name);
     }
 };
 } // namespace VKA_NAME

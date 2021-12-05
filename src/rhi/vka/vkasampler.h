@@ -12,9 +12,7 @@ struct Sampler
 {
     vk::UniqueSampler m_vk_sampler;
 
-    Sampler() {}
-
-    Sampler(const Device * device)
+    Sampler(const std::string & name, const Device & device)
     {
         vk::SamplerCreateInfo sampler_ci;
         sampler_ci.setMagFilter(vk::Filter::eLinear);
@@ -32,7 +30,8 @@ struct Sampler
         sampler_ci.setMipLodBias(0.0f);
         sampler_ci.setMinLod(0.0f);
         sampler_ci.setMaxLod(0.0f);
-        m_vk_sampler = device->m_vk_ldevice->createSamplerUnique(sampler_ci);
+        m_vk_sampler = device.m_vk_ldevice->createSamplerUnique(sampler_ci);
+        device.name_vkhpp_object<vk::Sampler, vk::Sampler::CType>(m_vk_sampler.get(), name);
     }
 };
 } // namespace VKA_NAME

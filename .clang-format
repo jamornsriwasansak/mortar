@@ -21,6 +21,7 @@ AllowShortLambdasOnASingleLine: true
 BinPackParameters: false
 BinPackArguments: false
 BreakBeforeBraces: Allman
+BreakConstructorInitializersBeforeComma: false
 ColumnLimit: 100
 CommentPragmas: ''
 ConstructorInitializerAllOnOneLineOrOnePerLine: true

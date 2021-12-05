@@ -79,7 +79,7 @@ struct CommandList
     }
 
     void
-    bind_raytrace_pipeline(const RayTracingPipeline & rt_pipeline)
+    bind_ray_trace_pipeline(const RayTracingPipeline & rt_pipeline)
     {
         m_vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,
                                          rt_pipeline.m_vk_pipeline.get());
@@ -122,7 +122,7 @@ struct CommandList
     }
 
     void
-    bind_raytrace_descriptor_set(const std::span<DescriptorSet> & desc_sets)
+    bind_ray_trace_descriptor_set(const std::span<DescriptorSet> & desc_sets)
     {
         bind_descriptor_set(desc_sets.data(), desc_sets.size(), vk::PipelineBindPoint::eRayTracingKHR);
     }
@@ -131,15 +131,13 @@ struct CommandList
     bind_vertex_buffer(const Buffer & vertex_buffer, [[maybe_unused]] const size_t stride)
     {
         // stride information has already been used in vk::VertexInputBindingDescription
-        m_vk_command_buffer.bindVertexBuffers(0, { vertex_buffer.m_vma_buffer_bundle->m_vk_buffer }, { 0 });
+        m_vk_command_buffer.bindVertexBuffers(0, { vertex_buffer.get_vk_buffer() }, { 0 });
     }
 
     void
     bind_index_buffer(const Buffer & index_buffer, const IndexType index_type)
     {
-        m_vk_command_buffer.bindIndexBuffer(index_buffer.m_vma_buffer_bundle->m_vk_buffer,
-                                            0,
-                                            static_cast<vk::IndexType>(index_type));
+        m_vk_command_buffer.bindIndexBuffer(index_buffer.get_vk_buffer(), 0, static_cast<vk::IndexType>(index_type));
     }
 
     void
@@ -153,9 +151,7 @@ struct CommandList
         copy_region.setSize(size_in_bytes);
         copy_region.setSrcOffset(src_offset_in_bytes);
         copy_region.setDstOffset(dst_offset_in_bytes);
-        m_vk_command_buffer.copyBuffer(src_buffer.m_vma_buffer_bundle->m_vk_buffer,
-                                       dst_buffer.m_vma_buffer_bundle->m_vk_buffer,
-                                       { copy_region });
+        m_vk_command_buffer.copyBuffer(src_buffer.get_vk_buffer(), dst_buffer.get_vk_buffer(), { copy_region });
     }
 
     void
@@ -237,7 +233,7 @@ struct CommandList
         render_pass_bi.renderArea.extent =
             vk::Extent2D(imgui_render_pass.m_resolution.x, imgui_render_pass.m_resolution.y);
         m_vk_command_buffer.beginRenderPass(render_pass_bi, vk::SubpassContents::eInline);
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_vk_command_buffer);
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VkCommandBuffer>(m_vk_command_buffer));
         m_vk_command_buffer.endRenderPass();
     }
 

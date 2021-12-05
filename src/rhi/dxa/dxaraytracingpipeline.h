@@ -227,6 +227,8 @@ struct RayTracingPipeline
                 rt_lib.m_shader_srcs.size());
             for (size_t i_shader = 0; i_shader < shaders.size(); i_shader++)
             {
+                // TODO:: avoid compiling the shader TWICE!
+                assert(false);
                 const auto & shader_src  = rt_lib.m_shader_srcs[i_shader];
                 shaders[i_shader].first  = hlsl_dxil_compiler.compile_as_dxil(shader_src);
                 shaders[i_shader].second = shader_src.m_shader_stage;

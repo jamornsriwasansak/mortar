@@ -124,7 +124,7 @@ struct RayTracingBlas
 
         // create acceleration structure
         vk::AccelerationStructureCreateInfoKHR accel_ci = {};
-        accel_ci.setBuffer(m_accel_buffer.m_vma_buffer_bundle->m_vk_buffer);
+        accel_ci.setBuffer(static_cast<vk::Buffer>(m_accel_buffer.m_vma_buffer_bundle->m_vk_buffer));
         accel_ci.setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
         accel_ci.setSize(required_buffer_size);
         m_vk_accel_struct = device.m_vk_ldevice->createAccelerationStructureKHRUnique(accel_ci);
@@ -184,8 +184,8 @@ struct RayTracingTlas
         std::byte * instance_dst = reinterpret_cast<std::byte *>(m_instance_buffer.map());
         for (size_t i = 0; i < instances.size(); i++)
         {
-            size_t offset = i * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-            std::memcpy(instance_dst + offset, &instances[i].m_vk_instance, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
+            size_t offset = i * sizeof(vk::AccelerationStructureInstanceKHR);
+            std::memcpy(instance_dst + offset, &instances[i].m_vk_instance, sizeof(vk::AccelerationStructureInstanceKHR));
         }
         m_instance_buffer.unmap();
 
@@ -231,7 +231,7 @@ struct RayTracingTlas
 
         // create acceleration structure
         vk::AccelerationStructureCreateInfoKHR accel_ci = {};
-        accel_ci.setBuffer(m_accel_buffer.m_vma_buffer_bundle->m_vk_buffer);
+        accel_ci.setBuffer(static_cast<vk::Buffer>(m_accel_buffer.m_vma_buffer_bundle->m_vk_buffer));
         accel_ci.setType(vk::AccelerationStructureTypeKHR::eTopLevel);
         accel_ci.setSize(required_buffer_size);
         m_vk_accel_struct = device.m_vk_ldevice->createAccelerationStructureKHRUnique(accel_ci);

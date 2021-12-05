@@ -85,13 +85,10 @@ struct SceneResource
     std::vector<SceneGeometry>     m_geometries;
     std::vector<SceneBaseInstance> m_base_instances;
 
-    SceneResource() {}
-
-    SceneResource(const Rhi::Device & device) : m_device(&device)
+    SceneResource(const Rhi::Device & device)
+    : m_device(&device),
+      m_transfer_cmd_pool("scene_resource_transfer_cmd_pool", device, Rhi::CommandQueueType::Transfer)
     {
-        m_transfer_cmd_pool =
-            Rhi::CommandPool("scene_resource_transfer_cmd_pool", &device, Rhi::CommandQueueType::Transfer);
-
         // index buffer vertex buffer
         m_d_vbuf_position = Rhi::Buffer("scene_m_d_vbuf_position",
                                         *m_device,
@@ -242,7 +239,7 @@ struct SceneResource
                                     vb_packed1.size() * sizeof(vb_packed1[0]));
         cmd_list.end();
 
-        Rhi::Fence tmp_fence(staging_buffer_manager.m_device);
+        Rhi::Fence tmp_fence("fence upload " + path.string(), staging_buffer_manager.m_device);
         tmp_fence.reset();
         cmd_list.submit(&tmp_fence);
         tmp_fence.wait();
@@ -352,7 +349,7 @@ struct SceneResource
         assert(desired_channel == 4 || desired_channel == 1);
         Rhi::FormatEnum format_enum =
             desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
-        Rhi::Texture texture(staging_buffer_manager.m_device,
+        Rhi::Texture texture(&staging_buffer_manager.m_device,
                              Rhi::TextureUsageEnum::Sampled,
                              Rhi::TextureStateEnum::FragmentShaderVisible,
                              format_enum,
@@ -521,7 +518,7 @@ struct SceneResource
         }
         cmd_list.end();
 
-        Rhi::Fence fence(m_device);
+        Rhi::Fence fence("scene_commit_fence", *m_device);
         fence.reset();
         cmd_list.submit(&fence);
         fence.wait();
