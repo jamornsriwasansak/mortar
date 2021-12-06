@@ -6,9 +6,6 @@
 #include "rhi/rhi.h"
 #include "rhi/shadercompiler/shader_binary_manager.h"
 
-#include "assetbrowser.h"
-#include "assetbrowserquick.h"
-
 #include <ranges>
 
 struct MainLoop
@@ -78,8 +75,6 @@ struct MainLoop
     SceneResource         m_scene_resource;
     FpsCamera             m_camera;
     int2                  m_swapchain_resolution = int2(0, 0);
-
-    AssetBrowserQuick m_asset_browser;
 
     Renderer m_renderer;
 
