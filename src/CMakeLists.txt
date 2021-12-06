@@ -41,7 +41,7 @@ target_compile_definitions(mortar PRIVATE IMGUI_USER_CONFIG="pch/imgui_config.h"
 target_compile_definitions(mortar PRIVATE __STDC_WANT_SECURE_LIB__=1 _SCL_SECURE_NO_WARNINGS NOMINMAX)
 if (MSVC)
     #target_compile_options(mortar PRIVATE /W4 /WX)
-    target_compile_options(mortar PRIVATE /W4)
+    target_compile_options(mortar PRIVATE /W4 /analyze)
 else()
     target_compile_options(mortar PRIVATE -Wall -Wextra -pedantic -Werror)
 endif()

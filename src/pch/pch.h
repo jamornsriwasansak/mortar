@@ -1,6 +1,7 @@
 #pragma once
 
 #pragma warning(push, 0)
+#ifndef CODE_ANALYSIS
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -65,5 +66,5 @@
 #include <variant>
 #include <vector>
 
-
+#endif
 #pragma warning(pop)
