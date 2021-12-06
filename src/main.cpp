@@ -24,7 +24,7 @@ main()
 
     // create renderer
     ShaderBinaryManager shader_binary_manager("shadercache");
-    MainLoop            main_loop(device, main_window, num_flights, shader_binary_manager, swapchain);
+    MainLoop main_loop(device, main_window, num_flights, shader_binary_manager, swapchain);
     main_loop.run();
     return 0;
 }

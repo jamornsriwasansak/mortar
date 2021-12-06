@@ -54,9 +54,11 @@ struct MainLoop
     struct PerSwapResource
     {
         Rhi::Texture m_swapchain_texture;
+        Rhi::Fence * m_swapchain_image_fence;
 
         PerSwapResource(const std::string & name, const Rhi::Device & device, const Rhi::Swapchain & swapchain, const size_t i_image)
-        : m_swapchain_texture(name + "_swapchain_texture", device, swapchain, i_image, float4(0.0f, 0.0f, 0.0f, 0.0f))
+        : m_swapchain_texture(name + "_swapchain_texture", device, swapchain, i_image, float4(0.0f, 0.0f, 0.0f, 0.0f)),
+          m_swapchain_image_fence(nullptr)
         {
         }
     };
@@ -157,7 +159,7 @@ struct MainLoop
         }
         for (PerFlightResource & per_flight_resource : m_per_flight_resources)
         {
-            per_flight_resource.m_flight_fence.wait();
+            per_flight_resource.wait();
         }
         m_swapchain.resize_to_window(m_device, m_window);
     }
@@ -191,6 +193,15 @@ struct MainLoop
         // update image index
         m_swapchain.update_image_index(&per_flight_resource.m_image_ready_semaphore);
 
+        PerSwapResource & per_swap_resource = m_per_swap_resources[m_swapchain.m_image_index];
+
+        // wait until the image we want is draw is finished drawing
+        if (per_swap_resource.m_swapchain_image_fence)
+        {
+            per_swap_resource.m_swapchain_image_fence->wait();
+            per_swap_resource.m_swapchain_image_fence = &per_flight_resource.m_flight_fence;
+        }
+
         // context parameters for each frame
         RenderContext ctx(m_device,
                           per_flight_resource.m_graphics_command_pool,
@@ -198,7 +209,7 @@ struct MainLoop
                           per_flight_resource.m_image_ready_semaphore,
                           per_flight_resource.m_image_presentable_semaphore,
                           per_flight_resource.m_flight_fence,
-                          m_per_swap_resources[m_swapchain.m_image_index].m_swapchain_texture,
+                          per_swap_resource.m_swapchain_texture,
                           m_staging_buffer_manager,
                           m_imgui_render_pass,
                           m_shader_binary_manager,
@@ -228,9 +239,9 @@ struct MainLoop
         if (!m_swapchain.present(&per_flight_resource.m_image_presentable_semaphore) ||
             any(notEqual(current_resolution, m_swapchain_resolution)))
         {
-            for (PerFlightResource & per_flight_resource : m_per_flight_resources)
+            for (PerFlightResource & resource : m_per_flight_resources)
             {
-                per_flight_resource.m_flight_fence.wait();
+                resource.wait();
             }
 
             resize_swapchain();
@@ -289,7 +300,7 @@ struct MainLoop
         // wait until all resource are not used
         for (PerFlightResource & per_flight_resource : m_per_flight_resources)
         {
-            per_flight_resource.m_flight_fence.wait();
+            per_flight_resource.wait();
         }
 
         m_imgui_render_pass.shut_down();

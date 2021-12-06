@@ -23,8 +23,9 @@ struct FramebufferBindings
                         const std::span<const Texture * const> colors,
                         const Texture * const                  depth = nullptr)
     {
-        const size_t                           num_attachments = colors.size() + depth ? 1 : 0;
-        size_t                                 i_attachment    = 0u;
+        const size_t num_depth_attachment = depth ? 1u : 0u;
+        const size_t num_attachments      = colors.size() + num_depth_attachment;
+        size_t       i_attachment         = 0u;
         std::vector<vk::AttachmentDescription> descs(num_attachments);
         std::vector<vk::ImageView>             image_views(num_attachments);
         std::vector<vk::AttachmentReference>   color_refs(colors.size());
@@ -37,9 +38,12 @@ struct FramebufferBindings
             const auto cattach = colors[i];
             const auto loadop  = vk::AttachmentLoadOp::eLoad;
 
-            vk::ImageLayout attachment_layout = cattach->get_attachment_image_layout(false);
-            vk::ImageLayout initial_image_layout =
-                loadop == vk::AttachmentLoadOp::eLoad ? attachment_layout : vk::ImageLayout::eUndefined;
+            vk::ImageLayout attachment_layout    = cattach->get_attachment_image_layout(false);
+            vk::ImageLayout initial_image_layout = vk::ImageLayout::eUndefined;
+            if constexpr (loadop == vk::AttachmentLoadOp::eLoad)
+            {
+                initial_image_layout = attachment_layout;
+            }
 
             vk::AttachmentReference & ref = color_refs[i];
             ref.setAttachment(static_cast<uint32_t>(i));
