@@ -54,39 +54,37 @@ struct Texture
         m_resolution = int3(swapchain.m_resolution, 1);
 
         // convert the layout into present khr
-        device.one_time_command_submit(
-            [&](vk::CommandBuffer cmd_buf)
-            {
-                vk::ImageLayout old_vk_image_layout = vk::ImageLayout::eUndefined;
-                vk::ImageLayout new_vk_image_layout = vk::ImageLayout::ePresentSrcKHR;
+        device.one_time_command_submit([&](vk::CommandBuffer cmd_buf) {
+            vk::ImageLayout old_vk_image_layout = vk::ImageLayout::eUndefined;
+            vk::ImageLayout new_vk_image_layout = vk::ImageLayout::ePresentSrcKHR;
 
-                vk::AccessFlags src_access_mask = access_flags_for_layout(old_vk_image_layout);
-                vk::AccessFlags dst_access_mask = access_flags_for_layout(new_vk_image_layout);
-                vk::PipelineStageFlags src_pipeline_stage_flags = pipeline_stage_flags(old_vk_image_layout);
-                vk::PipelineStageFlags dst_pipeline_stage_flags = pipeline_stage_flags(new_vk_image_layout);
+            vk::AccessFlags        src_access_mask = access_flags_for_layout(old_vk_image_layout);
+            vk::AccessFlags        dst_access_mask = access_flags_for_layout(new_vk_image_layout);
+            vk::PipelineStageFlags src_pipeline_stage_flags = pipeline_stage_flags(old_vk_image_layout);
+            vk::PipelineStageFlags dst_pipeline_stage_flags = pipeline_stage_flags(new_vk_image_layout);
 
-                // setup barrier make sure that image is properly setup
-                vk::ImageMemoryBarrier img_mem_barrier;
-                img_mem_barrier.setOldLayout(old_vk_image_layout);
-                img_mem_barrier.setNewLayout(new_vk_image_layout);
-                img_mem_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-                img_mem_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-                img_mem_barrier.setImage(m_vk_image);
-                img_mem_barrier.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
-                img_mem_barrier.subresourceRange.setBaseMipLevel(0);
-                img_mem_barrier.subresourceRange.setLevelCount(1);
-                img_mem_barrier.subresourceRange.setBaseArrayLayer(0);
-                img_mem_barrier.subresourceRange.setLayerCount(1);
-                img_mem_barrier.setSrcAccessMask(src_access_mask);
-                img_mem_barrier.setDstAccessMask(dst_access_mask);
+            // setup barrier make sure that image is properly setup
+            vk::ImageMemoryBarrier img_mem_barrier;
+            img_mem_barrier.setOldLayout(old_vk_image_layout);
+            img_mem_barrier.setNewLayout(new_vk_image_layout);
+            img_mem_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
+            img_mem_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
+            img_mem_barrier.setImage(m_vk_image);
+            img_mem_barrier.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
+            img_mem_barrier.subresourceRange.setBaseMipLevel(0);
+            img_mem_barrier.subresourceRange.setLevelCount(1);
+            img_mem_barrier.subresourceRange.setBaseArrayLayer(0);
+            img_mem_barrier.subresourceRange.setLayerCount(1);
+            img_mem_barrier.setSrcAccessMask(src_access_mask);
+            img_mem_barrier.setDstAccessMask(dst_access_mask);
 
-                cmd_buf.pipelineBarrier(src_pipeline_stage_flags,
-                                        dst_pipeline_stage_flags,
-                                        vk::DependencyFlagBits(0),
-                                        nullptr,
-                                        nullptr,
-                                        { img_mem_barrier });
-            });
+            cmd_buf.pipelineBarrier(src_pipeline_stage_flags,
+                                    dst_pipeline_stage_flags,
+                                    vk::DependencyFlagBits(0),
+                                    nullptr,
+                                    nullptr,
+                                    { img_mem_barrier });
+        });
         if (!name.empty())
         {
             device.name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
@@ -95,15 +93,15 @@ struct Texture
         }
     }
 
-    Texture(const Device *         device,
+    Texture(const std::string &    name,
+            const Device *         device,
             const TextureUsageEnum usage_,
             const TextureStateEnum initial_state_,
             const FormatEnum       format,
             const int2             resolution,
             const std::byte *      initial_data        = nullptr,
             StagingBufferManager * initial_data_loader = nullptr,
-            const float4           clear_value         = float4(0.0f, 0.0f, 0.0f, 0.0f),
-            const std::string &    name                = "")
+            const float4           clear_value         = float4(0.0f, 0.0f, 0.0f, 0.0f))
     : m_clear_value(clear_value)
     {
         assert(resolution.x > 0 && resolution.y > 0);
@@ -197,7 +195,8 @@ struct Texture
             copy_region.imageSubresource.setBaseArrayLayer(0);
             copy_region.imageSubresource.setLayerCount(1);
             copy_region.imageSubresource.setMipLevel(0);
-            initial_data_loader->m_vk_command_buffer.copyBufferToImage(static_cast<vk::Buffer>(staging_buffer->m_vk_buffer),
+            initial_data_loader->m_vk_command_buffer.copyBufferToImage(static_cast<vk::Buffer>(
+                                                                           staging_buffer->m_vk_buffer),
                                                                        m_vk_image,
                                                                        vk::ImageLayout::eTransferDstOptimal,
                                                                        { copy_region });
@@ -209,10 +208,9 @@ struct Texture
         }
         else
         {
-            device->one_time_command_submit(
-                [&](vk::CommandBuffer cmd_buf) {
-                    transition_image_layout(cmd_buf, m_vk_image, vk::ImageLayout::eUndefined, initial_layout);
-                });
+            device->one_time_command_submit([&](vk::CommandBuffer cmd_buf) {
+                transition_image_layout(cmd_buf, m_vk_image, vk::ImageLayout::eUndefined, initial_layout);
+            });
         }
 
         m_resolution      = int3(resolution, 0);

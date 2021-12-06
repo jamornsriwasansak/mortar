@@ -63,7 +63,8 @@ struct Renderer
         result.reserve(num_flights);
         for (size_t i = 0; i < num_flights; i++)
         {
-            result.emplace_back(Rhi::Texture(&device,
+            result.emplace_back(Rhi::Texture("flight_" + std::to_string(i) + "_ray_tracing_result",
+                                             &device,
                                              Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment |
                                                  Rhi::TextureUsageEnum::Sampled,
                                              Rhi::TextureStateEnum::NonFragmentShaderVisible,
@@ -71,8 +72,7 @@ struct Renderer
                                              resolution,
                                              nullptr,
                                              nullptr,
-                                             float4(0.0f, 0.0f, 0.0f, 0.0f),
-                                             "flight_" + std::to_string(i) + "_ray_tracing_result"));
+                                             float4(0.0f, 0.0f, 0.0f, 0.0f)));
         }
         return result;
     }

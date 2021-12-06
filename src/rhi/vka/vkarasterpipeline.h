@@ -90,13 +90,11 @@ struct RasterPipeline
     vk::UniquePipelineLayout                   m_vk_pipeline_layout;
     std::vector<vk::UniqueDescriptorSetLayout> m_vk_descriptor_set_layouts;
 
-    RasterPipeline() {}
-
-    RasterPipeline(const Device &                     device,
+    RasterPipeline(const std::string &                name,
+                   const Device &                     device,
                    const std::span<const ShaderSrc> & shader_srcs,
-                   const ShaderBinaryManager &              shader_binary_manager,
-                   const FramebufferBindings &        framebuffer_bindings,
-                   const std::string &                name = "")
+                   const ShaderBinaryManager &        shader_binary_manager,
+                   const FramebufferBindings &        framebuffer_bindings)
     {
         // compile all shader srcs
         std::vector<std::vector<std::byte>> spirv_codes(shader_srcs.size());

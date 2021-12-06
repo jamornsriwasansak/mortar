@@ -20,10 +20,9 @@ struct ImGuiRenderPass
     int2                               m_resolution;
     vk::UniqueDescriptorPool           m_descriptor_pool = {};
 
-    ImGuiRenderPass(const Device & device, const Window & window, const Swapchain & swapchain)
+    ImGuiRenderPass(const std::string & name, const Device & device, const Window & window, const Swapchain & swapchain)
     {
-        static bool InitializeImgui = []
-        {
+        static bool InitializeImgui = [] {
             // setup dear imgui
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
@@ -70,6 +69,7 @@ struct ImGuiRenderPass
         info.setDependencyCount(1);
         info.setPDependencies(&dependency);
         m_vk_render_pass = device.m_vk_ldevice->createRenderPassUnique(info);
+        device.name_vkhpp_object<vk::RenderPass, vk::RenderPass::CType>(m_vk_render_pass.get(), name);
 
         ImGuiIO & io = ImGui::GetIO();
 
@@ -94,6 +94,7 @@ struct ImGuiRenderPass
         pool_ci.setPoolSizes(pool_sizes);
         pool_ci.setMaxSets(100);
         m_descriptor_pool = device.m_vk_ldevice->createDescriptorPoolUnique(pool_ci);
+        device.name_vkhpp_object<vk::DescriptorPool, vk::DescriptorPool::CType>(m_descriptor_pool.get(), name);
 
         ImGui_ImplVulkan_InitInfo init_info = {};
         init_info.Instance                  = static_cast<VkInstance>(device.m_vk_instance);
@@ -102,15 +103,16 @@ struct ImGuiRenderPass
         init_info.QueueFamily               = device.m_family_indices.m_graphics;
         init_info.Queue                     = static_cast<VkQueue>(device.m_vk_graphics_queue);
         init_info.PipelineCache             = VK_NULL_HANDLE;
-        init_info.DescriptorPool            = static_cast<VkDescriptorPool>(m_descriptor_pool.get());
-        init_info.Allocator                 = nullptr;
-        init_info.MinImageCount             = static_cast<uint32_t>(swapchain.m_num_images);
-        init_info.ImageCount                = static_cast<uint32_t>(swapchain.m_num_images);
-        init_info.CheckVkResultFn           = nullptr;
+        init_info.DescriptorPool  = static_cast<VkDescriptorPool>(m_descriptor_pool.get());
+        init_info.Allocator       = nullptr;
+        init_info.MinImageCount   = static_cast<uint32_t>(swapchain.m_num_images);
+        init_info.ImageCount      = static_cast<uint32_t>(swapchain.m_num_images);
+        init_info.CheckVkResultFn = nullptr;
         ImGui_ImplVulkan_Init(&init_info, static_cast<VkRenderPass>(m_vk_render_pass.get()));
 
-        device.one_time_command_submit([&](vk::CommandBuffer cmd_buf)
-                                       { ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(cmd_buf)); });
+        device.one_time_command_submit([&](vk::CommandBuffer cmd_buf) {
+            ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(cmd_buf));
+        });
 
         init_or_resize_framebuffer(device, swapchain);
     }

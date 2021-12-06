@@ -65,11 +65,12 @@ struct RayTracingBlas
 
     RayTracingBlas() {}
 
-    RayTracingBlas(const Device &                                  device,
+    RayTracingBlas(const std::string &                             name,
+                   const Device &                                  device,
                    const std::span<const RayTracingGeometryDesc> & geometry_descs,
                    const RayTracingBuildHint                       hint,
-                   StagingBufferManager * buf_manager, // TODO:: get rid of staging buffer manager
-                   const std::string &    name = "")
+                   StagingBufferManager * buf_manager // TODO:: get rid of staging buffer manager
+    )
     {
         std::vector<vk::AccelerationStructureGeometryDataKHR> tri_geometry_datas(geometry_descs.size());
         std::vector<vk::AccelerationStructureGeometryKHR>     geometries(geometry_descs.size());
@@ -170,10 +171,10 @@ struct RayTracingTlas
 
     RayTracingTlas() {}
 
-    RayTracingTlas(const Device &                              device,
+    RayTracingTlas(const std::string &                         name,
+                   const Device &                              device,
                    const std::span<const RayTracingInstance> & instances,
-                   StagingBufferManager *                      buf_manager,
-                   const std::string &                         name)
+                   StagingBufferManager *                      buf_manager)
     {
         m_instance_buffer = Buffer(name + "_instance_buffer",
                                    device,

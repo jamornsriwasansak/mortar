@@ -99,7 +99,7 @@ struct MainLoop
       m_shader_binary_manager(shader_binary_manager),
       m_per_flight_resources(construct_per_flight_resources("main_flight_resource", device, num_flights)),
       m_per_swap_resources(construct_per_swap_resources("main_swap_resources", device, swapchain)),
-      m_imgui_render_pass(device, window, swapchain),
+      m_imgui_render_pass("main_imgui_render_pass", device, window, swapchain),
       m_camera(float3(10.0f, 10.0f, 10.0f),
                float3(0.0f, 0.0f, 0.0f),
                float3(0.0f, 1.0f, 0.0f),
