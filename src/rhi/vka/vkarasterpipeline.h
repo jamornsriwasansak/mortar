@@ -7,7 +7,7 @@
 #include "vkadevice.h"
 #include "vkaframebufferbinding.h"
 
-#include "rhi/shadercompiler/shader_manager.h"
+#include "rhi/shadercompiler/shader_binary_manager.h"
 #include "spirvreflection.h"
 
 namespace VKA_NAME
@@ -94,7 +94,7 @@ struct RasterPipeline
 
     RasterPipeline(const Device &                     device,
                    const std::span<const ShaderSrc> & shader_srcs,
-                   const ShaderManager &              shader_manager,
+                   const ShaderBinaryManager &              shader_binary_manager,
                    const FramebufferBindings &        framebuffer_bindings,
                    const std::string &                name = "")
     {
@@ -102,7 +102,7 @@ struct RasterPipeline
         std::vector<std::vector<std::byte>> spirv_codes(shader_srcs.size());
         for (size_t i = 0; i < shader_srcs.size(); i++)
         {
-            spirv_codes[i] = shader_manager.get_cached_shader(shader_srcs[i]);
+            spirv_codes[i] = shader_binary_manager.get_cached_shader(shader_srcs[i]);
         }
 
         // reflection

@@ -1,10 +1,9 @@
 #pragma once
 
 #include "rhi/rhi.h"
-#include "scene_resource.h"
-#include "shaders/raytrace_visualize_params.h"
+#include "shaders/ray_trace_visualize_params.h"
 
-struct RaytraceVisualizePass
+struct RayTraceVisualizePass
 {
     Rhi::RayTracingPipeline    m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
@@ -17,67 +16,64 @@ struct RaytraceVisualizePass
     Rhi::Buffer m_cpu_temp_buffer;
 #endif
 
-    RaytraceVisualizePass() {}
+    int rtvis_mode = 0;
 
-    RaytraceVisualizePass(const Rhi::Device & device, const ShaderManager & shader_manager)
-    {
-        init_or_reload(device, shader_manager);
-
-        // constant params for rtvisualize
-        m_cb_params = Rhi::Buffer("raytrace_visualize_cbparams",
-                                  device,
-                                  Rhi::BufferUsageEnum::ConstantBuffer,
-                                  Rhi::MemoryUsageEnum::CpuToGpu,
-                                  sizeof(RaytraceVisualizeCbParams));
-
-        // sampler
-        m_common_sampler = Rhi::Sampler(&device);
-
+    RayTraceVisualizePass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager)
+    : m_rt_pipeline("ray_trace_visualize_pipeline",
+                    device,
+                    get_ray_trace_visualize_pipeline_config(),
+                    shader_binary_manager,
+                    16,
+                    64,
+                    1)
+    , m_rt_sbt("ray_trace_visualize_sbt", device, m_rt_pipeline)
+    , m_common_sampler("ray_trace_visualize_sampler", device)
 #ifdef DEBUG_RayTraceVisualizePrintClickedInfo
-        // constant params for debug
-        m_debug_cb_params = Rhi::Buffer(device,
-                                        Rhi::BufferUsageEnum::ConstantBuffer,
-                                        Rhi::MemoryUsageEnum::CpuToGpu,
-                                        sizeof(RaytraceVisualizeDebugPrintCbParams),
-                                        "raytrace_visualize_debug_cbparams");
-
-        // print buffer
-        m_debug_print_buffer =
-            Rhi::Buffer(device,
-                        Rhi::BufferUsageEnum::StorageBuffer | Rhi::BufferUsageEnum::TransferSrc,
-                        Rhi::MemoryUsageEnum::GpuOnly,
-                        sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize,
-                        "raytrace_visualize_debug_print_buffer");
-
-        m_cpu_temp_buffer = Rhi::Buffer(device,
-                                        Rhi::BufferUsageEnum::TransferDst,
-                                        Rhi::MemoryUsageEnum::GpuToCpu,
-                                        sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize,
-                                        "raytrace_visualize_debug_print_download_buffer");
+    , m_debug_cb_params("ray_trace_visualize_debug_cbparams",
+                        device,
+                        Rhi::BufferUsageEnum::ConstantBuffer,
+                        Rhi::MemoryUsageEnum::CpuToGpu,
+                        sizeof(RaytraceVisualizeDebugPrintCbParams)
+    , m_debug_print_buffer("ray_trace_visualize_debug_print_buffer",
+                           device,
+                           Rhi::BufferUsageEnum::StorageBuffer | Rhi::BufferUsageEnum::TransferSrc,
+                           Rhi::MemoryUsageEnum::GpuOnly,
+                           sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize)
+    , m_cpu_temp_buffer("ray_trace_visualize_debug_print_download_buffer",
+                        device,
+                        Rhi::BufferUsageEnum::TransferDst,
+                        Rhi::MemoryUsageEnum::GpuToCpu,
+                        sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize)
 #endif
+    , m_cb_params("ray_trace_visualize_cbparams",
+                    device,
+                    Rhi::BufferUsageEnum::ConstantBuffer,
+                    Rhi::MemoryUsageEnum::CpuToGpu,
+                    sizeof(RaytraceVisualizeCbParams))
+    {
     }
 
-    void
-    init_or_reload(const Rhi::Device & device, const ShaderManager & shader_manager)
+    Rhi::RayTracingPipelineConfig
+    get_ray_trace_visualize_pipeline_config() const
     {
         // create pipeline for ssao
         Rhi::RayTracingPipelineConfig rt_config;
 
         // raygen
         const Rhi::ShaderSrc          raygen_shader(Rhi::ShaderStageEnum::RayGen,
-                                           BASE_SHADER_DIR "raytrace_visualize.hlsl",
+                                           BASE_SHADER_DIR "ray_trace_visualize.hlsl",
                                            "RayGen");
         [[maybe_unused]] const size_t raygen_id = rt_config.add_shader(raygen_shader);
 
         // miss
         const Rhi::ShaderSrc          miss_shader(Rhi::ShaderStageEnum::Miss,
-                                         BASE_SHADER_DIR "raytrace_visualize.hlsl",
+                                         BASE_SHADER_DIR "ray_trace_visualize.hlsl",
                                          "Miss");
         [[maybe_unused]] const size_t miss_id = rt_config.add_shader(miss_shader);
 
         // hitgroup
         const Rhi::ShaderSrc    hit_shader(Rhi::ShaderStageEnum::ClosestHit,
-                                        BASE_SHADER_DIR "raytrace_visualize.hlsl",
+                                        BASE_SHADER_DIR "ray_trace_visualize.hlsl",
                                         "ClosestHit");
         Rhi::RayTracingHitGroup hit_group;
         hit_group.m_closest_hit_id = rt_config.add_shader(hit_shader);
@@ -85,21 +81,13 @@ struct RaytraceVisualizePass
         // all raygen and all hit groups
         [[maybe_unused]] const size_t hitgroup_id = rt_config.add_hit_group(hit_group);
 
-        m_rt_pipeline = Rhi::RayTracingPipeline(&device,
-                                                rt_config,
-                                                shader_manager,
-                                                16,
-                                                64,
-                                                2,
-                                                "raytrace_visualize_pipeline");
-        m_rt_sbt = Rhi::RayTracingShaderTable(&device, m_rt_pipeline, "raytrace_visualize_sbt");
+        return rt_config;
     }
 
     void
-    run(Rhi::CommandList & cmd_list, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const uint2 target_resolution)
+    draw_gui()
     {
-        bool       p_open     = true;
-        static int rtvis_mode = 0;
+        bool p_open = true;
         if (ImGui::Begin(typeid(*this).name(), &p_open))
         {
             ImGui::RadioButton("InstanceId", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeInstanceId));
@@ -132,6 +120,23 @@ struct RaytraceVisualizePass
         }
         ImGui::End();
 
+#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
+        // display the debug result (from the previos frame)
+        if (ImGui::Begin("DEBUG_RayTraceVisualizePrintClickedInfo", &p_open))
+        {
+            // print the result from the previous frame.
+            // might have race condition but since it's for debugging a single pixel, it should be fine.
+            const char * mapped_debug_str = static_cast<char *>(m_cpu_temp_buffer.map());
+            ImGui::Text(mapped_debug_str);
+            m_cpu_temp_buffer.unmap();
+        }
+        ImGui::End();
+#endif
+    }
+
+    void
+    render(Rhi::CommandList & cmd_list, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const uint2 target_resolution)
+    {
         RaytraceVisualizeCbParams cb_params;
         CameraProperties          cam_props = ctx.m_fps_camera.get_camera_props();
         cb_params.m_camera_inv_proj         = inverse(cam_props.m_proj);
@@ -208,22 +213,11 @@ struct RaytraceVisualizePass
             .set_u_rw_structured_buffer(0, m_debug_print_buffer, sizeof(uint32_t), DEBUG_RayTraceVisualizePrintChar4BufferSize)
             .update();
 
-        // display the debug result (from the previos frame)
-        if (ImGui::Begin("DEBUG_RayTraceVisualizePrintClickedInfo", &p_open))
-        {
-            cmd_list.copy_buffer_region(m_cpu_temp_buffer, 0, m_debug_print_buffer, 0, sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize);
-
-            // print the result from the previous frame.
-            // might have race condition but since it's for debugging a single pixel, it should be fine.
-            const char * mapped_debug_str = static_cast<char *>(m_cpu_temp_buffer.map());
-            ImGui::Text(mapped_debug_str);
-            m_cpu_temp_buffer.unmap();
-        }
-        ImGui::End();
+        cmd_list.copy_buffer_region(m_cpu_temp_buffer, 0, m_debug_print_buffer, 0, sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize);
 #endif
 
-        cmd_list.bind_raytrace_pipeline(m_rt_pipeline);
-        cmd_list.bind_raytrace_descriptor_set(descriptor_sets);
+        cmd_list.bind_ray_trace_pipeline(m_rt_pipeline);
+        cmd_list.bind_ray_trace_descriptor_set(descriptor_sets);
         cmd_list.trace_rays(m_rt_sbt, target_resolution.x, target_resolution.y);
     }
 };

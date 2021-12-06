@@ -1,13 +1,9 @@
 #pragma once
 
+#include "pch/pch.h"
+
 #include "rhi/commontypes/rhienums.h"
 #include "rhi/commontypes/rhishadersrc.h"
-//
-#include <wrl/client.h>
-// dxcapi must be included after wrl/client
-#include "../inc/dxcapi.h"
-//
-
 #include "rhi/shadercompiler/hlsldxccompiler.h"
 
 struct SimpleDxcBlob : public IDxcBlob
@@ -35,9 +31,17 @@ struct SimpleDxcBlob : public IDxcBlob
     }
 };
 
-// Shader Manager
-// cache all shaders and
-struct ShaderManager
+struct ShaderBinaryHandle
+{
+    using ShaderSrc = Rhi::TShaderSrc<Rhi::ShaderStageEnum>;
+
+    ShaderSrc              m_shader_src;
+    std::vector<std::byte> m_raw_binary;
+};
+
+// Shader Binary Manager responsibles for caching shaders.
+// It initializes, hotreloads, recompiles the shaders on demand.
+struct ShaderBinaryManager
 {
     template <typename T>
     using ComPtr    = Microsoft::WRL::ComPtr<T>;
@@ -63,11 +67,11 @@ struct ShaderManager
         ShaderCacheFileBody   m_body;
     };
 
-    std::filesystem::path   m_cache_folder;
+    std::filesystem::path m_cache_folder;
 
-    ShaderManager() {}
-
-    ShaderManager(const std::filesystem::path & cache_folder) : m_cache_folder(cache_folder) {}
+    ShaderBinaryManager(const std::filesystem::path & cache_folder) : m_cache_folder(cache_folder)
+    {
+    }
 
     // ShaderBlob
     std::vector<std::byte>
@@ -115,7 +119,10 @@ private:
     get_shader_cache_path(const ShaderSrc & shader_src) const
     {
         std::string val = shader_src.m_file_path.string();
-        val += "_" + shader_src.m_entry;
+        if (!HlslDxcCompiler::GetTargetProfile(shader_src.m_shader_stage).m_is_lib)
+        {
+            val += "_" + shader_src.m_entry;
+        }
         val += "_";
         for (const std::string & define : shader_src.m_defines)
         {
@@ -162,7 +169,7 @@ private:
         assert(ofs.is_open());
         ShaderCacheFileHeader header;
         header.m_version                = 0;
-        header.m_compiled_shader_size   = blob->GetBufferSize();
+        header.m_compiled_shader_size   = static_cast<uint32_t>(blob->GetBufferSize());
         header.m_src_last_modified_time = src_modified_time;
         ofs.write(reinterpret_cast<char *>(&header.m_version), sizeof(header.m_version))
             .write(reinterpret_cast<char *>(&header.m_src_last_modified_time), sizeof(header.m_src_last_modified_time))

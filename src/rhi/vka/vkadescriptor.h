@@ -99,7 +99,7 @@ struct DescriptorSet
     set_b_constant_buffer(const size_t binding, const Buffer & buffer, const size_t i_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
-        buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
+        buf_info.setBuffer(static_cast<vk::Buffer>(buffer.m_vma_buffer_bundle->m_vk_buffer));
         buf_info.setOffset(0);
         buf_info.setRange(buffer.m_size_in_bytes);
         m_descriptor_buffer_infos.push_back(buf_info);
@@ -124,7 +124,7 @@ struct DescriptorSet
                             const size_t first_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
-        buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
+        buf_info.setBuffer(static_cast<vk::Buffer>(buffer.m_vma_buffer_bundle->m_vk_buffer));
         buf_info.setOffset(stride * first_element);
         buf_info.setRange(stride * num_elements);
         m_descriptor_buffer_infos.push_back(buf_info);
@@ -149,7 +149,7 @@ struct DescriptorSet
                               const size_t first_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
-        buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
+        buf_info.setBuffer(static_cast<vk::Buffer>(buffer.m_vma_buffer_bundle->m_vk_buffer));
         buf_info.setOffset(stride * first_element);
         buf_info.setRange(stride * num_elements);
         m_descriptor_buffer_infos.push_back(buf_info);
@@ -214,7 +214,7 @@ struct DescriptorSet
                                const size_t first_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
-        buf_info.setBuffer(buffer.m_vma_buffer_bundle->m_vk_buffer);
+        buf_info.setBuffer(static_cast<vk::Buffer>(buffer.m_vma_buffer_bundle->m_vk_buffer));
         buf_info.setOffset(stride * first_element);
         buf_info.setRange(stride * num_elements);
         m_descriptor_buffer_infos.push_back(buf_info);

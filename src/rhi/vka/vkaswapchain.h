@@ -22,7 +22,7 @@ struct Swapchain
     size_t m_num_images = 0;
     int2   m_resolution = { 0, 0 };
 
-    const Device * m_device;
+    const Device & m_device;
     vk::Format     m_vk_format;
 
     std::vector<vk::UniqueSemaphore> is_image_acquired_semaphore;
@@ -32,12 +32,10 @@ struct Swapchain
     uint32_t    m_image_index = 0;
     std::string m_name        = "";
 
-    Swapchain() {}
-
-    Swapchain(const std::string & name, const Device * device, const Window & window)
+    Swapchain(const std::string & name, const Device & device, const Window & window)
     : m_device(device), m_name(name)
     {
-        init(*device, window);
+        init(device, window);
     }
 
     void
@@ -48,11 +46,11 @@ struct Swapchain
 
         uint32_t   i_image;
         vk::Result is_image_acquired =
-            m_device->m_vk_ldevice->acquireNextImageKHR(*m_vk_swapchain,
-                                                        std::numeric_limits<uint64_t>::max(),
-                                                        semaphore,
-                                                        {},
-                                                        &i_image);
+            m_device.m_vk_ldevice->acquireNextImageKHR(*m_vk_swapchain,
+                                                       std::numeric_limits<uint64_t>::max(),
+                                                       semaphore,
+                                                       {},
+                                                       &i_image);
 
         if (is_image_acquired != vk::Result::eSuccess)
             Logger::Error<true>(__FUNCTION__, " acquireNextImage yields error ", vk::to_string(is_image_acquired));
@@ -73,7 +71,7 @@ struct Swapchain
         present_info.setSwapchainCount(1u);
         present_info.setPImageIndices(&m_image_index);
 
-        vk::Result result = m_device->m_vk_present_queue.presentKHR(&present_info);
+        vk::Result result = m_device.m_vk_present_queue.presentKHR(&present_info);
         return result == vk::Result::eSuccess;
     }
 
@@ -97,9 +95,9 @@ private:
 
         // get format, color_space and present mode
         auto [format, color_space] =
-            get_surface_info(&device, device.m_vk_surface, SupportedLdrSwapchainFormats, SupportedLdrSwapchainColorSpaces);
+            get_surface_info(device, device.m_vk_surface, SupportedLdrSwapchainFormats, SupportedLdrSwapchainColorSpaces);
         vk::PresentModeKHR present_mode =
-            get_present_mode(&device, device.m_vk_surface, SupportedSwapchainPresentMode);
+            get_present_mode(device, device.m_vk_surface, SupportedSwapchainPresentMode);
 
         // create family indices
         const uint32_t queue_family_indices[] = { device.m_family_indices.m_graphics,
@@ -142,7 +140,7 @@ private:
     }
 
     std::tuple<vk::Format, vk::ColorSpaceKHR>
-    get_surface_info(const Device *                      device,
+    get_surface_info(const Device &                      device,
                      const vk::SurfaceKHR &              surface,
                      const std::set<vk::Format> &        supported_swapchain_formats,
                      const std::set<vk::ColorSpaceKHR> & supported_swapchain_color_spaces)
@@ -153,7 +151,7 @@ private:
         vk::Format        m_swapchain_format;
         vk::ColorSpaceKHR m_swapchain_color_space;
         {
-            const auto surface_formats = device->m_vk_pdevice.getSurfaceFormatsKHR(surface);
+            const auto surface_formats = device.m_vk_pdevice.getSurfaceFormatsKHR(surface);
             for (const vk::SurfaceFormatKHR & surface_format : surface_formats)
             {
                 if (supported_swapchain_formats.count(surface_format.format) > 0 &&
@@ -175,11 +173,11 @@ private:
     }
 
     vk::PresentModeKHR
-    get_present_mode(const Device *                       device,
+    get_present_mode(const Device &                       device,
                      const vk::SurfaceKHR &               surface,
                      const std::set<vk::PresentModeKHR> & supported_swapchain_present_mode)
     {
-        const auto present_modes = device->m_vk_pdevice.getSurfacePresentModesKHR(surface);
+        const auto present_modes = device.m_vk_pdevice.getSurfacePresentModesKHR(surface);
         bool       found_wanted_present_mode = false;
         for (const vk::PresentModeKHR & present_mode : present_modes)
         {

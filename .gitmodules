@@ -31,3 +31,6 @@
 [submodule "dep/imgui"]
 	path = dep/imgui
 	url = https://github.com/ocornut/imgui
+[submodule "dep/Vulkan-Headers"]
+	path = dep/Vulkan-Headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers

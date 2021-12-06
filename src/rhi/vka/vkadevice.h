@@ -1,6 +1,7 @@
 #pragma once
 
-#include "vkacommon.h"
+#include "pch/pch.h"
+#include "rhi/vka/vkacommon.h"
 
 #ifdef USE_VKA
 
@@ -9,9 +10,8 @@
 #include "VulkanAfterCrash.h"
 #endif
 
-#include "vkaentry.h"
-
 #include "core/uniquehandle.h"
+#include "rhi/vka/vkaentry.h"
 
 namespace VKA_NAME
 {
@@ -132,10 +132,10 @@ struct Device
 
         // allocate vma
         VmaAllocatorCreateInfo vma_allocator_ci = {};
-        vma_allocator_ci.physicalDevice         = m_vk_pdevice;
-        vma_allocator_ci.device                 = *m_vk_ldevice;
-        vma_allocator_ci.instance               = physical_device.m_vk_instance;
-        vma_allocator_ci.vulkanApiVersion       = physical_device.m_vk_api_made_version;
+        vma_allocator_ci.physicalDevice         = static_cast<VkPhysicalDevice>(m_vk_pdevice);
+        vma_allocator_ci.device                 = static_cast<VkDevice>(*m_vk_ldevice);
+        vma_allocator_ci.instance         = static_cast<VkInstance>(physical_device.m_vk_instance);
+        vma_allocator_ci.vulkanApiVersion = physical_device.m_vk_api_made_version;
         vma_allocator_ci.flags = VmaAllocatorCreateFlagBits::VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
         vmaCreateAllocator(&vma_allocator_ci, &m_vma_allocator.get());
         Logger::Info(__FUNCTION__, " create vma allocator");
@@ -213,7 +213,7 @@ struct Device
     void
     name_vkhpp_object(const HppType & vk_object, const std::string & name = "") const
     {
-        CType base_vk_object = vk_object;
+        CType base_vk_object = static_cast<CType>(vk_object);
         if (enable_debug() && !name.empty())
         {
             vk::DebugMarkerObjectNameInfoEXT name_info = {};
@@ -406,9 +406,9 @@ private:
         std::set<size_t> selected_queue_family_ids;
         const uint32_t   not_found = std::numeric_limits<uint32_t>::max();
 
-        auto select_queue_family = [&](const vk::QueueFlags queue_flag,
-                                       const bool           need_present,
-                                       const bool           check_if_selected) -> uint32_t {
+        auto select_queue_family =
+            [&](const vk::QueueFlags queue_flag, const bool need_present, const bool check_if_selected) -> uint32_t
+        {
             for (size_t i_queue_family = 0; i_queue_family < queue_family_properties.size(); i_queue_family++)
             {
                 if (check_if_selected)

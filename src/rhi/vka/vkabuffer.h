@@ -14,7 +14,7 @@ struct Buffer
         VmaAllocator      m_vma_allocator;
         VmaAllocation     m_vma_allocation;
         VmaAllocationInfo m_vma_alloc_info;
-        VkBuffer          m_vk_buffer = nullptr;
+        VkBuffer          m_vk_buffer;
     };
 
     struct VmaBufferBundleDeleter
@@ -28,7 +28,7 @@ struct Buffer
     };
 
     UniqueVarHandle<VmaBufferBundle, VmaBufferBundleDeleter> m_vma_buffer_bundle;
-    size_t                                                   m_size_in_bytes;
+    DeviceSizeT                                              m_size_in_bytes;
     vk::DeviceAddress m_device_address = std::numeric_limits<vk::DeviceAddress>::max();
 
     Buffer() {}
@@ -37,7 +37,7 @@ struct Buffer
            const Device &        device,
            const BufferUsageEnum buffer_usage_,
            const MemoryUsageEnum memory_usage,
-           const size_t          buffer_size_in_bytes)
+           const DeviceSizeT     buffer_size_in_bytes)
     : m_size_in_bytes(buffer_size_in_bytes)
     {
         BufferUsageEnum buffer_usage = buffer_usage_;
@@ -107,6 +107,12 @@ struct Buffer
         {
             vmaUnmapMemory(m_vma_buffer_bundle->m_vma_allocator, m_vma_buffer_bundle->m_vma_allocation);
         }
+    }
+
+    vk::Buffer
+    get_vk_buffer() const
+    {
+        return vk::Buffer(m_vma_buffer_bundle->m_vk_buffer);
     }
 };
 } // namespace VKA_NAME

@@ -21,13 +21,6 @@
 #include <dxgi1_6.h>
 //
 #include <D3D12MemAlloc.h>
-//
-#include <iostream>
-#include <map>
-#include <span>
-#include <string>
-#include <variant>
-
 //#define USE_NSIGHT_AFTERMATH
 
 #define DXCK(ResultEvalExpression)                                                       \

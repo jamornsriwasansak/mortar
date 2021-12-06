@@ -1,5 +1,5 @@
 #include "common/color_conversion.h"
-#include "raytrace_visualize_params.h"
+#include "ray_trace_visualize_params.h"
 #include "shared/bindless_table.h"
 #include "shared/camera_params.h"
 #include "shared/compact_vertex.h"
@@ -164,20 +164,6 @@ ClosestHit(inout Payload payload, const Attributes attrib)
     {
         payload.m_color = mat.get_roughness(texcoord).rrr;
     }
-
-#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
-    DebugWriter dwriter;
-    dwriter.init();
-    if (all(u_debug_cbparams.m_selected_thread_id.xy == DispatchRaysIndex().xy))
-    {
-        dwriter.c('g'); dwriter.c('e'); dwriter.c('o'); dwriter.c('m'); dwriter.c(' '); dwriter.c('i'); dwriter.c('d'); dwriter.c(':');
-        dwriter.write_uint(GeometryIndex());
-        dwriter.c('\n');
-        dwriter.c('p'); dwriter.c('r'); dwriter.c('i'); dwriter.c('m'); dwriter.c(' '); dwriter.c('i'); dwriter.c('d'); dwriter.c(':');
-        dwriter.write_uint(PrimitiveIndex());
-        dwriter.c('\n');
-    }
-#endif
 }
 
 [shader("miss")] void

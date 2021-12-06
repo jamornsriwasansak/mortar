@@ -1,20 +1,10 @@
 #pragma once
 
+#include "pch/pch.h"
+
 #include "logger.h"
-#include "noncopyable.h"
 #include "stopwatch.h"
 #include "vmath.h"
-
-#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
-#include <vulkan/vulkan.hpp>
-// glfw must come after vulkan
-#include <GLFW/glfw3.h>
-
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
-
-#include <optional>
-#include <vector>
 
 struct GlfwHandler
 {
@@ -94,8 +84,6 @@ struct KeyEvent
 
 struct Window
 {
-    MAKE_NONCOPYABLE(Window);
-
     DECL_KEY_EVENT(A);
     DECL_KEY_EVENT(B);
     DECL_KEY_EVENT(C);
@@ -138,8 +126,6 @@ struct Window
     std::string                   m_title;
     AvgFrameTimeStopWatch         m_stop_watch;
     std::optional<vk::SurfaceKHR> m_vk_surface;
-
-    Window() {}
 
     Window(const std::string title, const int2 & resolution)
     {

@@ -4,13 +4,11 @@
 
 #ifdef USE_VKA
 
+#include "pch/pch.h"
+
 #include "vkadevice.h"
 #include "vkaswapchain.h"
 #include "vkatexture.h"
-
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_vulkan.h"
-#include "imgui.h"
 
 namespace VKA_NAME
 {
@@ -22,10 +20,21 @@ struct ImGuiRenderPass
     int2                               m_resolution;
     vk::UniqueDescriptorPool           m_descriptor_pool = {};
 
-    ImGuiRenderPass() {}
-
-    ImGuiRenderPass(const Device * device, const Window & window, const Swapchain & swapchain)
+    ImGuiRenderPass(const Device & device, const Window & window, const Swapchain & swapchain)
     {
+        static bool InitializeImgui = []
+        {
+            // setup dear imgui
+            IMGUI_CHECKVERSION();
+            ImGui::CreateContext();
+            ImGui::StyleColorsDark();
+            ImGuiIO & io = ImGui::GetIO();
+            io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+            io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto/Roboto-Medium.ttf", 15);
+            return true;
+        }();
+
         vk::AttachmentDescription attachment = {};
         attachment.setFormat(swapchain.m_vk_format);
         attachment.setSamples(vk::SampleCountFlagBits::e1);
@@ -60,7 +69,7 @@ struct ImGuiRenderPass
         info.setPSubpasses(&subpass);
         info.setDependencyCount(1);
         info.setPDependencies(&dependency);
-        m_vk_render_pass = device->m_vk_ldevice->createRenderPassUnique(info);
+        m_vk_render_pass = device.m_vk_ldevice->createRenderPassUnique(info);
 
         ImGuiIO & io = ImGui::GetIO();
 
@@ -84,24 +93,24 @@ struct ImGuiRenderPass
         vk::DescriptorPoolCreateInfo pool_ci;
         pool_ci.setPoolSizes(pool_sizes);
         pool_ci.setMaxSets(100);
-        m_descriptor_pool = device->m_vk_ldevice->createDescriptorPoolUnique(pool_ci);
+        m_descriptor_pool = device.m_vk_ldevice->createDescriptorPoolUnique(pool_ci);
 
         ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.Instance                  = device->m_vk_instance;
-        init_info.PhysicalDevice            = device->m_vk_pdevice;
-        init_info.Device                    = device->m_vk_ldevice.get();
-        init_info.QueueFamily               = device->m_family_indices.m_graphics;
-        init_info.Queue                     = device->m_vk_graphics_queue;
+        init_info.Instance                  = static_cast<VkInstance>(device.m_vk_instance);
+        init_info.PhysicalDevice            = static_cast<VkPhysicalDevice>(device.m_vk_pdevice);
+        init_info.Device                    = static_cast<VkDevice>(device.m_vk_ldevice.get());
+        init_info.QueueFamily               = device.m_family_indices.m_graphics;
+        init_info.Queue                     = static_cast<VkQueue>(device.m_vk_graphics_queue);
         init_info.PipelineCache             = VK_NULL_HANDLE;
-        init_info.DescriptorPool            = m_descriptor_pool.get();
+        init_info.DescriptorPool            = static_cast<VkDescriptorPool>(m_descriptor_pool.get());
         init_info.Allocator                 = nullptr;
         init_info.MinImageCount             = static_cast<uint32_t>(swapchain.m_num_images);
         init_info.ImageCount                = static_cast<uint32_t>(swapchain.m_num_images);
         init_info.CheckVkResultFn           = nullptr;
-        ImGui_ImplVulkan_Init(&init_info, m_vk_render_pass.get());
+        ImGui_ImplVulkan_Init(&init_info, static_cast<VkRenderPass>(m_vk_render_pass.get()));
 
-        device->one_time_command_submit(
-            [&](vk::CommandBuffer cmd_buf) { ImGui_ImplVulkan_CreateFontsTexture(cmd_buf); });
+        device.one_time_command_submit([&](vk::CommandBuffer cmd_buf)
+                                       { ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(cmd_buf)); });
 
         init_or_resize_framebuffer(device, swapchain);
     }
@@ -126,9 +135,9 @@ struct ImGuiRenderPass
     }
 
     void
-    init_or_resize_framebuffer(const Device * device, const Swapchain & swapchain)
+    init_or_resize_framebuffer(const Device & device, const Swapchain & swapchain)
     {
-        auto swapchain_images = device->m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain);
+        auto swapchain_images = device.m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain);
         m_vk_framebuffers.clear();
         m_vk_image_views.clear();
         m_resolution = swapchain.m_resolution;
@@ -136,7 +145,7 @@ struct ImGuiRenderPass
         {
             vk::ImageView       image_views[1];
             vk::UniqueImageView image_view =
-                create_image_view(device->m_vk_ldevice.get(), swapchain_images[i], swapchain.m_vk_format);
+                create_image_view(device.m_vk_ldevice.get(), swapchain_images[i], swapchain.m_vk_format);
             image_views[0] = image_view.get();
 
             vk::FramebufferCreateInfo framebuffer_ci = {};
@@ -147,7 +156,7 @@ struct ImGuiRenderPass
             framebuffer_ci.height = m_resolution.y;
             framebuffer_ci.layers = 1;
 
-            m_vk_framebuffers.push_back(device->m_vk_ldevice->createFramebufferUnique(framebuffer_ci));
+            m_vk_framebuffers.push_back(device.m_vk_ldevice->createFramebufferUnique(framebuffer_ci));
             m_vk_image_views.push_back(std::move(image_view));
         }
     }

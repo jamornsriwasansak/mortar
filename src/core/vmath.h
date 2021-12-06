@@ -1,12 +1,6 @@
 #pragma once
 
-#pragma warning(push, 0)
-#include <glm/glm.hpp>
-#include <glm/gtc/packing.hpp>
-#include <glm/gtx/compatibility.hpp>
-#include <glm/gtx/string_cast.hpp>
-#pragma warning(pop)
-#include <cstdint>
+#include "pch/pch.h"
 
 using namespace glm;
 
@@ -94,12 +88,13 @@ digit(const T num, const uint32_t i_digit)
     return value % 10;
 }
 
-template <typename T, typename U>
+template <typename T>
+concept TUnsignedInt = !std::is_signed<T>::value;
+
+template <TUnsignedInt T, TUnsignedInt U>
 T
 round_up(const T size, const U min_align_size)
 {
-    static_assert(!std::is_signed<T>::value);
-    static_assert(!std::is_signed<U>::value);
     static_assert(std::numeric_limits<T>::max() >= std::numeric_limits<U>::max());
     assert(std::numeric_limits<T>::max() - min_align_size + 1 > size);
 

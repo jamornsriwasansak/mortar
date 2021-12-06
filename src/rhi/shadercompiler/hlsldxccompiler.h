@@ -1,17 +1,12 @@
 #pragma once
 
-#include "rhi/commontypes/rhienums.h"
-#include "rhi/commontypes/rhishadersrc.h"
-//
-#include <wrl/client.h>
-// dxcapi must be included after wrl/client
-#include "../inc/dxcapi.h"
-//
+#include "pch/pch.h"
+
 #include "core/logger.h"
 #include "core/vmath.h"
-//
-#include <filesystem>
-#include <string>
+#include "rhi/commontypes/rhienums.h"
+#include "rhi/commontypes/rhishadersrc.h"
+
 
 struct HlslDxcCompiler
 {
@@ -45,18 +40,24 @@ struct HlslDxcCompiler
         }
     }
 
+    struct TargetProfile
+    {
+        const wchar_t * m_target_profile_str;
+        const bool      m_is_lib;
+    };
+
     template <typename ShaderStageEnum>
-    static const wchar_t *
-    get_target_profile(const ShaderStageEnum shader_stage)
+    static TargetProfile
+    GetTargetProfile(const ShaderStageEnum shader_stage)
     {
         switch (shader_stage)
         {
         case ShaderStageEnum::Vertex:
-            return L"vs_6_2";
+            return { L"vs_6_2", false };
         case ShaderStageEnum::Fragment:
-            return L"ps_6_2";
+            return { L"ps_6_2", false };
         default:
-            return L"lib_6_5";
+            return { L"lib_6_5", true };
         }
     }
 
@@ -203,8 +204,12 @@ struct HlslDxcCompiler
             arguments = get_compiling_argument<false>();
         }
 
-
-        std::wstring wshader_access_point(shader_access_point.begin(), shader_access_point.end());
+        TargetProfile target_profile = GetTargetProfile(shader_stage);
+        std::wstring  wshader_access_point;
+        if (!target_profile.m_is_lib)
+        {
+            wshader_access_point = std::wstring(shader_access_point.begin(), shader_access_point.end());
+        }
 
         // dxc preprocess
         ComPtr<IDxcBlob> preprocessed_source_blob;
@@ -265,10 +270,11 @@ struct HlslDxcCompiler
         {
             ComPtr<IDxcOperationResult> compilation_result;
 
+
             hr = m_compiler->Compile(preprocessed_source_blob.Get(),
                                      wshader_name.c_str(),
                                      wshader_access_point.c_str(),
-                                     get_target_profile(shader_stage),
+                                     target_profile.m_target_profile_str,
                                      arguments->data(),
                                      static_cast<UINT32>(arguments->size()),
                                      dxc_defines.data(),

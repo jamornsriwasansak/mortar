@@ -1,13 +1,9 @@
 #pragma once
 
+#include "pch/pch.h"
+
 #include "rhi/commontypes/rhienums.h"
 #include "rhi/commontypes/rhishadersrc.h"
-
-#include <spirv_reflect.h>
-#include <vulkan/vulkan.hpp>
-
-#include <string>
-#include <vector>
 
 struct VkReflectionResult
 {

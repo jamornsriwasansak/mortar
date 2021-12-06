@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pch/pch.h"
 #include "vkacommon.h"
 
 #ifdef USE_VKA
@@ -100,7 +101,8 @@ struct Entry
 
         // create surface
         VkSurfaceKHR vksurface;
-        VkResult err = glfwCreateWindowSurface(m_vk_instance.get(), window.m_glfw_window, nullptr, &vksurface);
+        VkInstance   vk_instance = static_cast<VkInstance>(m_vk_instance.get());
+        VkResult err = glfwCreateWindowSurface(vk_instance, window.m_glfw_window, nullptr, &vksurface);
         if (err)
         {
             Logger::Critical<true>(__FUNCTION__, " creating surface failed ", vk::to_string(vk::Result(err)));
