@@ -81,14 +81,14 @@ struct Swapchain
     }
 
     void
-    update_image_index([[maybe_unused]] const Semaphore & semaphore)
+    update_image_index([[maybe_unused]] const Semaphore * semaphore)
     {
         // present in dx12 automatically queue the next frame so wait semaphore is never been used.
         m_image_index = m_dx_swapchain->GetCurrentBackBufferIndex();
     }
 
     bool
-    present([[maybe_unused]] const Semaphore & wait_semaphore)
+    present([[maybe_unused]] const Semaphore * wait_semaphore)
     {
         // present in dx12 automatically queue the next frame so wait semaphore is never been used.
         // TODO:: allow use of vsync through swapchain

@@ -5,13 +5,13 @@
 
 #ifdef USE_VKA
 
-//#define USE_VULKAN_AFTER_CRASH
-#ifdef USE_VULKAN_AFTER_CRASH
-#include "VulkanAfterCrash.h"
-#endif
+    //#define USE_VULKAN_AFTER_CRASH
+    #ifdef USE_VULKAN_AFTER_CRASH
+        #include "VulkanAfterCrash.h"
+    #endif
 
-#include "core/uniquehandle.h"
-#include "rhi/vka/vkaentry.h"
+    #include "core/uniquehandle.h"
+    #include "rhi/vka/vkaentry.h"
 
 namespace VKA_NAME
 {
@@ -57,7 +57,7 @@ struct Device
         }
     };
     UniquePtrHandle<VmaAllocator, VmaAllocatorDeleter> m_vma_allocator;
-#ifdef USE_VULKAN_AFTER_CRASH
+    #ifdef USE_VULKAN_AFTER_CRASH
     struct VkAfterCrashDeviceDeleter
     {
         void
@@ -76,7 +76,7 @@ struct Device
     };
     UniquePtrHandle<VkAfterCrash_Device, VkAfterCrashDeviceDeleter> m_vkac_device;
     UniquePtrHandle<VkAfterCrash_Buffer, VkAfterCrashBufferDeleter> m_vkac_buffer;
-#endif
+    #endif
     uint32_t * m_vkac_crash_data = nullptr;
 
     Device() {}
@@ -140,7 +140,7 @@ struct Device
         vmaCreateAllocator(&vma_allocator_ci, &m_vma_allocator.get());
         Logger::Info(__FUNCTION__, " create vma allocator");
 
-#ifdef USE_VULKAN_AFTER_CRASH
+    #ifdef USE_VULKAN_AFTER_CRASH
         VkAfterCrash_DeviceCreateInfo vkac_device_ci;
         vkac_device_ci.vkPhysicalDevice = m_vk_pdevice;
         vkac_device_ci.vkDevice         = m_vk_ldevice.get();
@@ -149,7 +149,7 @@ struct Device
         VkAfterCrash_BufferCreateInfo vkac_buffer_ci;
         vkac_buffer_ci.markerCount = 1000;
         VKCK(VkAfterCrash_CreateBuffer(m_vkac_device.get(), &vkac_buffer_ci, &m_vkac_buffer.get(), &m_vkac_crash_data));
-#endif
+    #endif
     }
 
     FeaturesAvailable
@@ -202,11 +202,11 @@ struct Device
     inline bool
     enable_debug() const
     {
-#ifdef NDEBUG
+    #ifdef NDEBUG
         return false;
-#else
+    #else
         return m_debug;
-#endif
+    #endif
     }
 
     template <typename HppType, typename CType>
@@ -310,6 +310,7 @@ private:
         // specify device features
         vk::PhysicalDeviceFeatures device_features = {};
         device_features.setSamplerAnisotropy(VK_TRUE);
+        device_features.setShaderInt16(VK_TRUE);
         device_features.setShaderInt64(VK_TRUE);
 
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR feature_raytracing_accel = {};
@@ -321,14 +322,18 @@ private:
         feature_raytracing_pipeline.setRayTraversalPrimitiveCulling(VK_TRUE);
         feature_raytracing_pipeline.setPNext(&feature_raytracing_accel);
 
+        vk::PhysicalDevice16BitStorageFeatures feature_16bit_storage = {};
+        feature_16bit_storage.setStorageBuffer16BitAccess(VK_TRUE);
+        feature_16bit_storage.setPNext(&feature_raytracing_pipeline);
+
         vk::PhysicalDeviceVulkan12Features device_vulkan12_features = {};
         device_vulkan12_features.setBufferDeviceAddress(VK_TRUE);
         device_vulkan12_features.setStorageBuffer8BitAccess(VK_TRUE);
         device_vulkan12_features.setShaderStorageBufferArrayNonUniformIndexing(VK_TRUE);
         device_vulkan12_features.setRuntimeDescriptorArray(VK_TRUE);
-        device_vulkan12_features.setPNext(&feature_raytracing_pipeline);
         device_vulkan12_features.setUniformAndStorageBuffer8BitAccess(VK_TRUE);
         device_vulkan12_features.setShaderFloat16(VK_TRUE);
+        device_vulkan12_features.setPNext(&feature_16bit_storage);
 
         // allow Uniform and Storage buffer to not to be restricted by std140 and std430 (aligned by 32)
         device_vulkan12_features.setScalarBlockLayout(VK_TRUE);

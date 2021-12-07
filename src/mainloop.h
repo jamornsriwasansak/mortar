@@ -162,7 +162,6 @@ struct MainLoop
     {
         GlfwHandler::Inst().poll_events();
 
-
         int2 current_resolution = m_window.get_resolution();
         if (current_resolution.y == 0)
         {
@@ -184,7 +183,7 @@ struct MainLoop
         per_flight_resource.reset();
 
         // update image index
-        m_swapchain.update_image_index(per_flight_resource.m_image_ready_semaphore);
+        m_swapchain.update_image_index(&per_flight_resource.m_image_ready_semaphore);
 
         PerSwapResource & per_swap_resource = m_per_swap_resources[m_swapchain.m_image_index];
 
@@ -229,7 +228,7 @@ struct MainLoop
             m_imgui_render_pass.end_frame();
         }
 
-        if (!m_swapchain.present(per_flight_resource.m_image_presentable_semaphore) ||
+        if (!m_swapchain.present(&per_flight_resource.m_image_presentable_semaphore) ||
             any(notEqual(current_resolution, m_swapchain_resolution)))
         {
             for (PerFlightResource & resource : m_per_flight_resources)

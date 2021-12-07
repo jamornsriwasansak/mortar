@@ -106,6 +106,9 @@ struct Renderer
         bool p_open = true;
         m_pass_ray_trace_visualize.draw_gui();
         {
+            bool k = true;
+            ImGui::ShowDemoWindow(&k);
+
             if (ImGui::Begin("Renderer Raytrace Mode", &p_open))
             {
                 ImGui::RadioButton("VisualizeDebug",

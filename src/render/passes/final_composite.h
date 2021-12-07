@@ -34,8 +34,6 @@ struct RenderToFramebufferPass
                    [[maybe_unused]] ShaderBinaryManager &            shader_binary_manager,
                    [[maybe_unused]] const Rhi::FramebufferBindings & fb)
     {
-        // m_raster_pipeline = Rhi::RasterPipeline("final_composite_pipeline", device, get_shader_srcs(), shader_binary_manager, fb);
-        assert(false);
     }
 
     void

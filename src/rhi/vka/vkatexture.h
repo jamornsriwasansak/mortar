@@ -94,7 +94,7 @@ struct Texture
     }
 
     Texture(const std::string &    name,
-            const Device *         device,
+            const Device &         device,
             const TextureUsageEnum usage_,
             const TextureStateEnum initial_state_,
             const FormatEnum       format,
@@ -139,24 +139,24 @@ struct Texture
         VkImage           vma_vk_image;
         VmaAllocation     vma_allocation;
         VmaAllocationInfo vma_alloc_info;
-        VKCK(vmaCreateImage(*device->m_vma_allocator, &image_ci, &vma_alloc_ci, &vma_vk_image, &vma_allocation, &vma_alloc_info));
+        VKCK(vmaCreateImage(*device.m_vma_allocator, &image_ci, &vma_alloc_ci, &vma_vk_image, &vma_allocation, &vma_alloc_info));
 
         // setup image bundle
         VmaImageBundle image_bundle;
         image_bundle.m_vk_image       = vma_vk_image;
         image_bundle.m_vma_allocation = vma_allocation;
-        image_bundle.m_vma_allocator  = device->m_vma_allocator.get();
+        image_bundle.m_vma_allocator  = device.m_vma_allocator.get();
         image_bundle.m_vma_alloc_info = vma_alloc_info;
         m_vma_image_bundle.m_value    = image_bundle;
 
         m_vk_image      = static_cast<vk::Image>(vma_vk_image);
         m_vk_format     = static_cast<vk::Format>(format);
-        m_vk_image_view = create_image_view(device->m_vk_ldevice.get(), m_vk_image, m_vk_format);
+        m_vk_image_view = create_image_view(device.m_vk_ldevice.get(), m_vk_image, m_vk_format);
 
         if (!name.empty())
         {
-            device->name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
-            device->name_vkhpp_object<vk::ImageView, vk::ImageView::CType>(*m_vk_image_view,
+            device.name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
+            device.name_vkhpp_object<vk::ImageView, vk::ImageView::CType>(*m_vk_image_view,
                                                                            name + "_image_view");
         }
 
@@ -208,7 +208,7 @@ struct Texture
         }
         else
         {
-            device->one_time_command_submit([&](vk::CommandBuffer cmd_buf) {
+            device.one_time_command_submit([&](vk::CommandBuffer cmd_buf) {
                 transition_image_layout(cmd_buf, m_vk_image, vk::ImageLayout::eUndefined, initial_layout);
             });
         }

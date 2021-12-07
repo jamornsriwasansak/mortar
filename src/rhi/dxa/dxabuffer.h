@@ -11,11 +11,10 @@ namespace DXA_NAME
 {
 struct Buffer
 {
-    BufferUsageEnum                    m_buffer_usage              = BufferUsageEnum::None;
-    MemoryUsageEnum                    m_memory_usage              = MemoryUsageEnum::None;
-    D3D12MAHandle<D3D12MA::Allocation> m_allocation                = nullptr;
-    size_t                             m_size_in_bytes             = 0;
-    D3D12_GPU_DESCRIPTOR_HANDLE        m_dx_cbv_srv_uav_gpu_handle = { 0 };
+    BufferUsageEnum                    m_buffer_usage  = BufferUsageEnum::None;
+    MemoryUsageEnum                    m_memory_usage  = MemoryUsageEnum::None;
+    D3D12MAHandle<D3D12MA::Allocation> m_allocation    = nullptr;
+    size_t                             m_size_in_bytes = 0;
 
     Buffer() {}
 
