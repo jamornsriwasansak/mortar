@@ -9,6 +9,15 @@ main()
     constexpr bool is_debug = true;
 #endif
 
+    // setup dear imgui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+    ImGuiIO & io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto/Roboto-Medium.ttf", 15);
+
     // default parameters
     const size_t num_flights = 2;
     const int2   target_resolution(1920, 1080);
@@ -26,5 +35,6 @@ main()
     ShaderBinaryManager shader_binary_manager("shadercache");
     MainLoop main_loop(device, main_window, num_flights, shader_binary_manager, swapchain);
     main_loop.run();
+
     return 0;
 }

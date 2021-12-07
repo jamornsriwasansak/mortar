@@ -21,7 +21,7 @@ struct ImgImporter
         Rhi::FormatEnum format_enum =
             desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
         Rhi::Texture dst(filepath_str,
-                         &staging_buffer_manager->m_device,
+                         staging_buffer_manager->m_device,
                          Rhi::TextureUsageEnum::Sampled,
                          Rhi::TextureStateEnum::FragmentShaderVisible,
                          format_enum,

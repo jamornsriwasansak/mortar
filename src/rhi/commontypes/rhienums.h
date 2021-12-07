@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pch/pch.h"
-#include "rhi/setting.h"
 
 #ifndef DEFINE_ENUM_FLAG_OPERATORS
 #define DEFINE_ENUM_FLAG_OPERATORS(ENUMTYPE)                                       \

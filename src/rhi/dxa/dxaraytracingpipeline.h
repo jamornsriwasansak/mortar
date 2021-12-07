@@ -3,13 +3,11 @@
 #include "dxacommon.h"
 #ifdef USE_DXA
 
-#include "dxadevice.h"
-#include "dxilreflection.h"
-
-#include "rhi/commontypes/rhishadersrc.h"
-#include "rhi/shadercompiler/hlsldxccompiler.h"
-
-#include <optional>
+    #include "dxadevice.h"
+    #include "dxilreflection.h"
+    #include "pch/pch.h"
+    #include "rhi/commontypes/rhishadersrc.h"
+    #include "rhi/shadercompiler/hlsldxccompiler.h"
 
 namespace DXA_NAME
 {
@@ -22,7 +20,7 @@ struct RayTracingHitGroup
 
 struct RayTracingPipelineConfig
 {
-    std::vector<ShaderSrc> m_shader_srcs;
+    std::vector<ShaderSrc>          m_shader_srcs;
     std::vector<RayTracingHitGroup> m_hit_groups;
 
     RayTracingPipelineConfig() {}
@@ -64,7 +62,7 @@ struct RayTracingPipelineConfig
 
 struct RayTracingPipeline
 {
-    ComPtr<ID3D12StateObject> m_dx_rt_pso;
+    ComPtr<ID3D12StateObject>           m_dx_rt_pso;
     ComPtr<ID3D12StateObjectProperties> m_dx_rt_pso_props;
 
     using RootSignatureIndex                               = size_t;
@@ -73,12 +71,12 @@ struct RayTracingPipeline
     ComPtr<ID3D12RootSignature> m_dx_global_root_signature = nullptr;
     std::map<std::tuple<D3D_SHADER_INPUT_TYPE, SpaceIndex, BindPoint>, DxilReflection::DescriptorInfo> m_descriptor_set_info;
 
-    size_t m_raygen_record_size    = 0;
-    size_t m_miss_record_size      = 0;
-    size_t m_hit_group_record_size = 0;
-    size_t m_num_raygens           = 0;
-    size_t m_num_misses            = 0;
-    size_t m_num_hit_groups        = 0;
+    size_t                    m_raygen_record_size    = 0;
+    size_t                    m_miss_record_size      = 0;
+    size_t                    m_hit_group_record_size = 0;
+    size_t                    m_num_raygens           = 0;
+    size_t                    m_num_misses            = 0;
+    size_t                    m_num_hit_groups        = 0;
     std::vector<std::wstring> m_raygen_renamed_symbols;
     std::vector<std::wstring> m_miss_renamed_symbols;
     std::vector<std::wstring> m_hit_group_renamed_symbols;
@@ -86,9 +84,9 @@ struct RayTracingPipeline
     struct ShaderEntry
     {
         ComPtr<ID3D12RootSignature> m_local_root_signature = nullptr;
-        ComPtr<IDxcBlob> m_compiled_shader_blob            = nullptr;
-        size_t m_num_root_parameters                       = 0;
-        std::wstring m_entry_symbol   = L""; // name of the shader entry to be exported
+        ComPtr<IDxcBlob>            m_compiled_shader_blob = nullptr;
+        size_t                      m_num_root_parameters  = 0;
+        std::wstring                m_entry_symbol = L""; // name of the shader entry to be exported
         std::wstring m_renamed_symbol = L""; // name after the shader entry after renamed
 
         using BindPoint  = size_t;
@@ -101,20 +99,21 @@ struct RayTracingPipeline
         std::optional<size_t> m_closest_hit_id;
         std::optional<size_t> m_any_hit_id;
         std::optional<size_t> m_intersect_id;
-        std::wstring m_symbol = L"";
+        std::wstring          m_symbol = L"";
     };
 
     RayTracingPipeline() {}
 
-    RayTracingPipeline(const Device * device,
+    RayTracingPipeline(const std::string &              name,
+                       const Device &                   device,
                        const RayTracingPipelineConfig & rt_lib,
-                       const size_t attribute_size,
-                       const size_t payload_size,
-                       const size_t recursion_depth,
-                       const std::string & name = "")
+                       const ShaderBinaryManager &      shader_binary_manager,
+                       const size_t                     attribute_size,
+                       const size_t                     payload_size,
+                       const size_t                     recursion_depth)
     {
         HlslDxcCompiler hlsl_dxil_compiler;
-        DxilReflection dxil_reflector;
+        DxilReflection  dxil_reflector;
 
         std::vector<ShaderEntry> shader_entries(rt_lib.m_shader_srcs.size());
         for (size_t i = 0; i < rt_lib.m_shader_srcs.size(); i++)
@@ -153,15 +152,13 @@ struct RayTracingPipeline
             */
 
             // entry
-            const ShaderSrc & shader_src = rt_lib.m_shader_srcs[i];
-            ShaderEntry & entry          = shader_entries[i];
-
-            const size_t unique_id           = i;
+            const ShaderSrc & shader_src     = rt_lib.m_shader_srcs[i];
+            ShaderEntry &     entry          = shader_entries[i];
+            const size_t      unique_id      = i;
             const std::string renamed_symbol = shader_src.m_entry + "_" + std::to_string(unique_id);
 
             // compile shader blob
-            ComPtr<IDxcBlob> dxc_blob =
-                hlsl_dxil_compiler.compile_as_dxil(rt_lib.m_shader_srcs[i], rt_lib.m_shader_srcs[i].m_defines);
+            ComPtr<IDxcBlob> dxc_blob = hlsl_dxil_compiler.compile_as_dxil(rt_lib.m_shader_srcs[i]);
 
             entry.m_compiled_shader_blob = dxc_blob;
             // entry.m_num_root_parameters  = root_signature_desc.NumParameters;
@@ -185,7 +182,7 @@ struct RayTracingPipeline
         std::vector<HitGroupRecord> hit_group_records(rt_lib.m_hit_groups.size());
         for (size_t i = 0; i < rt_lib.m_hit_groups.size(); i++)
         {
-            const auto & hit_group            = rt_lib.m_hit_groups[i];
+            const auto &     hit_group        = rt_lib.m_hit_groups[i];
             HitGroupRecord & hit_shader_group = hit_group_records[i];
 
             // automatically generate hit_group symbol
@@ -228,7 +225,7 @@ struct RayTracingPipeline
             for (size_t i_shader = 0; i_shader < shaders.size(); i_shader++)
             {
                 // TODO:: avoid compiling the shader TWICE!
-                assert(false);
+                // assert(false);
                 const auto & shader_src  = rt_lib.m_shader_srcs[i_shader];
                 shaders[i_shader].first  = hlsl_dxil_compiler.compile_as_dxil(shader_src);
                 shaders[i_shader].second = shader_src.m_shader_stage;
@@ -246,46 +243,38 @@ struct RayTracingPipeline
                                      D3D12_ROOT_SIGNATURE_FLAG_NONE);
             ComPtr<ID3DBlob> signature = nullptr;
             ComPtr<ID3DBlob> error     = nullptr;
-            HRESULT root_description_create_result =
+            HRESULT          root_description_create_result =
                 D3D12SerializeRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
             if (error != nullptr)
             {
                 Logger::Critical<true>(__FUNCTION__ " ", static_cast<char *>(error->GetBufferPointer()));
             }
             DXCK(root_description_create_result);
-            DXCK(device->m_dx_device->CreateRootSignature(0,
-                                                          signature->GetBufferPointer(),
-                                                          signature->GetBufferSize(),
-                                                          IID_PPV_ARGS(&m_dx_global_root_signature)));
+            DXCK(device.m_dx_device->CreateRootSignature(0,
+                                                         signature->GetBufferPointer(),
+                                                         signature->GetBufferSize(),
+                                                         IID_PPV_ARGS(&m_dx_global_root_signature)));
+            device.name_dx_object(m_dx_global_root_signature, name + "_global_root_signature");
 
             m_descriptor_set_info = reflection_result.m_space_bindings;
         }
 
         init_pso(device, rt_lib, shader_entries, hit_group_records, attribute_size, payload_size, recursion_depth, name);
-
-        if (device->enable_debug())
-        {
-            if (!name.empty())
-            {
-                std::wstring wname(name.begin(), name.end());
-                m_dx_rt_pso->SetName(wname.c_str());
-            }
-        }
+        device.name_dx_object(m_dx_rt_pso, name + "_pso");
     }
 
     void
-    init_pso(const Device * device,
-             const RayTracingPipelineConfig & rt_lib,
-             const std::vector<ShaderEntry> & shader_entries,
+    init_pso(const Device &                      device,
+             const RayTracingPipelineConfig &    rt_lib,
+             const std::vector<ShaderEntry> &    shader_entries,
              const std::vector<HitGroupRecord> & hit_group_records,
-             const size_t attribute_size,
-             const size_t payload_size,
-             const size_t recursion_depth,
-             const std::string & name)
+             const size_t                        attribute_size,
+             const size_t                        payload_size,
+             const size_t                        recursion_depth,
+             const std::string &                 name)
     {
 
-        auto num_shader_entries = [&](const ShaderStageEnum stage) -> size_t
-        {
+        auto num_shader_entries = [&](const ShaderStageEnum stage) -> size_t {
             size_t result = 0;
             for (auto & src : rt_lib.m_shader_srcs)
             {
@@ -297,8 +286,7 @@ struct RayTracingPipeline
             return result;
         };
 
-        auto num_max_inputs = [&](const ShaderStageEnum stage) -> size_t
-        {
+        auto num_max_inputs = [&](const ShaderStageEnum stage) -> size_t {
             size_t max_inputs = 0;
             for (size_t i = 0; i < shader_entries.size(); i++)
             {
@@ -312,8 +300,7 @@ struct RayTracingPipeline
             return max_inputs;
         };
 
-        auto get_record_size = [&](const ShaderStageEnum stage) -> size_t
-        {
+        auto get_record_size = [&](const ShaderStageEnum stage) -> size_t {
             size_t result = 0;
             result += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
             result += num_max_inputs(stage) * 8; // 8 bytes per input
@@ -328,23 +315,23 @@ struct RayTracingPipeline
         const size_t num_records    = num_raygens + num_misses + num_hit_groups;
 
         // subobject for setting up pso
-        std::vector<D3D12_STATE_SUBOBJECT> subobjects(num_shaders      // export dxil library
+        std::vector<D3D12_STATE_SUBOBJECT>   subobjects(num_shaders      // export dxil library
                                                       + num_hit_groups // export hit group
                                                       + num_records * 2 // local root signatures and its association
                                                       + 2   // shader config and its association
                                                       + 1   // global root signature
                                                       + 1); // pipeline config
-        size_t num_subobjects = 0;
-        std::vector<D3D12_EXPORT_DESC> dxil_export_desc(num_shaders);
-        size_t num_dxil_export_desc = 0;
+        size_t                               num_subobjects = 0;
+        std::vector<D3D12_EXPORT_DESC>       dxil_export_desc(num_shaders);
+        size_t                               num_dxil_export_desc = 0;
         std::vector<D3D12_DXIL_LIBRARY_DESC> dxil_library_descs(num_shaders);
-        size_t num_dxil_library_descs = 0;
-        std::vector<D3D12_HIT_GROUP_DESC> hit_group_descs(num_hit_groups);
-        size_t num_hit_group_descs = 0;
-        std::vector<std::array<LPCWSTR, 1>> local_root_signature_symbols_descs(num_records);
-        size_t num_local_root_signature_symbols_descs = 0;
-        std::vector<LPCWSTR> payload_assoc_symbols(num_records);
-        size_t num_payload_assoc_symbols = 0;
+        size_t                               num_dxil_library_descs = 0;
+        std::vector<D3D12_HIT_GROUP_DESC>    hit_group_descs(num_hit_groups);
+        size_t                               num_hit_group_descs = 0;
+        std::vector<std::array<LPCWSTR, 1>>  local_root_signature_symbols_descs(num_records);
+        size_t                               num_local_root_signature_symbols_descs = 0;
+        std::vector<LPCWSTR>                 payload_assoc_symbols(num_records);
+        size_t                               num_payload_assoc_symbols = 0;
         std::vector<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION> local_root_signature_export_assocs(num_records);
         size_t num_local_root_signature_export_assocs = 0;
 
@@ -417,7 +404,7 @@ struct RayTracingPipeline
         for (size_t i = 0; i < shader_entries.size() + hit_group_records.size(); i++)
         {
             ID3D12RootSignature * const * root_signature_ptr = nullptr;
-            LPCWSTR symbol                                   = nullptr;
+            LPCWSTR                       symbol             = nullptr;
 
             if (i < shader_entries.size())
             {
@@ -428,7 +415,7 @@ struct RayTracingPipeline
                 {
                     if (entry.m_local_root_signature == nullptr)
                     {
-                        root_signature_ptr = device->m_dx_empty_local_root_signature.GetAddressOf();
+                        root_signature_ptr = device.m_dx_empty_local_root_signature.GetAddressOf();
                     }
                     else
                     {
@@ -443,7 +430,7 @@ struct RayTracingPipeline
                 const auto & hit_group = hit_group_records[i - shader_entries.size()];
                 if (shader_entries[hit_group.m_closest_hit_id.value()].m_local_root_signature == nullptr)
                 {
-                    root_signature_ptr = device->m_dx_empty_local_root_signature.GetAddressOf();
+                    root_signature_ptr = device.m_dx_empty_local_root_signature.GetAddressOf();
                 }
                 else
                 {
@@ -551,7 +538,7 @@ struct RayTracingPipeline
         pipeline_desc.pSubobjects             = subobjects.data();
 
         // create state object
-        DXCK(device->m_dx_device->CreateStateObject(&pipeline_desc, IID_PPV_ARGS(&m_dx_rt_pso)));
+        DXCK(device.m_dx_device->CreateStateObject(&pipeline_desc, IID_PPV_ARGS(&m_dx_rt_pso)));
 
         DXCK(m_dx_rt_pso->QueryInterface(IID_PPV_ARGS(&m_dx_rt_pso_props)));
 
@@ -566,49 +553,48 @@ struct RayTracingPipeline
         m_num_misses            = num_shader_entries(ShaderStageEnum::Miss);
         m_num_hit_groups        = num_hit_groups;
 
-        device->name_dx_object(m_dx_rt_pso, name);
+        device.name_dx_object(m_dx_rt_pso, name);
     }
 };
 
 struct RayTracingShaderTable
 {
-    D3D12MAHandle<D3D12MA::Allocation> m_shader_table_buffer = nullptr;
-    D3D12_DISPATCH_RAYS_DESC m_dx_dispatch_rays_desc         = {};
+    D3D12MAHandle<D3D12MA::Allocation> m_shader_table_buffer   = nullptr;
+    D3D12_DISPATCH_RAYS_DESC           m_dx_dispatch_rays_desc = {};
 
     RayTracingShaderTable() {}
 
-    RayTracingShaderTable(const Device * device,
+    RayTracingShaderTable(const std::string &        name,
+                          const Device &             device,
                           const RayTracingPipeline & pipeline,
-                          const std::string & name,
                           // TODO:: these gpu descriptor handle should be set in a different function
                           const D3D12_GPU_DESCRIPTOR_HANDLE raygen_handle    = { 0 },
                           const D3D12_GPU_DESCRIPTOR_HANDLE miss_handle      = { 0 },
                           const D3D12_GPU_DESCRIPTOR_HANDLE hit_group_handle = { 0 })
     {
-        auto & desc = m_dx_dispatch_rays_desc;
-
         const size_t raygen_size   = pipeline.m_raygen_record_size * pipeline.m_num_raygens;
         const size_t miss_size     = pipeline.m_miss_record_size * pipeline.m_num_misses;
         const size_t hitgroup_size = pipeline.m_hit_group_record_size * pipeline.m_num_hit_groups;
-        const size_t rounded_raygen_size = round_up(raygen_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
-        const size_t rounded_miss_size = round_up(miss_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+        const size_t rounded_raygen_size =
+            round_up(raygen_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+        const size_t rounded_miss_size =
+            round_up(miss_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
         const size_t rounded_hitgroup_size =
             round_up(hitgroup_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
         const size_t shader_table_size = rounded_raygen_size + rounded_miss_size + rounded_hitgroup_size;
 
         // allocate resource
-        m_shader_table_buffer = [&]()
-        {
+        m_shader_table_buffer = [&]() {
             // Create shader table buffer
             D3D12MA::ALLOCATION_DESC alloc_desc = {};
             alloc_desc.Flags                    = D3D12MA::ALLOCATION_FLAG_COMMITTED;
             alloc_desc.HeapType                 = D3D12_HEAP_TYPE_UPLOAD;
 
-            ID3D12Resource * resource;
+            ID3D12Resource *      resource;
             D3D12MA::Allocation * allocation = nullptr;
             CD3DX12_RESOURCE_DESC buffer_desc =
                 CD3DX12_RESOURCE_DESC::Buffer(shader_table_size, D3D12_RESOURCE_FLAG_NONE);
-            DXCK(device->m_d3d12ma->CreateResource(&alloc_desc,
+            DXCK(device.m_d3d12ma->CreateResource(&alloc_desc,
                                                    &buffer_desc,
                                                    D3D12_RESOURCE_STATE_GENERIC_READ,
                                                    nullptr,
@@ -630,7 +616,7 @@ struct RayTracingShaderTable
                         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             if (pipeline.m_raygen_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
             {
-                // TODO:: copy multiple handles to support multiple uniforms in local root signatures
+                // TODO:: copy multiple handles to support multiple local root signatures
                 std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &raygen_handle, sizeof(raygen_handle));
             }
             sbtp += pipeline.m_raygen_record_size;
@@ -644,7 +630,7 @@ struct RayTracingShaderTable
                         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             if (pipeline.m_miss_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
             {
-                // TODO:: copy multiple handles to support multiple uniforms in local root signatures
+                // TODO:: copy multiple handles to support multiple local root signatures
                 std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &miss_handle, sizeof(miss_handle));
             }
             sbtp += pipeline.m_miss_record_size;
@@ -658,7 +644,7 @@ struct RayTracingShaderTable
                         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             if (pipeline.m_hit_group_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
             {
-                // TODO:: copy multiple handles to support multiple uniforms in local root signatures
+                // TODO:: copy multiple handles to support multiple local root signatures
                 std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &hit_group_handle, sizeof(hit_group_handle));
             }
             sbtp += pipeline.m_hit_group_record_size;
@@ -667,6 +653,7 @@ struct RayTracingShaderTable
         m_shader_table_buffer->GetResource()->Unmap(0, nullptr);
 
         // raygen
+        D3D12_DISPATCH_RAYS_DESC & desc = m_dx_dispatch_rays_desc;
         desc.RayGenerationShaderRecord.StartAddress =
             m_shader_table_buffer->GetResource()->GetGPUVirtualAddress();
         desc.RayGenerationShaderRecord.SizeInBytes = raygen_size;
@@ -688,7 +675,7 @@ struct RayTracingShaderTable
         desc.CallableShaderTable.StrideInBytes = 0;
 
         // set debug name
-        if (device->enable_debug())
+        if (device.enable_debug())
         {
             if (!name.empty())
             {

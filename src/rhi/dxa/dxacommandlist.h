@@ -1,30 +1,32 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "pch/pch.h"
+
 #ifdef USE_DXA
 
-#include "dxabuffer.h"
-#include "dxadescriptor.h"
-#include "dxaentry.h"
-#include "dxafence.h"
-#include "dxaframebufferbinding.h"
-#include "dxaimguirenderpass.h"
-#include "dxarasterpipeline.h"
-#include "dxaraytracingpipeline.h"
-#include "dxasemaphore.h"
-#include "dxaswapchain.h"
-#include "dxatexture.h"
+    #include "dxabuffer.h"
+    #include "dxacommon.h"
+    #include "dxadescriptor.h"
+    #include "dxaentry.h"
+    #include "dxafence.h"
+    #include "dxaframebufferbinding.h"
+    #include "dxaimguirenderpass.h"
+    #include "dxarasterpipeline.h"
+    #include "dxaraytracingpipeline.h"
+    #include "dxasemaphore.h"
+    #include "dxaswapchain.h"
+    #include "dxatexture.h"
 
 namespace DXA_NAME
 {
 struct CommandList
 {
-    ComPtr<ID3D12GraphicsCommandList4> m_dx_cmd_list = nullptr;
-    ID3D12CommandQueue * m_dx_cmd_queue              = nullptr;
+    ComPtr<ID3D12GraphicsCommandList4> m_dx_cmd_list  = nullptr;
+    ID3D12CommandQueue *               m_dx_cmd_queue = nullptr;
 
     // TODO:: avoid std::list
     std::list<std::vector<D3D12_VERTEX_BUFFER_VIEW>> m_bound_vertex_buffer_views;
-    ID3D12RootSignature * m_dx_root_signature = nullptr;
+    ID3D12RootSignature *                            m_dx_root_signature = nullptr;
 
     CommandList() {}
 
@@ -122,16 +124,16 @@ struct CommandList
     }
 
     void
-    bind_raytrace_descriptor_set(const std::span<DescriptorSet> & desc_sets)
+    bind_ray_trace_descriptor_set(const std::span<DescriptorSet> & desc_sets)
     {
         bind_descriptor_set(desc_sets.data(), desc_sets.size(), false);
     }
 
     void
-    bind_index_buffer(const Buffer & buffer,
+    bind_index_buffer(const Buffer &  buffer,
                       const IndexType index_type,
-                      const size_t size_in_bytes   = std::numeric_limits<size_t>::max(),
-                      const size_t offset_in_bytes = 0)
+                      const size_t    size_in_bytes   = std::numeric_limits<size_t>::max(),
+                      const size_t    offset_in_bytes = 0)
     {
         D3D12_INDEX_BUFFER_VIEW index_buffer_view;
         index_buffer_view.BufferLocation =
@@ -194,9 +196,9 @@ struct CommandList
 
     void
     bind_vertex_buffer(const Buffer & buffer,
-                       const size_t stride_size_in_bytes,
-                       const size_t size_in_bytes = std::numeric_limits<size_t>::max(),
-                       const size_t offset        = 0)
+                       const size_t   stride_size_in_bytes,
+                       const size_t   size_in_bytes = std::numeric_limits<size_t>::max(),
+                       const size_t   offset        = 0)
     {
         // reserve vertex buffer view and resize it
         m_bound_vertex_buffer_views.resize(m_bound_vertex_buffer_views.size() + 1);
@@ -211,7 +213,7 @@ struct CommandList
     }
 
     void
-    bind_raytrace_pipeline(const RayTracingPipeline & pipeline)
+    bind_ray_trace_pipeline(const RayTracingPipeline & pipeline)
     {
         m_dx_cmd_list->SetComputeRootSignature(pipeline.m_dx_global_root_signature.Get());
         m_dx_cmd_list->SetPipelineState1(pipeline.m_dx_rt_pso.Get());
@@ -238,10 +240,10 @@ struct CommandList
 
     void
     copy_buffer_region(const Buffer & dst_buffer,
-                       const size_t dst_offset_in_bytes,
+                       const size_t   dst_offset_in_bytes,
                        const Buffer & src_buffer,
-                       const size_t src_offset_in_bytes,
-                       const size_t size_in_bytes)
+                       const size_t   src_offset_in_bytes,
+                       const size_t   size_in_bytes)
     {
         m_dx_cmd_list->CopyBufferRegion(dst_buffer.m_allocation->GetResource(),
                                         dst_offset_in_bytes,
@@ -314,7 +316,7 @@ struct CommandList
     prepare_swapchain_as_render_target(const Swapchain & swapchain)
     {
         CD3DX12_RESOURCE_BARRIER barrier_present_to_rtv = CD3DX12_RESOURCE_BARRIER::Transition(
-            swapchain.m_dx_swapchain_resource_pointers[swapchain.m_image_index],
+            swapchain.m_dx_swapchain_resource_pointers[swapchain.m_image_index].Get(),
             D3D12_RESOURCE_STATE_PRESENT,
             D3D12_RESOURCE_STATE_RENDER_TARGET);
         m_dx_cmd_list->ResourceBarrier(1, &barrier_present_to_rtv);
@@ -324,7 +326,7 @@ struct CommandList
     prepare_swapchain_for_present(const Swapchain & swapchain)
     {
         CD3DX12_RESOURCE_BARRIER barrier_rtv_to_present = CD3DX12_RESOURCE_BARRIER::Transition(
-            swapchain.m_dx_swapchain_resource_pointers[swapchain.m_image_index],
+            swapchain.m_dx_swapchain_resource_pointers[swapchain.m_image_index].Get(),
             D3D12_RESOURCE_STATE_RENDER_TARGET,
             D3D12_RESOURCE_STATE_PRESENT);
         m_dx_cmd_list->ResourceBarrier(1, &barrier_rtv_to_present);
@@ -363,9 +365,9 @@ struct CommandList
 
     void
     trace_rays(const RayTracingShaderTable & shader_table,
-               const size_t width  = 1,
-               const size_t height = 1,
-               const size_t depth  = 1)
+               const size_t                  width  = 1,
+               const size_t                  height = 1,
+               const size_t                  depth  = 1)
     {
         // Dispatch rays
         D3D12_DISPATCH_RAYS_DESC desc = shader_table.m_dx_dispatch_rays_desc;

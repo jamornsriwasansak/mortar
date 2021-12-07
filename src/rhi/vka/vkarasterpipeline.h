@@ -200,6 +200,10 @@ struct RasterPipeline
 
         device.name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
     }
+
+    void resize()
+    {
+    }
 };
 } // namespace VKA_NAME
 #endif

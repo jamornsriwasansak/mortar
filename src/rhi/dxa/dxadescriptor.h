@@ -1,16 +1,18 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "pch/pch.h"
+
 #ifdef USE_DXA
 
-#include "dxabuffer.h"
-#include "dxadescriptorpool.h"
-#include "dxarasterpipeline.h"
-#include "dxaraytracingaccel.h"
-#include "dxaraytracingpipeline.h"
-#include "dxasampler.h"
-#include "dxatexture.h"
-#include "dxilreflection.h"
+    #include "dxabuffer.h"
+    #include "dxacommon.h"
+    #include "dxadescriptorpool.h"
+    #include "dxarasterpipeline.h"
+    #include "dxaraytracingaccel.h"
+    #include "dxaraytracingpipeline.h"
+    #include "dxasampler.h"
+    #include "dxatexture.h"
+    #include "dxilreflection.h"
 
 namespace DXA_NAME
 {
@@ -42,9 +44,9 @@ struct DescriptorSet
     DescriptorPool * m_descriptor_pool = nullptr;
     const Device *   m_device          = nullptr;
 
-#ifndef NDEBUG
+    #ifndef NDEBUG
     bool m_updated = false;
-#endif
+    #endif
 
     DescriptorSet() {}
 
@@ -52,9 +54,7 @@ struct DescriptorSet
                   DescriptorPool *                     descriptor_pool,
                   const size_t                         i_set,
                   [[maybe_unused]] const std::string & name = "")
-    : m_device(device),
-      m_set(i_set),
-      m_descriptor_pool(descriptor_pool)
+    : m_device(device), m_set(i_set), m_descriptor_pool(descriptor_pool)
     {
     }
 
@@ -82,8 +82,9 @@ struct DescriptorSet
     {
     }
 
+    template <typename THeap>
     std::optional<DescriptorHandle>
-    get_handle(D3D_SHADER_INPUT_TYPE type, DescriptorHeap * heap, const size_t binding, const size_t i_offset)
+    request_handle(D3D_SHADER_INPUT_TYPE type, DescriptorHeap<THeap> * heap, const size_t binding, const size_t i_offset)
     {
         const auto index       = std::make_tuple(type, m_set, binding);
         const auto iter        = m_descriptor_info->find(index);
@@ -100,7 +101,7 @@ struct DescriptorSet
         DescriptorHandle result;
         if (handle_iter == m_handles.end())
         {
-            DescriptorHandle handle = heap->get_handle(desc_info.m_num_bindings);
+            DescriptorHandle handle = heap->request_handle(desc_info.m_num_bindings);
             m_root_descriptor_tables.push_back(
                 RootDescriptorTable{ desc_info.m_root_signature_index, handle.m_dx_gpu_handle });
             m_handles[index] = handle;
@@ -151,7 +152,7 @@ struct DescriptorSet
         srv_desc.Buffer.StructureByteStride      = 0;
         srv_desc.Buffer.NumElements              = static_cast<UINT>(num_elements);
         std::optional<DescriptorHandle> handle =
-            get_handle(D3D_SIT_BYTEADDRESS, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
+            request_handle(D3D_SIT_BYTEADDRESS, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
 
         if (handle.has_value())
         {
@@ -189,7 +190,7 @@ struct DescriptorSet
         srv_desc.Buffer.StructureByteStride      = static_cast<UINT>(stride);
         srv_desc.Buffer.NumElements              = static_cast<UINT>(num_elements);
         std::optional<DescriptorHandle> handle =
-            get_handle(D3D_SIT_STRUCTURED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
+            request_handle(D3D_SIT_STRUCTURED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
 
         if (handle.has_value())
         {
@@ -213,7 +214,7 @@ struct DescriptorSet
     set_s_sampler(const size_t binding, const Sampler & sampler, const size_t i_sampler = 0)
     {
         std::optional<DescriptorHandle> handle =
-            get_handle(D3D_SIT_SAMPLER, &m_descriptor_pool->m_sampler_heap, binding, i_sampler);
+            request_handle(D3D_SIT_SAMPLER, &m_descriptor_pool->m_sampler_heap, binding, i_sampler);
         if (handle.has_value())
         {
             m_device->m_dx_device->CreateSampler(&sampler.sampler_desc, handle->m_dx_cpu_handle);
@@ -240,7 +241,7 @@ struct DescriptorSet
         srv_desc.ViewDimension                   = D3D12_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels             = 1;
         std::optional<DescriptorHandle> handle =
-            get_handle(D3D_SIT_TEXTURE, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_texture);
+            request_handle(D3D_SIT_TEXTURE, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_texture);
         if (handle.has_value())
         {
             m_device->m_dx_device->CreateShaderResourceView(texture.m_dx_resource, &srv_desc, handle->m_dx_cpu_handle);
@@ -276,7 +277,7 @@ struct DescriptorSet
         srv_desc.RaytracingAccelerationStructure.Location =
             tlas.m_tlas_buffer.m_allocation->GetResource()->GetGPUVirtualAddress();
         std::optional<DescriptorHandle> handle =
-            get_handle(D3D_SIT_RTACCELERATIONSTRUCTURE, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, 0);
+            request_handle(D3D_SIT_RTACCELERATIONSTRUCTURE, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, 0);
         if (handle.has_value())
         {
             m_device->m_dx_device->CreateShaderResourceView(nullptr, &srv_desc, handle->m_dx_cpu_handle);
@@ -301,7 +302,7 @@ struct DescriptorSet
         uav_desc.Format                           = texture.get_view_format();
         uav_desc.ViewDimension                    = D3D12_UAV_DIMENSION_TEXTURE2D;
         std::optional<DescriptorHandle> handle =
-            get_handle(D3D_SIT_UAV_RWTYPED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_texture);
+            request_handle(D3D_SIT_UAV_RWTYPED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_texture);
         if (handle.has_value())
         {
             m_device->m_dx_device->CreateUnorderedAccessView(texture.m_dx_resource,
@@ -337,7 +338,7 @@ struct DescriptorSet
         uav_desc.Buffer.NumElements               = static_cast<UINT>(num_elements);
         uav_desc.ViewDimension                    = D3D12_UAV_DIMENSION_BUFFER;
         std::optional<DescriptorHandle> handle =
-            get_handle(D3D_SIT_UAV_RWSTRUCTURED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
+            request_handle(D3D_SIT_UAV_RWSTRUCTURED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
 
         if (handle.has_value())
         {
@@ -361,9 +362,9 @@ struct DescriptorSet
     void
     update()
     {
-#ifndef NDEBUG
+    #ifndef NDEBUG
         m_updated = true;
-#endif
+    #endif
     }
 };
 } // namespace DXA_NAME

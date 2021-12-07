@@ -45,7 +45,7 @@ struct SceneDesc
 
 struct SceneResource
 {
-    const Rhi::Device * m_device = nullptr;
+    Rhi::Device & m_device;
 
     // command pool
     Rhi::CommandPool m_transfer_cmd_pool;
@@ -85,25 +85,25 @@ struct SceneResource
     std::vector<SceneGeometry>     m_geometries;
     std::vector<SceneBaseInstance> m_base_instances;
 
-    SceneResource(const Rhi::Device & device)
-    : m_device(&device),
+    SceneResource(Rhi::Device & device)
+    : m_device(device),
       m_transfer_cmd_pool("scene_resource_transfer_cmd_pool", device, Rhi::CommandQueueType::Transfer)
     {
         // index buffer vertex buffer
         m_d_vbuf_position = Rhi::Buffer("scene_m_d_vbuf_position",
-                                        *m_device,
+                                        m_device,
                                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
                                             Rhi::BufferUsageEnum::VertexBuffer,
                                         Rhi::MemoryUsageEnum::GpuOnly,
                                         sizeof(float3) * EngineSetting::MaxNumVertices);
         m_d_vbuf_packed   = Rhi::Buffer("scene_m_d_vbuf_packed",
-                                      *m_device,
+                                      m_device,
                                       Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
                                           Rhi::BufferUsageEnum::VertexBuffer,
                                       Rhi::MemoryUsageEnum::GpuOnly,
                                       sizeof(CompactVertex) * EngineSetting::MaxNumVertices);
         m_d_ibuf          = Rhi::Buffer("scene_m_d_ibuf",
-                               *m_device,
+                               m_device,
                                Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
                                    Rhi::BufferUsageEnum::IndexBuffer,
                                Rhi::MemoryUsageEnum::GpuOnly,
@@ -111,7 +111,7 @@ struct SceneResource
 
         // materials
         m_d_materials = Rhi::Buffer("scene_m_d_materials",
-                                    *m_device,
+                                    m_device,
                                     Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                                     Rhi::MemoryUsageEnum::GpuOnly,
                                     sizeof(StandardMaterial) * EngineSetting::MaxNumStandardMaterials);
@@ -119,13 +119,13 @@ struct SceneResource
         // geometry table and geometry offset table
         m_d_base_instance_table =
             Rhi::Buffer("scene_m_d_base_instance_table",
-                        *m_device,
+                        m_device,
                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                         Rhi::MemoryUsageEnum::GpuOnly,
                         sizeof(BaseInstanceTableEntry) * EngineSetting::MaxNumGeometryOffsetTableEntry);
         m_d_geometry_table =
             Rhi::Buffer("scene_m_d_geometry_table",
-                        *m_device,
+                        m_device,
                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                         Rhi::MemoryUsageEnum::GpuOnly,
                         sizeof(GeometryTableEntry) * EngineSetting::MaxNumGeometryTableEntry);
@@ -156,8 +156,10 @@ struct SceneResource
         {
             vertices_base_idxs[i_geometry_info] = num_total_vertices;
             indices_base_idxs[i_geometry_info]  = num_total_indices;
-            num_total_vertices += round_up(geometry_infos[i_geometry_info].m_dst_num_vertices, 32u);
-            num_total_indices += round_up(geometry_infos[i_geometry_info].m_dst_num_indices, 32u);
+            num_total_vertices +=
+                round_up(geometry_infos[i_geometry_info].m_dst_num_vertices, static_cast<size_t>(32));
+            num_total_indices +=
+                round_up(geometry_infos[i_geometry_info].m_dst_num_indices, static_cast<size_t>(32));
         }
 
         // allocate host vertex buffers and index buffer
@@ -196,17 +198,17 @@ struct SceneResource
         Rhi::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
 
         Rhi::Buffer staging_buffer("scene_staging_buffer_vb",
-                                   *m_device,
+                                   m_device,
                                    Rhi::BufferUsageEnum::TransferSrc,
                                    Rhi::MemoryUsageEnum::CpuOnly,
                                    vb_positions1.size() * sizeof(vb_positions1[0]));
         Rhi::Buffer staging_buffer2("scene_staging_buffer_ib",
-                                    *m_device,
+                                    m_device,
                                     Rhi::BufferUsageEnum::TransferSrc,
                                     Rhi::MemoryUsageEnum::CpuOnly,
                                     ib1.size() * sizeof(ib1[0]));
         Rhi::Buffer staging_buffer3("scene_staging_buffer_vb_packed",
-                                    *m_device,
+                                    m_device,
                                     Rhi::BufferUsageEnum::TransferSrc,
                                     Rhi::MemoryUsageEnum::CpuOnly,
                                     vb_packed1.size() * sizeof(vb_packed1[0]));
@@ -350,7 +352,7 @@ struct SceneResource
         Rhi::FormatEnum format_enum =
             desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
         Rhi::Texture texture(filepath_str,
-                             &staging_buffer_manager.m_device,
+                             staging_buffer_manager.m_device,
                              Rhi::TextureUsageEnum::Sampled,
                              Rhi::TextureStateEnum::FragmentShaderVisible,
                              format_enum,
@@ -417,7 +419,7 @@ struct SceneResource
 
                 // build blas
                 m_rt_blases[i_binst] =
-                    Rhi::RayTracingBlas("", *m_device, geom_descs, hint, &staging_buffer_manager);
+                    Rhi::RayTracingBlas("blas_" + std::to_string(i_binst), m_device, geom_descs, hint, &staging_buffer_manager);
                 staging_buffer_manager.submit_all_pending_upload();
             }
         }
@@ -436,7 +438,7 @@ struct SceneResource
             }
 
             // build tlas
-            m_rt_tlas = Rhi::RayTracingTlas("ray_tracing_tlas", *m_device, instances, &staging_buffer_manager);
+            m_rt_tlas = Rhi::RayTracingTlas("ray_tracing_tlas", m_device, instances, &staging_buffer_manager);
             staging_buffer_manager.submit_all_pending_upload();
         }
 
@@ -445,7 +447,7 @@ struct SceneResource
 
         // build material buffer
         Rhi::Buffer staging_buffer("scene_staging_buffer_material",
-                                   *m_device,
+                                   m_device,
                                    Rhi::BufferUsageEnum::TransferSrc,
                                    Rhi::MemoryUsageEnum::CpuOnly,
                                    m_h_materials.size() * sizeof(m_h_materials[0]));
@@ -484,12 +486,12 @@ struct SceneResource
             }
 
             staging_buffer2 = Rhi::Buffer("scene_staging_buffer_geometry_table",
-                                          *m_device,
+                                          m_device,
                                           Rhi::BufferUsageEnum::TransferSrc,
                                           Rhi::MemoryUsageEnum::CpuOnly,
                                           sizeof(GeometryTableEntry) * geometry_table.size());
             staging_buffer3 = Rhi::Buffer("scene_staging_buffer_base_instance",
-                                          *m_device,
+                                          m_device,
                                           Rhi::BufferUsageEnum::TransferSrc,
                                           Rhi::MemoryUsageEnum::CpuOnly,
                                           sizeof(BaseInstanceTableEntry) * base_instance_table.size());
@@ -516,7 +518,7 @@ struct SceneResource
         }
         cmd_list.end();
 
-        Rhi::Fence fence("scene_commit_fence", *m_device);
+        Rhi::Fence fence("scene_commit_fence", m_device);
         fence.reset();
         cmd_list.submit(&fence);
         fence.wait();

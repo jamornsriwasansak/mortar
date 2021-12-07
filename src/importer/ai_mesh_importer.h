@@ -2,19 +2,12 @@
 
 //#define DEBUG_CheckInvalidSplittedGeometry
 
+#include "pch/pch.h"
+
 #include "core/logger.h"
 #include "core/vmath.h"
 #include "shaders/shared/compact_vertex.h"
 #include "shaders/shared/types.h"
-//
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
-#include <filesystem>
-#include <optional>
-#include <set>
-#include <string>
-#include <vector>
 
 struct AiGeometryInfo
 {
@@ -234,7 +227,7 @@ struct AiScene
         // for each face in ai mesh
         const urange32_t face_range      = geometry_info.m_src_faces_range;
         size_t           num_dst_indices = 0;
-        for (uint i_src_face = face_range.m_begin; i_src_face < face_range.m_end; i_src_face++)
+        for (uint32_t i_src_face = face_range.m_begin; i_src_face < face_range.m_end; i_src_face++)
         {
             auto get_dst_vindex = [&](const uint ai_vindex) {
                 // get dst_vindex

@@ -29,8 +29,8 @@ struct Renderer
     RayTracePathTracer      m_pass_ray_trace_primitive_pathtrace;
     RenderToFramebufferPass m_pass_render_to_framebuffer;
 
-    Renderer(const Rhi::Device &                         device,
-             const ShaderBinaryManager &                 shader_binary_manager,
+    Renderer(Rhi::Device &                               device,
+             ShaderBinaryManager &                       shader_binary_manager,
              const std::span<const Rhi::Texture * const> swapchain_attachment,
              const int2                                  resolution,
              const size_t                                num_flights)
@@ -50,21 +50,21 @@ struct Renderer
         result.reserve(swapchain_attachment.size());
         for (size_t i = 0; i < swapchain_attachment.size(); i++)
         {
-            const std::array<const Rhi::Texture *, 1> attachments = { swapchain_attachment[i] };
+            const std::vector<const Rhi::Texture *> attachments = { swapchain_attachment[i] };
             result.emplace_back("framebuffer_bindings", device, attachments);
         }
         return result;
     }
 
     std::vector<PerFlightResource>
-    construct_per_flight_resource(const Rhi::Device & device, const int2 resolution, const size_t num_flights)
+    construct_per_flight_resource(Rhi::Device & device, const int2 resolution, const size_t num_flights)
     {
         std::vector<PerFlightResource> result;
         result.reserve(num_flights);
         for (size_t i = 0; i < num_flights; i++)
         {
             result.emplace_back(Rhi::Texture("flight_" + std::to_string(i) + "_ray_tracing_result",
-                                             &device,
+                                             device,
                                              Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment |
                                                  Rhi::TextureUsageEnum::Sampled,
                                              Rhi::TextureStateEnum::NonFragmentShaderVisible,
@@ -78,7 +78,7 @@ struct Renderer
     }
 
     void
-    resize(const Rhi::Device &                           device,
+    resize(Rhi::Device &                                 device,
            const int2                                    resolution,
            ShaderBinaryManager &                         shader_binary_manager,
            const std::span<const Rhi::Texture * const> & swapchain_attachments,

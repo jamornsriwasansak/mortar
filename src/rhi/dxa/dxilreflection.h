@@ -1,24 +1,12 @@
 #pragma once
 
-#include "rhi/setting.h"
+#include "pch/pch.h"
 
 #ifdef USE_DXA
 
 #include "rhi/commontypes/rhishadersrc.h"
 //
 #include "core/logger.h"
-//
-#include <wrl/client.h>
-// dxcapi must be included after wrl/client
-#include "../inc/d3d12shader.h"
-#include "../inc/dxcapi.h"
-//
-#include <DirectXMath.h>
-#include <directx/d3d12.h>
-#include <directx/d3dx12.h>
-#include <dxgi1_6.h>
-//
-#include <map>
 
 struct DxilReflection
 {

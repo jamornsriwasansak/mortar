@@ -10,12 +10,12 @@ struct RenderToFramebufferPass
     Rhi::Sampler        m_sampler;
 
     RenderToFramebufferPass(const Rhi::Device &              device,
-                            const ShaderBinaryManager &      shader_binary_manager,
+                            ShaderBinaryManager &            shader_binary_manager,
                             const Rhi::FramebufferBindings & fb)
     : m_sampler("render_to_framebuffer_sampler", device),
       m_raster_pipeline("final_composite_pipeline", device, get_shader_srcs(), shader_binary_manager, fb)
     {
-        //init_or_reload(device, shader_binary_manager, fb);
+        // init_or_reload(device, shader_binary_manager, fb);
     }
 
     std::array<Rhi::ShaderSrc, 2>
@@ -30,9 +30,9 @@ struct RenderToFramebufferPass
     }
 
     void
-    init_or_reload(const Rhi::Device &              device,
-                   const ShaderBinaryManager &      shader_binary_manager,
-                   const Rhi::FramebufferBindings & fb)
+    init_or_reload([[maybe_unused]] const Rhi::Device &              device,
+                   [[maybe_unused]] ShaderBinaryManager &            shader_binary_manager,
+                   [[maybe_unused]] const Rhi::FramebufferBindings & fb)
     {
         // m_raster_pipeline = Rhi::RasterPipeline("final_composite_pipeline", device, get_shader_srcs(), shader_binary_manager, fb);
         assert(false);

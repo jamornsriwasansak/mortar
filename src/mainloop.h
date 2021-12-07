@@ -6,8 +6,6 @@
 #include "rhi/rhi.h"
 #include "rhi/shadercompiler/shader_binary_manager.h"
 
-#include <ranges>
-
 struct MainLoop
 {
     struct PerFlightResource
@@ -53,7 +51,7 @@ struct MainLoop
         Rhi::Texture m_swapchain_texture;
         Rhi::Fence * m_swapchain_image_fence;
 
-        PerSwapResource(const std::string & name, const Rhi::Device & device, const Rhi::Swapchain & swapchain, const size_t i_image)
+        PerSwapResource(const std::string & name, Rhi::Device & device, const Rhi::Swapchain & swapchain, const size_t i_image)
         : m_swapchain_texture(name + "_swapchain_texture", device, swapchain, i_image, float4(0.0f, 0.0f, 0.0f, 0.0f)),
           m_swapchain_image_fence(nullptr)
         {
@@ -106,7 +104,7 @@ struct MainLoop
     {
     }
 
-    std::vector<PerFlightResource>
+    static std::vector<PerFlightResource>
     construct_per_flight_resources(const std::string & name, const Rhi::Device & device, const size_t num_flights)
     {
         std::vector<PerFlightResource> result;
@@ -118,8 +116,8 @@ struct MainLoop
         return result;
     }
 
-    std::vector<PerSwapResource>
-    construct_per_swap_resources(const std::string & name, const Rhi::Device & device, const Rhi::Swapchain & swapchain)
+    static std::vector<PerSwapResource>
+    construct_per_swap_resources(const std::string & name, Rhi::Device & device, const Rhi::Swapchain & swapchain)
     {
         std::vector<PerSwapResource> result;
         result.reserve(swapchain.m_num_images);
@@ -130,7 +128,7 @@ struct MainLoop
         return result;
     }
 
-    std::vector<const Rhi::Texture *>
+    static std::vector<const Rhi::Texture *>
     get_swapchain_textures(const std::span<PerSwapResource> & per_swap_resources)
     {
         std::vector<const Rhi::Texture *> result;
@@ -186,7 +184,7 @@ struct MainLoop
         per_flight_resource.reset();
 
         // update image index
-        m_swapchain.update_image_index(&per_flight_resource.m_image_ready_semaphore);
+        m_swapchain.update_image_index(per_flight_resource.m_image_ready_semaphore);
 
         PerSwapResource & per_swap_resource = m_per_swap_resources[m_swapchain.m_image_index];
 
@@ -231,7 +229,7 @@ struct MainLoop
             m_imgui_render_pass.end_frame();
         }
 
-        if (!m_swapchain.present(&per_flight_resource.m_image_presentable_semaphore) ||
+        if (!m_swapchain.present(per_flight_resource.m_image_presentable_semaphore) ||
             any(notEqual(current_resolution, m_swapchain_resolution)))
         {
             for (PerFlightResource & resource : m_per_flight_resources)

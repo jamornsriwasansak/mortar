@@ -32,11 +32,20 @@
         #add_subdirectory(${DEPS_PATH}/DirectXShaderCompiler DXC_PREDEFINED_CONFIG)
     # for windows
         set(DXC_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/DirectXShaderCompilerPrebuilt-win PARENT_SCOPE)
+        set(DXC_BIN
+            ${CMAKE_CURRENT_SOURCE_DIR}/DirectXShaderCompilerPrebuilt-win/bin/x64/dxcompiler.dll
+            ${CMAKE_CURRENT_SOURCE_DIR}/DirectXShaderCompilerPrebuilt-win/bin/x64/dxil.dll
+            PARENT_SCOPE)
         set(DXC_LIB ${CMAKE_CURRENT_SOURCE_DIR}/DirectXShaderCompilerPrebuilt-win/lib/x64/dxcompiler.lib PARENT_SCOPE)
+
+# D3D12MemoryAllocator
+    set(D3D12_MEM_ALLOCATOR_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemoryAllocator/include PARENT_SCOPE)
+    file(GLOB TMP_D3D12_MEM_ALLOCATOR_SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp)
+    set(D3D12_MEM_ALLOCATOR_SOURCE_DIRS ${TMP_D3D12_MEM_ALLOCATOR_SOURCE_DIRS} PARENT_SCOPE)
 
 # spirv reflect
     set(SPIRV_REFLECT_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Reflect PARENT_SCOPE)
-    file(GLOB TMP_SPIRV_REFLECT_SOURCE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Reflect/spirv_reflect.c" PARENT_SCOPE)
+    file(GLOB TMP_SPIRV_REFLECT_SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Reflect/spirv_reflect.c PARENT_SCOPE)
     set(SPIRV_REFLECT_SOURCE_DIRS ${TMP_SPIRV_REFLECT_SOURCE_DIRS} PARENT_SCOPE)
 
 # assimp

@@ -22,18 +22,6 @@ struct ImGuiRenderPass
 
     ImGuiRenderPass(const std::string & name, const Device & device, const Window & window, const Swapchain & swapchain)
     {
-        static bool InitializeImgui = [] {
-            // setup dear imgui
-            IMGUI_CHECKVERSION();
-            ImGui::CreateContext();
-            ImGui::StyleColorsDark();
-            ImGuiIO & io = ImGui::GetIO();
-            io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-            io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto/Roboto-Medium.ttf", 15);
-            return true;
-        }();
-
         vk::AttachmentDescription attachment = {};
         attachment.setFormat(swapchain.m_vk_format);
         attachment.setSamples(vk::SampleCountFlagBits::e1);

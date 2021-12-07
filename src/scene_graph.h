@@ -1,26 +1,22 @@
 #pragma once
 
+#include "pch/pch.h"
 #include "rhi/rhi.h"
-//
-#include <iostream>
-#include <numeric>
-#include <variant>
-#include <vector>
 
 struct SceneGraphGeometry
 {
-    uint32_t m_vbuf_offset               = 0;
-    uint32_t m_ibuf_offset               = 0;
-    size_t m_num_vertices                = 0;
-    size_t m_num_indices                 = 0;
-    uint32_t m_material_id               = 0;
-    bool m_is_static                     = true;
+    uint32_t         m_vbuf_offset       = 0;
+    uint32_t         m_ibuf_offset       = 0;
+    size_t           m_num_vertices      = 0;
+    size_t           m_num_indices       = 0;
+    uint32_t         m_material_id       = 0;
+    bool             m_is_static         = true;
     StandardMaterial m_standard_material = {};
 };
 
 struct SceneGraphLeaf
 {
-    bool m_is_instance     = false;
+    bool     m_is_instance = false;
     uint32_t m_instance_id = std::numeric_limits<uint32_t>::max();
     uint32_t m_geometry_id = std::numeric_limits<uint32_t>::max();
     // multiplication of tranforms from root to leaf
@@ -30,8 +26,8 @@ struct SceneGraphLeaf
 struct SceneGraphNode
 {
     SceneGraphNode * m_parent                                        = nullptr;
-    float4x4 m_transform                                             = glm::identity<float4x4>();
-    bool m_is_dirty                                                  = true;
+    float4x4         m_transform                                     = glm::identity<float4x4>();
+    bool             m_is_dirty                                      = true;
     std::variant<SceneGraphLeaf, std::vector<SceneGraphNode>> m_info = {};
 
     SceneGraphNode(const bool as_leaf)
@@ -130,7 +126,7 @@ struct SceneGraphNode
         else
         {
             const std::vector<SceneGraphNode> & childs = std::get<1>(m_info);
-            size_t sum                                 = 0;
+            size_t                              sum    = 0;
             for (size_t i = 0; i < childs.size(); i++)
             {
                 sum += childs[i].get_num_leaves(func);
