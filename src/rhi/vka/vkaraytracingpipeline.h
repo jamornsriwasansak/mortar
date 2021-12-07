@@ -132,16 +132,16 @@ struct RayTracingPipeline
         }
 
         // shader group create infos pass for raygen shader and miss shader
-        std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_cis(m_num_raygens + m_num_misses
-                                                                             + m_num_hit_groups);
-        size_t                                              i_group = 0;
+        std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shader_group_cis(
+            m_num_raygens + m_num_misses + m_num_hit_groups);
+        size_t i_group = 0;
         for (size_t i = 0; i < rt_lib.m_shader_srcs.size(); i++)
         {
             // id is the same as array index
             const uint32_t shader_id  = static_cast<uint32_t>(i);
             const auto &   shader_src = rt_lib.m_shader_srcs[i];
-            if (shader_src.m_shader_stage == ShaderStageEnum::RayGen
-                || shader_src.m_shader_stage == ShaderStageEnum::Miss)
+            if (shader_src.m_shader_stage == ShaderStageEnum::RayGen ||
+                shader_src.m_shader_stage == ShaderStageEnum::Miss)
             {
                 vk::RayTracingShaderGroupCreateInfoKHR & shader_group_ci = shader_group_cis[i_group];
                 shader_group_ci.setType(vk::RayTracingShaderGroupTypeKHR::eGeneral);
@@ -219,8 +219,6 @@ struct RayTracingShaderTable
     vk::StridedDeviceAddressRegionKHR                  m_hitgroup_device_region;
     vk::StridedDeviceAddressRegionKHR                  m_callable_device_region;
 
-    RayTracingShaderTable() {}
-
     RayTracingShaderTable(const std::string & name, const Device & device, const RayTracingPipeline & pipeline)
     {
         // compute shader handle size
@@ -250,8 +248,8 @@ struct RayTracingShaderTable
 
         // buffer create info
         vk::BufferCreateInfo buffer_ci_tmp;
-        buffer_ci_tmp.setUsage(vk::BufferUsageFlagBits::eShaderDeviceAddress
-                               | vk::BufferUsageFlagBits::eShaderBindingTableKHR);
+        buffer_ci_tmp.setUsage(vk::BufferUsageFlagBits::eShaderDeviceAddress |
+                               vk::BufferUsageFlagBits::eShaderBindingTableKHR);
         buffer_ci_tmp.setSize(data_size);
         VkBufferCreateInfo      buffer_ci    = buffer_ci_tmp;
         VmaAllocationCreateInfo vma_alloc_ci = {};

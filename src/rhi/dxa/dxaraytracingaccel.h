@@ -3,8 +3,8 @@
 #include "dxacommon.h"
 #ifdef USE_DXA
 
-#include "dxabuffer.h"
-#include "dxastagingbuffermanager.h"
+    #include "dxabuffer.h"
+    #include "dxastagingbuffermanager.h"
 
 namespace DXA_NAME
 {
@@ -62,11 +62,11 @@ struct RayTracingBlas
 
     RayTracingBlas() {}
 
-    RayTracingBlas(const Device *                            device,
+    RayTracingBlas(const std::string &                       name,
+                   const Device &                            device,
                    const std::span<RayTracingGeometryDesc> & geometry_descs,
                    const RayTracingBuildHint                 hint,
-                   StagingBufferManager *                    resource_loader,
-                   const std::string &                       name = "")
+                   StagingBufferManager *                    resource_loader)
     {
         // setup input building blas
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottom_level_inputs = {};
@@ -79,8 +79,8 @@ struct RayTracingBlas
 
         // get prebuild information
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottom_level_prebuild_info = {};
-        device->m_dx_device->GetRaytracingAccelerationStructurePrebuildInfo(&bottom_level_inputs,
-                                                                            &bottom_level_prebuild_info);
+        device.m_dx_device->GetRaytracingAccelerationStructurePrebuildInfo(&bottom_level_inputs,
+                                                                           &bottom_level_prebuild_info);
         if (bottom_level_prebuild_info.ResultDataMaxSizeInBytes <= 0)
         {
             Logger::Critical<true>(__FUNCTION__ " bottomlevel's ResultDataMaxSizeInBytes <= 0");
@@ -143,10 +143,10 @@ struct RayTracingTlas
 
     RayTracingTlas() {}
 
-    RayTracingTlas(const Device *                              device,
+    RayTracingTlas(const std::string &                         name,
+                   const Device &                              device,
                    const std::span<const RayTracingInstance> & instances,
-                   StagingBufferManager *                      temp_resource_manager,
-                   const std::string &                         name = "")
+                   StagingBufferManager *                      temp_resource_manager)
     {
         // copy description of instance into the buffer
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
@@ -174,8 +174,7 @@ struct RayTracingTlas
 
         // tlas input info
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO top_level_prebuild_info = {};
-        device->m_dx_device->GetRaytracingAccelerationStructurePrebuildInfo(&top_level_inputs,
-                                                                            &top_level_prebuild_info);
+        device.m_dx_device->GetRaytracingAccelerationStructurePrebuildInfo(&top_level_inputs, &top_level_prebuild_info);
         if (top_level_prebuild_info.ResultDataMaxSizeInBytes <= 0)
         {
             Logger::Critical<true>(__FUNCTION__ " toplevel's ResultDataMaxSizeInBytes <= 0");

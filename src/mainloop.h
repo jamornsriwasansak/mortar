@@ -6,11 +6,6 @@
 #include "rhi/rhi.h"
 #include "rhi/shadercompiler/shader_binary_manager.h"
 
-#include "assetbrowser.h"
-#include "assetbrowserquick.h"
-
-#include <ranges>
-
 struct MainLoop
 {
     struct PerFlightResource
@@ -56,7 +51,7 @@ struct MainLoop
         Rhi::Texture m_swapchain_texture;
         Rhi::Fence * m_swapchain_image_fence;
 
-        PerSwapResource(const std::string & name, const Rhi::Device & device, const Rhi::Swapchain & swapchain, const size_t i_image)
+        PerSwapResource(const std::string & name, Rhi::Device & device, const Rhi::Swapchain & swapchain, const size_t i_image)
         : m_swapchain_texture(name + "_swapchain_texture", device, swapchain, i_image, float4(0.0f, 0.0f, 0.0f, 0.0f)),
           m_swapchain_image_fence(nullptr)
         {
@@ -79,8 +74,6 @@ struct MainLoop
     FpsCamera             m_camera;
     int2                  m_swapchain_resolution = int2(0, 0);
 
-    AssetBrowserQuick m_asset_browser;
-
     Renderer m_renderer;
 
     bool m_is_reload_shader_needed = true;
@@ -99,7 +92,7 @@ struct MainLoop
       m_shader_binary_manager(shader_binary_manager),
       m_per_flight_resources(construct_per_flight_resources("main_flight_resource", device, num_flights)),
       m_per_swap_resources(construct_per_swap_resources("main_swap_resources", device, swapchain)),
-      m_imgui_render_pass(device, window, swapchain),
+      m_imgui_render_pass("main_imgui_render_pass", device, window, swapchain),
       m_camera(float3(10.0f, 10.0f, 10.0f),
                float3(0.0f, 0.0f, 0.0f),
                float3(0.0f, 1.0f, 0.0f),
@@ -111,7 +104,7 @@ struct MainLoop
     {
     }
 
-    std::vector<PerFlightResource>
+    static std::vector<PerFlightResource>
     construct_per_flight_resources(const std::string & name, const Rhi::Device & device, const size_t num_flights)
     {
         std::vector<PerFlightResource> result;
@@ -123,8 +116,8 @@ struct MainLoop
         return result;
     }
 
-    std::vector<PerSwapResource>
-    construct_per_swap_resources(const std::string & name, const Rhi::Device & device, const Rhi::Swapchain & swapchain)
+    static std::vector<PerSwapResource>
+    construct_per_swap_resources(const std::string & name, Rhi::Device & device, const Rhi::Swapchain & swapchain)
     {
         std::vector<PerSwapResource> result;
         result.reserve(swapchain.m_num_images);
@@ -135,7 +128,7 @@ struct MainLoop
         return result;
     }
 
-    std::vector<const Rhi::Texture *>
+    static std::vector<const Rhi::Texture *>
     get_swapchain_textures(const std::span<PerSwapResource> & per_swap_resources)
     {
         std::vector<const Rhi::Texture *> result;
@@ -168,7 +161,6 @@ struct MainLoop
     loop(const size_t i_flight)
     {
         GlfwHandler::Inst().poll_events();
-
 
         int2 current_resolution = m_window.get_resolution();
         if (current_resolution.y == 0)

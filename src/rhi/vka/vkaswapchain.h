@@ -62,7 +62,7 @@ struct Swapchain
     present(const Semaphore * semaphore)
     {
         vk::PresentInfoKHR present_info = {};
-        if (semaphore != nullptr)
+        if (semaphore)
         {
             present_info.setPWaitSemaphores(&semaphore->m_vk_semaphore.get());
             present_info.setWaitSemaphoreCount(1u);

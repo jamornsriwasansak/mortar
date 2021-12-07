@@ -3,7 +3,7 @@
 #include "dxacommon.h"
 #ifdef USE_DXA
 
-#include "dxadevice.h"
+    #include "dxadevice.h"
 
 namespace DXA_NAME
 {
@@ -11,9 +11,7 @@ struct Sampler
 {
     D3D12_SAMPLER_DESC sampler_desc = {};
 
-    Sampler() {}
-
-    Sampler([[maybe_unused]] const Device * device)
+    Sampler([[maybe_unused]] const std::string & name, [[maybe_unused]] const Device & device)
     {
         sampler_desc.Filter         = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
         sampler_desc.AddressU       = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -26,5 +24,5 @@ struct Sampler
         sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME
 #endif

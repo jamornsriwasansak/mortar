@@ -70,9 +70,12 @@ struct FramebufferBindings
             const auto dattach = depth;
             const auto loadop  = vk::AttachmentLoadOp::eLoad;
 
-            vk::ImageLayout attachment_layout = dattach->get_attachment_image_layout(false);
-            vk::ImageLayout initial_image_layout =
-                loadop == vk::AttachmentLoadOp::eLoad ? attachment_layout : vk::ImageLayout::eUndefined;
+            vk::ImageLayout attachment_layout    = dattach->get_attachment_image_layout(false);
+            vk::ImageLayout initial_image_layout = vk::ImageLayout::eUndefined;
+            if constexpr (loadop == vk::AttachmentLoadOp::eLoad)
+            {
+                initial_image_layout = attachment_layout;
+            }
 
             vk::AttachmentReference ref = {};
             ref.setAttachment(static_cast<uint32_t>(num_attachments - 1));

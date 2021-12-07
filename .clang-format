@@ -32,6 +32,7 @@ DerivePointerBinding: false
 DerivePointerAlignment: false
 IndentCaseLabels: false
 IndentFunctionDeclarationAfterType: false
+IndentPPDirectives: BeforeHash
 IndentWidth: 4
 Language: Cpp
 MaxEmptyLinesToKeep: 2

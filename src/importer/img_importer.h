@@ -20,15 +20,15 @@ struct ImgImporter
         assert(desired_channel == 4 || desired_channel == 1);
         Rhi::FormatEnum format_enum =
             desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
-        Rhi::Texture dst(&staging_buffer_manager->m_device,
+        Rhi::Texture dst(filepath_str,
+                         staging_buffer_manager->m_device,
                          Rhi::TextureUsageEnum::Sampled,
                          Rhi::TextureStateEnum::FragmentShaderVisible,
                          format_enum,
                          resolution,
                          image_bytes,
                          staging_buffer_manager,
-                         float4(),
-                         filepath_str);
+                         float4());
         staging_buffer_manager->submit_all_pending_upload();
         stbi_image_free(image);
         return dst;

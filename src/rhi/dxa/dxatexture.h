@@ -3,9 +3,9 @@
 #include "dxacommon.h"
 #ifdef USE_DXA
 
-#include "dxadevice.h"
-#include "dxastagingbuffermanager.h"
-#include "dxaswapchain.h"
+    #include "dxadevice.h"
+    #include "dxastagingbuffermanager.h"
+    #include "dxaswapchain.h"
 
 namespace DXA_NAME
 {
@@ -20,28 +20,28 @@ struct Texture
 
     Texture() {}
 
-    Texture(Device *            device,
+    Texture(const std::string & name,
+            Device &            device,
             const Swapchain &   swapchain,
             const size_t        i_image,
-            const float4        clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f),
-            const std::string & name        = "")
+            const float4        clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f))
     : m_resolution(swapchain.m_resolution), m_dx_format(swapchain.m_dx_format), m_clear_value(clear_value)
     {
-        m_dx_resource = swapchain.m_dx_swapchain_resource_pointers[i_image];
+        m_dx_resource = swapchain.m_dx_swapchain_resource_pointers[i_image].Get();
         m_dx_format   = swapchain.m_dx_format;
         init_rtv(device);
-        device->name_dx_object(m_dx_resource, name);
+        device.name_dx_object(m_dx_resource, name);
     }
 
-    Texture(Device *               device,
+    Texture(const std::string &    name,
+            Device &               device,
             const TextureUsageEnum texture_usage,
             const TextureStateEnum initial_state,
             const FormatEnum       format,
             const int2             resolution,
             const std::byte *      initial_data        = nullptr,
             StagingBufferManager * initial_data_loader = nullptr,
-            const float4           clear_value         = float4(0.0f, 0.0f, 0.0f, 0.0f),
-            const std::string &    name                = "")
+            const float4           clear_value         = float4(0.0f, 0.0f, 0.0f, 0.0f))
     : m_resolution(resolution), m_dx_format(static_cast<DXGI_FORMAT>(format)), m_clear_value(clear_value)
     {
         bool is_color_render_target = false;
@@ -110,12 +110,12 @@ struct Texture
         // allocate resource
         ID3D12Resource *      resource   = nullptr;
         D3D12MA::Allocation * allocation = nullptr;
-        device->m_d3d12ma->CreateResource(&alloc_desc,
-                                          &resource_desc,
-                                          temp_initial_usage,
-                                          p_clear_value,
-                                          &allocation,
-                                          IID_PPV_ARGS(&resource));
+        device.m_d3d12ma->CreateResource(&alloc_desc,
+                                         &resource_desc,
+                                         temp_initial_usage,
+                                         p_clear_value,
+                                         &allocation,
+                                         IID_PPV_ARGS(&resource));
 
         // check if allocation has problem
         if (allocation == nullptr)
@@ -172,7 +172,7 @@ struct Texture
             init_dsv(device, static_cast<DXGI_FORMAT>(format));
         }
 
-        device->name_dx_object(resource, name);
+        device.name_dx_object(resource, name);
     }
 
     bool
@@ -200,13 +200,13 @@ struct Texture
 
 private:
     void
-    init_rtv(Device * device)
+    init_rtv(Device & device)
     {
-        m_dx_dsv_rtv_cpu_handle = device->m_rtv_descriptor_heap.get_rtv_handle(m_dx_resource).m_dx_cpu_handle;
+        m_dx_dsv_rtv_cpu_handle = device.m_rtv_descriptor_heap.get_rtv_handle(m_dx_resource).m_dx_cpu_handle;
     }
 
     void
-    init_dsv(Device * device, const DXGI_FORMAT format)
+    init_dsv(Device & device, const DXGI_FORMAT format)
     {
         // create depth stencil view in descriptor heap
         D3D12_DEPTH_STENCIL_VIEW_DESC depth_stencil_desc = {};
@@ -215,7 +215,7 @@ private:
         depth_stencil_desc.Flags                         = D3D12_DSV_FLAG_NONE;
 
         m_dx_dsv_rtv_cpu_handle =
-            device->m_dsv_descriptor_heap.get_dsv_handle(depth_stencil_desc, m_dx_resource).m_dx_cpu_handle;
+            device.m_dsv_descriptor_heap.get_dsv_handle(depth_stencil_desc, m_dx_resource).m_dx_cpu_handle;
     }
 };
 } // namespace DXA_NAME

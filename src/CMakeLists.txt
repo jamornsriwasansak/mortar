@@ -5,16 +5,19 @@ add_executable(mortar
     pch/vma.cpp
     ${SPIRV_REFLECT_SOURCE_DIRS}
     ${IMGUI_SOURCE_DIRS}
-    ${IMGUI_BACKEND_SOURCE_DIRS})
+    ${IMGUI_BACKEND_SOURCE_DIRS}
+    ${D3D12_MEM_ALLOCATOR_SOURCE_DIRS})
 
-target_link_libraries(mortar PRIVATE
+target_link_libraries(
+    mortar PRIVATE
     glfw
     assimp
     ${DXC_LIB}
     ${Vulkan_LIBRARY}
     DirectX-Headers d3d12 dxgi dxguid d3dcompiler)
 
-target_include_directories(mortar SYSTEM PRIVATE
+target_include_directories(
+    mortar SYSTEM PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${IMGUI_INCLUDE_DIRS}
     ${SPDLOG_INCLUDE_DIRS}
@@ -24,17 +27,21 @@ target_include_directories(mortar SYSTEM PRIVATE
     ${VMA_INCLUDE_DIRS}
     ${Vulkan_INCLUDE_DIR}
     ${SPIRV_REFLECT_INCLUDE_DIRS}
-    ${STBIMAGE_INCLUDE_DIRS})
+    ${STBIMAGE_INCLUDE_DIRS}
+    ${D3D12_MEM_ALLOCATOR_INCLUDE_DIRS})
+
+message(STATUS ${D3D12_MEM_ALLOCATOR_INCLUDE_DIRS})
 
 set_target_properties(
     mortar
     PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin")
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../bin"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/../bin")
 
-foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
-    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-    set_target_properties(mortar PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "${CMAKE_CURRENT_SOURCE_DIR}/../bin")
-endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
+add_custom_command(
+    TARGET mortar POST_BUILD COMMAND
+    ${CMAKE_COMMAND} -E copy ${DXC_BIN} "${CMAKE_CURRENT_SOURCE_DIR}/../bin")
 
 target_compile_features(mortar PRIVATE cxx_std_20)
 target_compile_definitions(mortar PRIVATE IMGUI_USER_CONFIG="pch/imgui_config.h")

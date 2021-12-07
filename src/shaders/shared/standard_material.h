@@ -3,6 +3,8 @@
 
 struct StandardMaterial
 {
+    // tex_id can be either texture id or value
+    // this depends on the sign of tex_id
     uint32_t m_diffuse_tex_id;
     uint32_t m_specular_tex_id;
     uint32_t m_roughness_tex_id;
@@ -21,7 +23,7 @@ struct StandardMaterial
     uint32_t
     encode_rgb(const float3 v)
     {
-        const uint3 u3        = round(saturate(v) * 255.0f);
+        const uint3 u3        = uint3(round(saturate(v) * 255.0f));
         const uint32_t flag   = (1 << 24);
         const uint32_t result = (u3.r << 0) | (u3.g << 8) | (u3.b << 16) | flag;
         return result;
@@ -38,7 +40,7 @@ struct StandardMaterial
     uint32_t
     encode_r(const float v)
     {
-        const uint32_t u      = round(clamp(v, 0.0f, 1.0f) * 65535.0f);
+        const uint32_t u      = uint32_t(round(clamp(v, 0.0f, 1.0f) * 65535.0f));
         const uint32_t flag   = (1 << 24);
         const uint32_t result = (u << 0) | flag;
         return result;

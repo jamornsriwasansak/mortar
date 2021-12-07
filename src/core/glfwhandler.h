@@ -125,7 +125,6 @@ struct Window
     GLFWwindow *                  m_glfw_window = nullptr;
     std::string                   m_title;
     AvgFrameTimeStopWatch         m_stop_watch;
-    std::optional<vk::SurfaceKHR> m_vk_surface;
 
     Window(const std::string title, const int2 & resolution)
     {

@@ -1,46 +1,46 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "pch/pch.h"
+
 #ifdef USE_DXA
 
-#include "dxadevice.h"
+    #include "dxacommon.h"
+    #include "dxadevice.h"
 
 namespace DXA_NAME
 {
 struct Buffer
 {
-    BufferUsageEnum                    m_buffer_usage              = BufferUsageEnum::None;
-    MemoryUsageEnum                    m_memory_usage              = MemoryUsageEnum::None;
-    D3D12MAHandle<D3D12MA::Allocation> m_allocation                = nullptr;
-    size_t                             m_size_in_bytes             = 0;
-    D3D12_GPU_DESCRIPTOR_HANDLE        m_dx_cbv_srv_uav_gpu_handle = { 0 };
-    std::string                        m_name                      = "";
+    BufferUsageEnum                    m_buffer_usage  = BufferUsageEnum::None;
+    MemoryUsageEnum                    m_memory_usage  = MemoryUsageEnum::None;
+    D3D12MAHandle<D3D12MA::Allocation> m_allocation    = nullptr;
+    size_t                             m_size_in_bytes = 0;
 
     Buffer() {}
 
     Buffer(const std::string &   name,
-           const Device *        device,
-           const BufferUsageEnum buffer_usage_,
+           const Device &        device,
+           const BufferUsageEnum buffer_usage,
            const MemoryUsageEnum memory_usage,
            const size_t          buffer_size_in_bytes)
-    : m_size_in_bytes(buffer_size_in_bytes), m_memory_usage(memory_usage), m_buffer_usage(buffer_usage_)
+    : m_size_in_bytes(buffer_size_in_bytes), m_memory_usage(memory_usage), m_buffer_usage(buffer_usage)
     {
-        BufferUsageEnum      buffer_usage = buffer_usage_;
-        D3D12_RESOURCE_FLAGS flags        = D3D12_RESOURCE_FLAG_NONE;
-        if (HasFlag(buffer_usage, BufferUsageEnum::StorageBuffer))
+        BufferUsageEnum      modified_buffer_usage = buffer_usage;
+        D3D12_RESOURCE_FLAGS flags                 = D3D12_RESOURCE_FLAG_NONE;
+        if (HasFlag(modified_buffer_usage, BufferUsageEnum::StorageBuffer))
         {
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-            buffer_usage ^= BufferUsageEnum::StorageBuffer;
+            modified_buffer_usage ^= BufferUsageEnum::StorageBuffer;
             assert(memory_usage == MemoryUsageEnum::GpuOnly);
         }
-        if (HasFlag(buffer_usage, BufferUsageEnum::RayTracingAccelStructBuffer))
+        if (HasFlag(modified_buffer_usage, BufferUsageEnum::RayTracingAccelStructBuffer))
         {
             flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
             assert(memory_usage == MemoryUsageEnum::GpuOnly);
         }
 
         // constant buffer needs 256 bytes alignment
-        if ((buffer_usage & BufferUsageEnum::ConstantBuffer) == BufferUsageEnum::ConstantBuffer)
+        if ((modified_buffer_usage & BufferUsageEnum::ConstantBuffer) == BufferUsageEnum::ConstantBuffer)
         {
             m_size_in_bytes = round_up(m_size_in_bytes, static_cast<size_t>(256));
         }
@@ -48,7 +48,7 @@ struct Buffer
         // allocate memory for buffer using D3D12MA
         D3D12MA::ALLOCATION_DESC alloc_desc = {};
 
-        if (HasFlag(buffer_usage, BufferUsageEnum::RayTracingAccelStructBuffer))
+        if (HasFlag(modified_buffer_usage, BufferUsageEnum::RayTracingAccelStructBuffer))
         {
             // TODO:: check once in a while if this is fixed.
             // for some reasons, the amd's D3D12MA causes bug when using FLAG_NONE to create raytracing accel creation
@@ -80,16 +80,16 @@ struct Buffer
         }
 
         // setup state
-        D3D12_RESOURCE_STATES states = static_cast<D3D12_RESOURCE_STATES>(buffer_usage);
-        if (!HasOnlyFlag(buffer_usage, BufferUsageEnum::StorageBuffer))
+        D3D12_RESOURCE_STATES states = static_cast<D3D12_RESOURCE_STATES>(modified_buffer_usage);
+        if (!HasOnlyFlag(modified_buffer_usage, BufferUsageEnum::StorageBuffer))
         {
             states = states & ~D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         }
-        if (!HasOnlyFlag(buffer_usage, BufferUsageEnum::VertexBuffer))
+        if (!HasOnlyFlag(modified_buffer_usage, BufferUsageEnum::VertexBuffer))
         {
             states = states & ~D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
         }
-        if (!HasOnlyFlag(buffer_usage, BufferUsageEnum::IndexBuffer))
+        if (!HasOnlyFlag(modified_buffer_usage, BufferUsageEnum::IndexBuffer))
         {
             states = states & ~D3D12_RESOURCE_STATE_INDEX_BUFFER;
         }
@@ -108,7 +108,7 @@ struct Buffer
         ID3D12Resource *      resource;
         D3D12MA::Allocation * allocation  = nullptr;
         CD3DX12_RESOURCE_DESC buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(m_size_in_bytes, flags);
-        DXCK(device->m_d3d12ma->CreateResource(&alloc_desc, &buffer_desc, states, nullptr, &allocation, IID_PPV_ARGS(&resource)));
+        DXCK(device.m_d3d12ma->CreateResource(&alloc_desc, &buffer_desc, states, nullptr, &allocation, IID_PPV_ARGS(&resource)));
 
         // check if allocation has problem
         if (allocation == nullptr)
@@ -120,7 +120,7 @@ struct Buffer
         m_allocation = D3D12MAHandle<D3D12MA::Allocation>(allocation);
 
         // set name
-        device->name_dx_object(resource, name);
+        device.name_dx_object(resource, name);
     }
 
     void *

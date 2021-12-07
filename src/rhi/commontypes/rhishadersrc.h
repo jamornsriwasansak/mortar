@@ -13,7 +13,6 @@ template <typename ShaderStageEnum>
 struct TShaderSrc
 {
     std::filesystem::path m_file_path = "";
-    std::string m_source              = "";
     std::string m_entry               = "";
     std::vector<std::string> m_defines;
     ShaderStageEnum m_shader_stage;
@@ -35,13 +34,6 @@ struct TShaderSrc
     }
 
     TShaderSrc &
-    set_raw_source(const std::string & source)
-    {
-        m_source = source;
-        return *this;
-    }
-
-    TShaderSrc &
     set_entry(const std::string & entry)
     {
         m_entry = entry;
@@ -51,14 +43,7 @@ struct TShaderSrc
     std::string
     source() const
     {
-        if (m_file_path != "")
-        {
-            return File::LoadFile(m_file_path.c_str());
-        }
-        else
-        {
-            return m_source;
-        }
+        return File::LoadFile(m_file_path.c_str());
     }
 };
 } // namespace Rhi

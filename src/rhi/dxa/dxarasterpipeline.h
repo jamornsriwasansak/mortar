@@ -3,24 +3,24 @@
 #include "dxacommon.h"
 #ifdef USE_DXA
 
-#include "dxaframebufferbinding.h"
-#include "dxilreflection.h"
-//
-#include "../shadercompiler/hlsldxccompiler.h"
-//
-#include "core/logger.h"
+    #include "../shadercompiler/hlsldxccompiler.h"
+    #include "../shadercompiler/shader_binary_manager.h"
+    #include "core/logger.h"
+    #include "dxaframebufferbinding.h"
+    #include "dxilreflection.h"
+
 
 namespace DXA_NAME
 {
 struct RasterPipeline
 {
-    ComPtr<ID3D12RootSignature> m_dx_root_signature  = nullptr;
-    ComPtr<ID3D12PipelineState> m_dx_pso             = nullptr;
-    D3D12_VIEWPORT m_dx_viewport                     = {};
-    D3D12_RECT m_dx_scissor_rect                     = {};
-    D3D12_PRIMITIVE_TOPOLOGY_TYPE m_dx_topology_type = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-    D3D12_PRIMITIVE_TOPOLOGY m_dx_topology           = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-    DXGI_FORMAT m_dx_depth_format                    = {};
+    ComPtr<ID3D12RootSignature>   m_dx_root_signature = nullptr;
+    ComPtr<ID3D12PipelineState>   m_dx_pso            = nullptr;
+    D3D12_VIEWPORT                m_dx_viewport       = {};
+    D3D12_RECT                    m_dx_scissor_rect   = {};
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE m_dx_topology_type  = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+    D3D12_PRIMITIVE_TOPOLOGY      m_dx_topology       = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+    DXGI_FORMAT                   m_dx_depth_format   = {};
 
     // just to improve the readability of m_descriptor_infos
     using RootSignatureIndex = size_t;
@@ -29,33 +29,34 @@ struct RasterPipeline
 
     std::map<std::tuple<D3D_SHADER_INPUT_TYPE, SpaceIndex, BindPoint>, DxilReflection::DescriptorInfo> m_descriptor_set_info;
 
-    RasterPipeline() {}
-
-    RasterPipeline(const Device * device,
+    RasterPipeline(const std::string &                          name,
+                   const Device &                               device,
                    const std::span<const DXA_NAME::ShaderSrc> & shader_srcs,
-                   const FramebufferBindings & framebuffer_bindings,
-                   const std::string & name = "")
-    : RasterPipeline(device, shader_srcs, nullptr, framebuffer_bindings, name)
+                   ShaderBinaryManager &                        shader_binary_manager,
+                   const FramebufferBindings &                  framebuffer_bindings)
+    : RasterPipeline(name, device, shader_srcs, shader_binary_manager, nullptr, framebuffer_bindings)
     {
     }
 
-    RasterPipeline(const Device * device,
+    RasterPipeline(const std::string &                          name,
+                   const Device &                               device,
                    const std::span<const DXA_NAME::ShaderSrc> & shader_srcs,
-                   const ComPtr<ID3D12RootSignature> & root_signature,
-                   const FramebufferBindings & framebuffer_bindings,
-                   const std::string & name)
+                   ShaderBinaryManager &                        shader_manager,
+                   const ComPtr<ID3D12RootSignature> &          root_signature,
+                   const FramebufferBindings &                  framebuffer_bindings)
     : m_dx_root_signature(root_signature),
       m_dx_topology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST),
       m_dx_topology_type(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE)
     {
-        init(device, shader_srcs, framebuffer_bindings, name);
+        init(name, device, shader_srcs, shader_manager, framebuffer_bindings);
     }
 
     void
-    init(const Device * device,
+    init(const std::string &                          name,
+         const Device &                               device,
          const std::span<const DXA_NAME::ShaderSrc> & shader_srcs,
-         const FramebufferBindings & framebuffer_binding,
-         const std::string & name)
+         ShaderBinaryManager &                        shader_manager,
+         const FramebufferBindings &                  framebuffer_binding)
     {
         // compile all shader srcs
         std::vector<std::pair<ComPtr<IDxcBlob>, ShaderStageEnum>> shader_blobs(shader_srcs.size());
@@ -63,14 +64,13 @@ struct RasterPipeline
             HlslDxcCompiler hlsl_dxil_compiler;
             for (size_t i = 0; i < shader_srcs.size(); i++)
             {
-                shader_blobs[i].first =
-                    hlsl_dxil_compiler.compile_as_dxil(shader_srcs[i], shader_srcs[i].m_defines);
+                shader_blobs[i].first  = hlsl_dxil_compiler.compile_as_dxil(shader_srcs[i]);
                 shader_blobs[i].second = shader_srcs[i].m_shader_stage;
             }
         }
 
         // input layout description from reflection
-        DxilReflection dxil_reflector;
+        DxilReflection                   dxil_reflector;
         DxilReflection::ReflectionResult reflection_result = dxil_reflector.reflect(shader_blobs, shader_srcs);
 
         // create root signature if we don't have root signature yet
@@ -86,17 +86,17 @@ struct RasterPipeline
             // create signature and error blob
             ComPtr<ID3DBlob> signature = nullptr;
             ComPtr<ID3DBlob> error     = nullptr;
-            HRESULT root_description_create_result =
+            HRESULT          root_description_create_result =
                 D3D12SerializeRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
             if (error != nullptr)
             {
                 Logger::Critical<true>(__FUNCTION__ " ", static_cast<char *>(error->GetBufferPointer()));
             }
             DXCK(root_description_create_result);
-            DXCK(device->m_dx_device->CreateRootSignature(0,
-                                                          signature->GetBufferPointer(),
-                                                          signature->GetBufferSize(),
-                                                          IID_PPV_ARGS(&m_dx_root_signature)));
+            DXCK(device.m_dx_device->CreateRootSignature(0,
+                                                         signature->GetBufferPointer(),
+                                                         signature->GetBufferSize(),
+                                                         IID_PPV_ARGS(&m_dx_root_signature)));
 
             // set space binding
             m_descriptor_set_info = reflection_result.m_space_bindings;
@@ -157,7 +157,7 @@ struct RasterPipeline
         }
 
         // create the pso
-        DXCK(device->m_dx_device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&m_dx_pso)));
+        DXCK(device.m_dx_device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&m_dx_pso)));
 
         // Fill out the Viewport
         m_dx_viewport.TopLeftX = 0;
@@ -177,7 +177,7 @@ struct RasterPipeline
         m_dx_scissor_rect.bottom =
             static_cast<LONG>(framebuffer_binding.m_color_attachments[0]->m_resolution.y);
 
-        device->name_dx_object(m_dx_pso, name);
+        device.name_dx_object(m_dx_pso, name);
     }
 };
 } // namespace DXA_NAME

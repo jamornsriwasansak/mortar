@@ -3,11 +3,11 @@
 #include "dxacommon.h"
 #ifdef USE_DXA
 
-#include "dxaentry.h"
+    #include "dxaentry.h"
 
-#ifdef USE_NSIGHT_AFTERMATH
-#include "NsightAftermathGpuCrashTracker.h"
-#endif
+    #ifdef USE_NSIGHT_AFTERMATH
+        #include "NsightAftermathGpuCrashTracker.h"
+    #endif
 
 namespace DXA_NAME
 {
@@ -19,14 +19,14 @@ struct Device
     ComPtr<ID3D12CommandQueue>        m_dx_copy_queue    = nullptr;
     D3D12MAHandle<D3D12MA::Allocator> m_d3d12ma          = nullptr;
 
-    DescriptorHeap              m_rtv_descriptor_heap;
-    DescriptorHeap              m_dsv_descriptor_heap;
-    ComPtr<ID3D12RootSignature> m_dx_empty_root_signature;
-    ComPtr<ID3D12RootSignature> m_dx_empty_local_root_signature;
+    DescriptorHeap<DescriptorCpuHandle> m_rtv_descriptor_heap;
+    DescriptorHeap<DescriptorCpuHandle> m_dsv_descriptor_heap;
+    ComPtr<ID3D12RootSignature>         m_dx_empty_root_signature;
+    ComPtr<ID3D12RootSignature>         m_dx_empty_local_root_signature;
 
-#ifdef USE_NSIGHT_AFTERMATH
+    #ifdef USE_NSIGHT_AFTERMATH
     GpuCrashTracker m_nv_gpu_crash_tracker;
-#endif
+    #endif
 
     bool m_is_device_support_raytracing = false;
 
@@ -62,10 +62,14 @@ struct Device
         m_is_device_support_raytracing = check_raytracing_support();
 
         // create descriptor heap for render target view and depth stencil view
-        m_dsv_descriptor_heap =
-            DescriptorHeap(m_dx_device.Get(), D3D12_DESCRIPTOR_HEAP_FLAG_NONE, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 100);
-        m_rtv_descriptor_heap =
-            DescriptorHeap(m_dx_device.Get(), D3D12_DESCRIPTOR_HEAP_FLAG_NONE, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 100);
+        m_dsv_descriptor_heap = DescriptorHeap<DescriptorCpuHandle>(m_dx_device.Get(),
+                                                                    D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+                                                                    D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+                                                                    100);
+        m_rtv_descriptor_heap = DescriptorHeap<DescriptorCpuHandle>(m_dx_device.Get(),
+                                                                    D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+                                                                    D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+                                                                    100);
 
         // create empty global root signature
         ComPtr<ID3DBlob>          dummy_root_signature      = nullptr;
@@ -93,7 +97,7 @@ struct Device
                                               local_dummy_root_signature->GetBufferSize(),
                                               IID_PPV_ARGS(&m_dx_empty_local_root_signature)));
 
-#ifdef USE_NSIGHT_AFTERMATH
+    #ifdef USE_NSIGHT_AFTERMATH
         m_nv_gpu_crash_tracker.Initialize();
         const uint32_t aftermathFlags =
             GFSDK_Aftermath_FeatureFlags_EnableMarkers |          // Enable event marker tracking.
@@ -102,17 +106,17 @@ struct Device
             GFSDK_Aftermath_FeatureFlags_GenerateShaderDebugInfo; // Generate debug information for shaders.
         AFTERMATH_CHECK_ERROR(
             GFSDK_Aftermath_DX12_Initialize(GFSDK_Aftermath_Version_API, aftermathFlags, m_dx_device.Get()));
-#endif
+    #endif
     }
 
     inline bool
     enable_debug() const
     {
-#ifdef NDEBUG
+    #ifdef NDEBUG
         return false;
-#else
+    #else
         return m_debug;
-#endif
+    #endif
     }
 
     template <typename DxType>
@@ -132,18 +136,18 @@ private:
     ComPtr<ID3D12Device5>
     create_device(IDXGIAdapter4 * dx_adapter, [[maybe_unused]] const bool debug)
     {
-#if 0
+    #if 0
         if (debug)
         {
             // needed to prevent gpu crash from SetStablePowerState
             D3D12EnableExperimentalFeatures(0, nullptr, nullptr, nullptr);
         }
-#endif
+    #endif
 
         ComPtr<ID3D12Device5> dx_device;
         DXCK(D3D12CreateDevice(dx_adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&dx_device)));
 
-#if 0
+    #if 0
         // note: stable power crashes renderdoc so I turned it off by default
         if (debug)
         {
@@ -161,7 +165,7 @@ private:
                 info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
             }
         }
-#endif
+    #endif
         return dx_device;
     }
 

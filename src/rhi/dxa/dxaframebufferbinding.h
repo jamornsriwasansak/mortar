@@ -3,8 +3,8 @@
 #include "dxacommon.h"
 #ifdef USE_DXA
 
-#include "dxaswapchain.h"
-#include "dxatexture.h"
+    #include "dxaswapchain.h"
+    #include "dxatexture.h"
 
 namespace DXA_NAME
 {
@@ -15,16 +15,17 @@ struct FramebufferBindings
 
     FramebufferBindings() {}
 
-    FramebufferBindings([[maybe_unused]] const Device *      device,
+    FramebufferBindings([[maybe_unused]] const std::string & name,
+                        [[maybe_unused]] const Device &      device,
                         const std::vector<const Texture *> & colors,
-                        const std::optional<const Texture *> depth = std::nullopt)
-    : m_color_attachments(colors)
+                        const Texture *                      depth = nullptr)
+    : m_color_attachments(colors.begin(), colors.end())
     {
-        if (depth.has_value())
+        if (depth)
         {
-            m_depth_attachment = depth.value();
+            m_depth_attachment = depth;
         }
     }
 };
-} // namespace Dxa
+} // namespace DXA_NAME
 #endif
