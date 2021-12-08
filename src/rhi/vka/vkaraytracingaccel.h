@@ -4,8 +4,8 @@
 
 #ifdef USE_VKA
 
-#include "vkabuffer.h"
-#include "vkadevice.h"
+    #include "vkabuffer.h"
+    #include "vkadevice.h"
 
 namespace VKA_NAME
 {
@@ -178,7 +178,7 @@ struct RayTracingTlas
     {
         m_instance_buffer = Buffer(name + "_instance_buffer",
                                    device,
-                                   BufferUsageEnum::TransferSrc,
+                                   BufferUsageEnum::TransferSrc | BufferUsageEnum::RayTracingAccelStructBufferInput,
                                    MemoryUsageEnum::CpuOnly,
                                    sizeof(vk::AccelerationStructureInstanceKHR) * instances.size());
 

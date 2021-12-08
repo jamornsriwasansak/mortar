@@ -93,7 +93,7 @@ struct SceneResource
         m_d_vbuf_position = Rhi::Buffer("scene_m_d_vbuf_position",
                                         m_device,
                                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
-                                            Rhi::BufferUsageEnum::VertexBuffer,
+                                            Rhi::BufferUsageEnum::VertexBuffer | Rhi::BufferUsageEnum::RayTracingAccelStructBufferInput,
                                         Rhi::MemoryUsageEnum::GpuOnly,
                                         sizeof(float3) * EngineSetting::MaxNumVertices);
         m_d_vbuf_packed   = Rhi::Buffer("scene_m_d_vbuf_packed",
@@ -105,7 +105,7 @@ struct SceneResource
         m_d_ibuf          = Rhi::Buffer("scene_m_d_ibuf",
                                m_device,
                                Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
-                                   Rhi::BufferUsageEnum::IndexBuffer,
+                                   Rhi::BufferUsageEnum::IndexBuffer | Rhi::BufferUsageEnum::RayTracingAccelStructBufferInput,
                                Rhi::MemoryUsageEnum::GpuOnly,
                                Rhi::GetSizeInBytes(m_ibuf_index_type) * EngineSetting::MaxNumIndices);
 

@@ -3,51 +3,51 @@
 #include "pch/pch.h"
 
 #ifndef DEFINE_ENUM_FLAG_OPERATORS
-#define DEFINE_ENUM_FLAG_OPERATORS(ENUMTYPE)                                       \
-    extern "C++"                                                                   \
-    {                                                                              \
-        inline ENUMTYPE                                                            \
-        operator|(ENUMTYPE a, ENUMTYPE b)                                          \
-        {                                                                          \
-            return ENUMTYPE(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)a) |        \
-                            ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));        \
-        }                                                                          \
-        inline ENUMTYPE &                                                          \
-        operator|=(ENUMTYPE & a, ENUMTYPE b)                                       \
-        {                                                                          \
-            return (ENUMTYPE &)(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type &)a) |= \
-                                ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));    \
-        }                                                                          \
-        inline ENUMTYPE                                                            \
-        operator&(ENUMTYPE a, ENUMTYPE b)                                          \
-        {                                                                          \
-            return ENUMTYPE(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)a) &        \
-                            ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));        \
-        }                                                                          \
-        inline ENUMTYPE &                                                          \
-        operator&=(ENUMTYPE & a, ENUMTYPE b)                                       \
-        {                                                                          \
-            return (ENUMTYPE &)(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type &)a) &= \
-                                ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));    \
-        }                                                                          \
-        inline ENUMTYPE                                                            \
-        operator~(ENUMTYPE a)                                                      \
-        {                                                                          \
-            return ENUMTYPE(~((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)a));       \
-        }                                                                          \
-        inline ENUMTYPE                                                            \
-        operator^(ENUMTYPE a, ENUMTYPE b)                                          \
-        {                                                                          \
-            return ENUMTYPE(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)a) ^        \
-                            ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));        \
-        }                                                                          \
-        inline ENUMTYPE &                                                          \
-        operator^=(ENUMTYPE & a, ENUMTYPE b)                                       \
-        {                                                                          \
-            return (ENUMTYPE &)(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type &)a) ^= \
-                                ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));    \
-        }                                                                          \
-    }
+    #define DEFINE_ENUM_FLAG_OPERATORS(ENUMTYPE)                                       \
+        extern "C++"                                                                   \
+        {                                                                              \
+            inline ENUMTYPE                                                            \
+            operator|(ENUMTYPE a, ENUMTYPE b)                                          \
+            {                                                                          \
+                return ENUMTYPE(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)a) |        \
+                                ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));        \
+            }                                                                          \
+            inline ENUMTYPE &                                                          \
+            operator|=(ENUMTYPE & a, ENUMTYPE b)                                       \
+            {                                                                          \
+                return (ENUMTYPE &)(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type &)a) |= \
+                                    ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));    \
+            }                                                                          \
+            inline ENUMTYPE                                                            \
+            operator&(ENUMTYPE a, ENUMTYPE b)                                          \
+            {                                                                          \
+                return ENUMTYPE(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)a) &        \
+                                ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));        \
+            }                                                                          \
+            inline ENUMTYPE &                                                          \
+            operator&=(ENUMTYPE & a, ENUMTYPE b)                                       \
+            {                                                                          \
+                return (ENUMTYPE &)(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type &)a) &= \
+                                    ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));    \
+            }                                                                          \
+            inline ENUMTYPE                                                            \
+            operator~(ENUMTYPE a)                                                      \
+            {                                                                          \
+                return ENUMTYPE(~((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)a));       \
+            }                                                                          \
+            inline ENUMTYPE                                                            \
+            operator^(ENUMTYPE a, ENUMTYPE b)                                          \
+            {                                                                          \
+                return ENUMTYPE(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)a) ^        \
+                                ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));        \
+            }                                                                          \
+            inline ENUMTYPE &                                                          \
+            operator^=(ENUMTYPE & a, ENUMTYPE b)                                       \
+            {                                                                          \
+                return (ENUMTYPE &)(((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type &)a) ^= \
+                                    ((_ENUM_FLAG_SIZED_INTEGER<ENUMTYPE>::type)b));    \
+            }                                                                          \
+        }
 #endif
 
 template <typename EnumType>
@@ -148,14 +148,15 @@ namespace DXA_NAME
 {
 enum class BufferUsageEnum : uint32_t
 {
-    None                        = 0,
-    VertexBuffer                = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-    IndexBuffer                 = D3D12_RESOURCE_STATE_INDEX_BUFFER,
-    ConstantBuffer              = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-    StorageBuffer               = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-    TransferSrc                 = D3D12_RESOURCE_STATE_COPY_SOURCE,
-    TransferDst                 = D3D12_RESOURCE_STATE_COPY_DEST,
-    RayTracingAccelStructBuffer = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE
+    None                             = 0,
+    VertexBuffer                     = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+    IndexBuffer                      = D3D12_RESOURCE_STATE_INDEX_BUFFER,
+    RayTracingAccelStructBufferInput = 0,
+    ConstantBuffer                   = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+    StorageBuffer                    = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+    TransferSrc                      = D3D12_RESOURCE_STATE_COPY_SOURCE,
+    TransferDst                      = D3D12_RESOURCE_STATE_COPY_DEST,
+    RayTracingAccelStructBuffer      = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE
 };
 DEFINE_ENUM_FLAG_OPERATORS(BufferUsageEnum);
 } // namespace DXA_NAME
@@ -166,13 +167,14 @@ namespace VKA_NAME
 {
 enum class BufferUsageEnum : uint32_t
 {
-    None           = VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM,
-    VertexBuffer   = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-    IndexBuffer    = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-    ConstantBuffer = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    StorageBuffer  = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-    TransferSrc    = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    TransferDst    = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    None                             = VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM,
+    VertexBuffer                     = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    IndexBuffer                      = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+    RayTracingAccelStructBufferInput = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+    ConstantBuffer                   = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    StorageBuffer                    = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+    TransferSrc                      = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    TransferDst                      = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     RayTracingAccelStructBuffer = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 };
 DEFINE_ENUM_FLAG_OPERATORS(BufferUsageEnum);
