@@ -48,6 +48,19 @@
     file(GLOB TMP_SPIRV_REFLECT_SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Reflect/spirv_reflect.c PARENT_SCOPE)
     set(SPIRV_REFLECT_SOURCE_DIRS ${TMP_SPIRV_REFLECT_SOURCE_DIRS} PARENT_SCOPE)
 
+# NVIDIA aftermath
+# TODO:: make an option to toggle this on or off
+    # for windows x64
+    #include_directories(SYSTEM $ENV{NSIGHT_AFTERMATH_SDK}/include)
+    #include_directories(SYSTEM ${DEPS_PATH}/nsightaftermathhelper/include)
+    #file(GLOB GFSDK_Aftermath_src "${DEPS_PATH}/nsightaftermathhelper/include/*.cpp")
+    #set(NVIDIA_AFTERMATH_LIB $ENV{NSIGHT_AFTERMATH_SDK}/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
+    #set(DEPS_LIBRARIES ${DEPS_LIBRARIES} ${NVIDIA_AFTERMATH_LIB})
+
+# aftercrash
+    #include_directories(SYSTEM "${DEPS_PATH}/aftercrash/include")
+    #file(GLOB aftercrash_src "${DEPS_PATH}/aftercrash/src/D3d12AfterCrash.cpp" "${DEPS_PATH}/aftercrash/src/vulkanaftercrash.cpp")
+
 # assimp
     set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
     set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
