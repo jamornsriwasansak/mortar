@@ -1,5 +1,7 @@
 #pragma once
 
+#include "pch/pch.h"
+
 struct GuiEventCoordinator
 {
     bool m_use_all_debug_gui               = true;

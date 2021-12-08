@@ -30,8 +30,6 @@ target_include_directories(
     ${STBIMAGE_INCLUDE_DIRS}
     ${D3D12_MEM_ALLOCATOR_INCLUDE_DIRS})
 
-message(STATUS ${D3D12_MEM_ALLOCATOR_INCLUDE_DIRS})
-
 set_target_properties(
     mortar
     PROPERTIES
