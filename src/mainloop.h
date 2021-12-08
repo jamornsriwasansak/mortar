@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/camera.h"
+#include "core/gui_event_coordinator.h"
 #include "render/render_context.h"
 #include "render/renderer.h"
 #include "rhi/rhi.h"
@@ -70,6 +71,7 @@ struct MainLoop
     size_t                         m_num_flights = 0;
 
     ShaderBinaryManager & m_shader_binary_manager;
+    GuiEventCoordinator & m_gui_event_coordinator;
     SceneResource         m_scene_resource;
     FpsCamera             m_camera;
     int2                  m_swapchain_resolution = int2(0, 0);
@@ -81,8 +83,9 @@ struct MainLoop
     MainLoop(Rhi::Device &         device,
              Window &              window,
              const size_t          num_flights,
+             Rhi::Swapchain &      swapchain,
              ShaderBinaryManager & shader_binary_manager,
-             Rhi::Swapchain &      swapchain)
+             GuiEventCoordinator & gui_event_coordinator)
     : m_device(device),
       m_window(window),
       m_swapchain_resolution(window.get_resolution()),
@@ -93,6 +96,7 @@ struct MainLoop
       m_per_flight_resources(construct_per_flight_resources("main_flight_resource", device, num_flights)),
       m_per_swap_resources(construct_per_swap_resources("main_swap_resources", device, swapchain)),
       m_imgui_render_pass("main_imgui_render_pass", device, window, swapchain),
+      m_gui_event_coordinator(gui_event_coordinator),
       m_camera(float3(10.0f, 10.0f, 10.0f),
                float3(0.0f, 0.0f, 0.0f),
                float3(0.0f, 1.0f, 0.0f),
@@ -100,7 +104,12 @@ struct MainLoop
                static_cast<float>(window.get_resolution().x) /
                    static_cast<float>(window.get_resolution().y)),
       m_staging_buffer_manager("main_staging_buffer_manager", device),
-      m_renderer(device, shader_binary_manager, get_swapchain_textures(m_per_swap_resources), window.get_resolution(), num_flights)
+      m_renderer(device,
+                 shader_binary_manager,
+                 gui_event_coordinator,
+                 get_swapchain_textures(m_per_swap_resources),
+                 window.get_resolution(),
+                 num_flights)
     {
     }
 
@@ -160,39 +169,40 @@ struct MainLoop
     void
     loop(const size_t i_flight)
     {
+        // in the first step we poll all the events
         GlfwHandler::Inst().poll_events();
 
-        int2 current_resolution = m_window.get_resolution();
-        if (current_resolution.y == 0)
+        // get current resolution and check if it is being minimized or not
+        int2 new_resolution = m_window.get_resolution();
+        if (new_resolution.y == 0)
         {
             return;
         }
 
         // wait for resource in this flight to be ready
+        // after per_flight_resource finished waiting, then reset all resource
         PerFlightResource & per_flight_resource = m_per_flight_resources[i_flight];
         per_flight_resource.wait();
+        per_flight_resource.reset();
 
+        // get image index (which is also swap index)
+        // then based on that index, get a swap in the swapchain resource then
+        // wait until the image we want is draw is finished drawing
+        m_swapchain.update_image_index(&per_flight_resource.m_image_ready_semaphore);
+        PerSwapResource & per_swap_resource = m_per_swap_resources[m_swapchain.m_image_index];
+        if (per_swap_resource.m_swapchain_image_fence)
+        {
+            per_swap_resource.m_swapchain_image_fence->wait();
+            per_swap_resource.m_swapchain_image_fence = &per_flight_resource.m_flight_fence;
+        }
+
+        // check if there is any keyevent shortcut triggered for reloading shaders or not
         bool reload_shader = m_is_reload_shader_needed;
         if (m_window.m_R.m_event == KeyEventEnum::JustPress && m_window.m_LEFT_CONTROL.m_event == KeyEventEnum::Hold)
         {
             reload_shader = true;
         }
         m_is_reload_shader_needed = false;
-
-        // reset all resource
-        per_flight_resource.reset();
-
-        // update image index
-        m_swapchain.update_image_index(&per_flight_resource.m_image_ready_semaphore);
-
-        PerSwapResource & per_swap_resource = m_per_swap_resources[m_swapchain.m_image_index];
-
-        // wait until the image we want is draw is finished drawing
-        if (per_swap_resource.m_swapchain_image_fence)
-        {
-            per_swap_resource.m_swapchain_image_fence->wait();
-            per_swap_resource.m_swapchain_image_fence = &per_flight_resource.m_flight_fence;
-        }
 
         // context parameters for each frame
         RenderContext ctx(m_device,
@@ -213,29 +223,40 @@ struct MainLoop
                           reload_shader,
                           true);
 
+        // mark imgui new frame
+        // then draw imgui main dock
         if (ctx.m_should_imgui_drawn)
         {
             m_imgui_render_pass.new_frame();
+            m_gui_event_coordinator.draw_main_dockspace();
         }
 
-        const bool is_imgui_used =
-            ImGui::IsAnyItemActive() || ImGui::IsAnyItemFocused() || ImGui::IsAnyItemHovered();
-        m_camera.update(&m_window, std::min(m_window.m_stop_watch.m_average_frame_time * 0.01f, 1.0f), !is_imgui_used);
+        // update camera before start drawing
+        m_camera.update(m_window,
+                        new_resolution,
+                        std::min(m_window.m_stop_watch.m_average_frame_time * 0.01f, 1.0f),
+                        !m_gui_event_coordinator.is_gui_being_used());
 
+        // loop the renderer
         m_renderer.loop(ctx);
         if (ctx.m_should_imgui_drawn)
         {
             m_imgui_render_pass.end_frame();
         }
 
+        // check if swapchain present success or not
+        // swapchain in vulkan could fail due to resizing / minimizing
         if (!m_swapchain.present(&per_flight_resource.m_image_presentable_semaphore) ||
-            any(notEqual(current_resolution, m_swapchain_resolution)))
+            any(notEqual(new_resolution, m_swapchain_resolution)))
         {
+            // before we resize any resource
+            // we must make sure that all the resource are not being used anymore
             for (PerFlightResource & resource : m_per_flight_resources)
             {
                 resource.wait();
             }
 
+            // resize everything!
             resize_swapchain();
             m_per_swap_resources = construct_per_swap_resources("main_swap_resources", m_device, m_swapchain);
             m_renderer.resize(m_device,
@@ -244,12 +265,13 @@ struct MainLoop
                               get_swapchain_textures(m_per_swap_resources),
                               m_num_flights);
             m_imgui_render_pass.init_or_resize_framebuffer(m_device, m_swapchain);
+
+            // TODO:: this is a hack, should be removed
+            // What I should do is calling renderer.resize(resolution) instead (which is still not implemented)
             m_is_reload_shader_needed = true;
 
             // initialize camera
-            m_swapchain_resolution  = m_window.get_resolution();
-            m_camera.m_aspect_ratio = static_cast<float>(m_swapchain_resolution.x) /
-                                      static_cast<float>(m_swapchain_resolution.y);
+            m_swapchain_resolution = m_window.get_resolution();
         }
         m_window.update();
     }
@@ -257,6 +279,8 @@ struct MainLoop
     void
     run()
     {
+        // dirty stuffs here
+
         size_t i_flight = 0;
 
         const urange32_t sponza_geometries =

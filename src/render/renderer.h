@@ -24,13 +24,17 @@ struct Renderer
         VisualizeDebug,
         PrimitivePathTracing
     };
+
+    GuiEventCoordinator &   m_gui_event_coordinator;
     RayTraceMode            m_ray_trace_mode = RayTraceMode::VisualizeDebug;
+    RayTraceVisualizeParams m_pass_ray_trace_visualize_params;
     RayTraceVisualizePass   m_pass_ray_trace_visualize;
     RayTracePathTracer      m_pass_ray_trace_primitive_pathtrace;
     RenderToFramebufferPass m_pass_render_to_framebuffer;
 
     Renderer(Rhi::Device &                               device,
              ShaderBinaryManager &                       shader_binary_manager,
+             GuiEventCoordinator &                       gui_event_coordinator,
              const std::span<const Rhi::Texture * const> swapchain_attachment,
              const int2                                  resolution,
              const size_t                                num_flights)
@@ -38,7 +42,8 @@ struct Renderer
       m_pass_ray_trace_visualize(device, shader_binary_manager),
       m_pass_ray_trace_primitive_pathtrace(device, shader_binary_manager),
       m_pass_render_to_framebuffer(device, shader_binary_manager, m_raster_fbindings[0]),
-      m_per_flight_resources(construct_per_flight_resource(device, resolution, num_flights))
+      m_per_flight_resources(construct_per_flight_resource(device, resolution, num_flights)),
+      m_gui_event_coordinator(gui_event_coordinator)
     {
     }
 
@@ -102,14 +107,14 @@ struct Renderer
 
         cmd_list.begin();
 
+        // update all parameters
+        m_pass_ray_trace_visualize_params.draw_gui(m_gui_event_coordinator);
+
         // raytrace mode
         bool p_open = true;
-        m_pass_ray_trace_visualize.draw_gui();
+        if (m_gui_event_coordinator.m_display_main_pipeline_mode)
         {
-            bool k = true;
-            ImGui::ShowDemoWindow(&k);
-
-            if (ImGui::Begin("Renderer Raytrace Mode", &p_open))
+            if (ImGui::Begin("Renderer Raytrace Mode", &m_gui_event_coordinator.m_display_main_pipeline_mode))
             {
                 ImGui::RadioButton("VisualizeDebug",
                                    reinterpret_cast<int *>(&m_ray_trace_mode),
@@ -124,7 +129,11 @@ struct Renderer
             switch (m_ray_trace_mode)
             {
             case Renderer::RayTraceMode::VisualizeDebug:
-                m_pass_ray_trace_visualize.render(cmd_list, ctx, per_flight_resource.m_rt_result, ctx.m_resolution);
+                m_pass_ray_trace_visualize.render(cmd_list,
+                                                  ctx,
+                                                  per_flight_resource.m_rt_result,
+                                                  m_pass_ray_trace_visualize_params,
+                                                  ctx.m_resolution);
                 break;
             case Renderer::RayTraceMode::PrimitivePathTracing:
                 m_pass_ray_trace_primitive_pathtrace.render(cmd_list, ctx, per_flight_resource.m_rt_result, ctx.m_resolution);

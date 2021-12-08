@@ -16,7 +16,7 @@ main()
     ImGuiIO & io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.Fonts->AddFontFromFileTTF("resources/fonts/Roboto/Roboto-Medium.ttf", 15);
 
     // default parameters
@@ -24,7 +24,8 @@ main()
     const int2   target_resolution(1920, 1080);
 
     // create main window
-    Window main_window("Mortar", target_resolution);
+    Window              main_window("Mortar", target_resolution);
+    GuiEventCoordinator gui_event_coordinator;
 
     // create device
     Rhi::Entry          entry(main_window, is_debug);
@@ -34,7 +35,7 @@ main()
 
     // create renderer
     ShaderBinaryManager shader_binary_manager("shadercache");
-    MainLoop main_loop(device, main_window, num_flights, shader_binary_manager, swapchain);
+    MainLoop            main_loop(device, main_window, num_flights, swapchain, shader_binary_manager, gui_event_coordinator);
     main_loop.run();
 
     return 0;

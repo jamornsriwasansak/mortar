@@ -1,7 +1,62 @@
 #pragma once
 
+#include "core/gui_event_coordinator.h"
 #include "rhi/rhi.h"
 #include "shaders/ray_trace_visualize_params.h"
+
+struct RayTraceVisualizeParams
+{
+    int m_rtvis_mode = 0;
+
+    RayTraceVisualizeParams() {}
+
+    void
+    draw_gui(GuiEventCoordinator & gui_event_flags)
+    {
+        if (gui_event_flags.m_display_raytrace_visualize_menu)
+        {
+            if (ImGui::Begin(typeid(*this).name(), &gui_event_flags.m_display_raytrace_visualize_menu))
+            {
+                ImGui::RadioButton("InstanceId",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeInstanceId));
+                ImGui::RadioButton("BaseInstanceId",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeBaseInstanceId));
+                ImGui::RadioButton("GeometryId",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeGeometryId));
+                ImGui::RadioButton("TriangleId",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeTriangleId));
+                ImGui::RadioButton("BaryCentricCoords",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeBaryCentricCoords));
+                ImGui::RadioButton("Position", &m_rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModePosition));
+                ImGui::RadioButton("Geometry Normal",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeGeometryNormal));
+                ImGui::RadioButton("Shading Normal",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeShadingNormal));
+                ImGui::RadioButton("Texture Coord",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeTextureCoords));
+                ImGui::RadioButton("Depth", &m_rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeDepth));
+                ImGui::RadioButton("DiffuseReflectance",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeDiffuseReflectance));
+                ImGui::RadioButton("SpecularReflectance",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeSpecularReflectance));
+                ImGui::RadioButton("Roughness",
+                                   &m_rtvis_mode,
+                                   static_cast<int>(RaytraceVisualizeModeEnum::ModeRoughness));
+            }
+            ImGui::End();
+        }
+    }
+};
 
 struct RayTraceVisualizePass
 {
@@ -15,8 +70,6 @@ struct RayTraceVisualizePass
     Rhi::Buffer m_debug_print_buffer;
     Rhi::Buffer m_cpu_temp_buffer;
 #endif
-
-    int rtvis_mode = 0;
 
     RayTraceVisualizePass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager)
     : m_rt_pipeline("ray_trace_visualize_pipeline",
@@ -87,39 +140,6 @@ struct RayTraceVisualizePass
     void
     draw_gui()
     {
-        bool p_open = true;
-        if (ImGui::Begin(typeid(*this).name(), &p_open))
-        {
-            ImGui::RadioButton("InstanceId", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeInstanceId));
-            ImGui::RadioButton("BaseInstanceId",
-                               &rtvis_mode,
-                               static_cast<int>(RaytraceVisualizeModeEnum::ModeBaseInstanceId));
-            ImGui::RadioButton("GeometryId", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeGeometryId));
-            ImGui::RadioButton("TriangleId", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeTriangleId));
-            ImGui::RadioButton("BaryCentricCoords",
-                               &rtvis_mode,
-                               static_cast<int>(RaytraceVisualizeModeEnum::ModeBaryCentricCoords));
-            ImGui::RadioButton("Position", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModePosition));
-            ImGui::RadioButton("Geometry Normal",
-                               &rtvis_mode,
-                               static_cast<int>(RaytraceVisualizeModeEnum::ModeGeometryNormal));
-            ImGui::RadioButton("Shading Normal",
-                               &rtvis_mode,
-                               static_cast<int>(RaytraceVisualizeModeEnum::ModeShadingNormal));
-            ImGui::RadioButton("Texture Coord",
-                               &rtvis_mode,
-                               static_cast<int>(RaytraceVisualizeModeEnum::ModeTextureCoords));
-            ImGui::RadioButton("Depth", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeDepth));
-            ImGui::RadioButton("DiffuseReflectance",
-                               &rtvis_mode,
-                               static_cast<int>(RaytraceVisualizeModeEnum::ModeDiffuseReflectance));
-            ImGui::RadioButton("SpecularReflectance",
-                               &rtvis_mode,
-                               static_cast<int>(RaytraceVisualizeModeEnum::ModeSpecularReflectance));
-            ImGui::RadioButton("Roughness", &rtvis_mode, static_cast<int>(RaytraceVisualizeModeEnum::ModeRoughness));
-        }
-        ImGui::End();
-
 #ifdef DEBUG_RayTraceVisualizePrintClickedInfo
         // display the debug result (from the previos frame)
         if (ImGui::Begin("DEBUG_RayTraceVisualizePrintClickedInfo", &p_open))
@@ -135,13 +155,13 @@ struct RayTraceVisualizePass
     }
 
     void
-    render(Rhi::CommandList & cmd_list, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const uint2 target_resolution)
+    render(Rhi::CommandList & cmd_list, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const RayTraceVisualizeParams & params, const uint2 target_resolution)
     {
         RaytraceVisualizeCbParams cb_params;
         CameraProperties          cam_props = ctx.m_fps_camera.get_camera_props();
         cb_params.m_camera_inv_proj         = inverse(cam_props.m_proj);
         cb_params.m_camera_inv_view         = inverse(cam_props.m_view);
-        cb_params.m_mode                    = static_cast<RaytraceVisualizeModeEnum>(rtvis_mode);
+        cb_params.m_mode = static_cast<RaytraceVisualizeModeEnum>(params.m_rtvis_mode);
         std::memcpy(m_cb_params.map(), &cb_params, sizeof(RaytraceVisualizeCbParams));
         m_cb_params.unmap();
 
