@@ -85,7 +85,6 @@ struct HlslDxcCompiler
                 static const std::wstring sshift = std::to_wstring(SShift);
 
                 result.push_back(L"-fvk-auto-shift-bindings");
-                result.push_back(L"-fspv-reflect");
                 result.push_back(L"-spirv");
                 result.push_back(L"-fspv-target-env=vulkan1.2");
 
@@ -114,11 +113,6 @@ struct HlslDxcCompiler
                 result.push_back(L"-fvk-s-shift");
                 result.push_back(sshift.c_str());
                 result.push_back(L"all");
-
-                // hlsl in general
-                result.push_back(L"-fspv-extension=SPV_GOOGLE_hlsl_functionality1");
-                result.push_back(L"-fspv-extension=SPV_GOOGLE_user_type");
-                result.push_back(L"-fspv-extension=KHR");
             }
             return result;
         }();
