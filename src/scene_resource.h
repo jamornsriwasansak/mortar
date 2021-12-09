@@ -468,7 +468,7 @@ struct SceneResource
             for (size_t i = 0; i < m_base_instances.size(); i++)
             {
                 BaseInstanceTableEntry base_instance_entry;
-                base_instance_entry.m_geometry_entry_offset = geometry_table.size();
+                base_instance_entry.m_geometry_table_index_base = geometry_table.size();
                 base_instance_table.push_back(base_instance_entry);
                 for (size_t k = 0; k < m_base_instances[i].m_geometry_id_ranges.size(); k++)
                 {

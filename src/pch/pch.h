@@ -1,7 +1,9 @@
 #pragma once
 
-#define RHI_VKA
-// #define RHI_DXA
+#if !defined(RHI_VKA) && !defined(RHI_DXA)
+    #define RHI_VKA
+    // #define RHI_DXA
+#endif
 
 #pragma warning(push, 0)
 #ifndef CODE_ANALYSIS

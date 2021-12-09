@@ -80,8 +80,13 @@ ClosestHit(inout Payload payload, const Attributes attrib)
     const float2 barycentric = attrib.uv;
 
     payload.m_miss                        = false;
-    const uint base_geometry_entry_offset = u_base_instance_table[InstanceID()].m_geometry_entry_offset;
-    const uint geometry_offset            = base_geometry_entry_offset + GeometryIndex();
+
+    uint geometry_table_index_base = 0;
+    if (InstanceID() != 0)
+    {
+        geometry_table_index_base = u_base_instance_table[InstanceID()].m_geometry_table_index_base;
+    }
+    const uint geometry_offset            = geometry_table_index_base + GeometryIndex();
     const GeometryTableEntry geometry_entry = u_geometry_table[geometry_offset];
 
     const uint index0       = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx];
