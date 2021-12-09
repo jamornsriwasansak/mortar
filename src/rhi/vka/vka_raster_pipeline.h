@@ -1,14 +1,14 @@
 #pragma once
 
-#include "vkacommon.h"
+#include "rhi/rhi.h"
 
 #ifdef USE_VKA
 
-#include "vkadevice.h"
-#include "vkaframebufferbinding.h"
-
-#include "rhi/shadercompiler/shader_binary_manager.h"
-#include "spirvreflection.h"
+    #include "rhi/shadercompiler/shader_binary_manager.h"
+    #include "spirv_reflection.h"
+    #include "vka_common.h"
+    #include "vka_device.h"
+    #include "vka_framebuffer_binding.h"
 
 namespace VKA_NAME
 {
@@ -201,7 +201,8 @@ struct RasterPipeline
         device.name_vkhpp_object<vk::Pipeline, vk::Pipeline::CType>(m_vk_pipeline.get(), name);
     }
 
-    void resize()
+    void
+    resize()
     {
     }
 };

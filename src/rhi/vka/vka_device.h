@@ -1,17 +1,17 @@
 #pragma once
 
 #include "pch/pch.h"
-#include "rhi/vka/vkacommon.h"
 
 #ifdef USE_VKA
 
+    #include "rhi/vka/vka_common.h"
     //#define USE_VULKAN_AFTER_CRASH
     #ifdef USE_VULKAN_AFTER_CRASH
         #include "VulkanAfterCrash.h"
     #endif
 
     #include "core/uniquehandle.h"
-    #include "rhi/vka/vkaentry.h"
+    #include "rhi/vka/vka_entry.h"
 
 namespace VKA_NAME
 {

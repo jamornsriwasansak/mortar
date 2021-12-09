@@ -1,19 +1,20 @@
 #pragma once
 
-#include "vkacommon.h"
+#include "pch/pch.h"
 
 #ifdef USE_VKA
 
-#include "rhi/commontypes/rhicopyregion.h"
-#include "vkadescriptor.h"
-#include "vkadevice.h"
-#include "vkafence.h"
-#include "vkaframebufferbinding.h"
-#include "vkaimguirenderpass.h"
-#include "vkarasterpipeline.h"
-#include "vkaraytracingpipeline.h"
-#include "vkasemaphore.h"
-#include "vkatexture.h"
+    #include "rhi/common/rhi_copy_region.h"
+    #include "vka_common.h"
+    #include "vka_descriptor.h"
+    #include "vka_device.h"
+    #include "vka_fence.h"
+    #include "vka_framebuffer_binding.h"
+    #include "vka_imgui_render_pass.h"
+    #include "vka_raster_pipeline.h"
+    #include "vka_raytracing_pipeline.h"
+    #include "vka_semaphore.h"
+    #include "vka_texture.h"
 
 namespace VKA_NAME
 {

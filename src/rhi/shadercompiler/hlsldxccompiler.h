@@ -4,9 +4,8 @@
 
 #include "core/logger.h"
 #include "core/vmath.h"
-#include "rhi/commontypes/rhienums.h"
-#include "rhi/commontypes/rhishadersrc.h"
-
+#include "rhi/common/rhi_enums.h"
+#include "rhi/common/rhi_shader_src.h"
 
 struct HlslDxcCompiler
 {
@@ -65,7 +64,8 @@ struct HlslDxcCompiler
     static std::vector<LPCWSTR> *
     get_compiling_argument()
     {
-        static std::vector<LPCWSTR> arguments = [&]() {
+        static std::vector<LPCWSTR> arguments = [&]()
+        {
             std::vector<LPCWSTR> result;
             result.push_back(DXC_ARG_DEBUG);
             result.push_back(DXC_ARG_ALL_RESOURCES_BOUND);

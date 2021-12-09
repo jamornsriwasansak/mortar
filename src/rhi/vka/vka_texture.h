@@ -1,12 +1,13 @@
 #pragma once
 
-#include "vkacommon.h"
+#include "pch/pch.h"
 
 #ifdef USE_VKA
 
-#include "vkadevice.h"
-#include "vkastagingbuffermanager.h"
-#include "vkaswapchain.h"
+    #include "vka_common.h"
+    #include "vka_device.h"
+    #include "vka_stagingbuffermanager.h"
+    #include "vka_swapchain.h"
 
 namespace VKA_NAME
 {
@@ -54,37 +55,39 @@ struct Texture
         m_resolution = int3(swapchain.m_resolution, 1);
 
         // convert the layout into present khr
-        device.one_time_command_submit([&](vk::CommandBuffer cmd_buf) {
-            vk::ImageLayout old_vk_image_layout = vk::ImageLayout::eUndefined;
-            vk::ImageLayout new_vk_image_layout = vk::ImageLayout::ePresentSrcKHR;
+        device.one_time_command_submit(
+            [&](vk::CommandBuffer cmd_buf)
+            {
+                vk::ImageLayout old_vk_image_layout = vk::ImageLayout::eUndefined;
+                vk::ImageLayout new_vk_image_layout = vk::ImageLayout::ePresentSrcKHR;
 
-            vk::AccessFlags        src_access_mask = access_flags_for_layout(old_vk_image_layout);
-            vk::AccessFlags        dst_access_mask = access_flags_for_layout(new_vk_image_layout);
-            vk::PipelineStageFlags src_pipeline_stage_flags = pipeline_stage_flags(old_vk_image_layout);
-            vk::PipelineStageFlags dst_pipeline_stage_flags = pipeline_stage_flags(new_vk_image_layout);
+                vk::AccessFlags src_access_mask = access_flags_for_layout(old_vk_image_layout);
+                vk::AccessFlags dst_access_mask = access_flags_for_layout(new_vk_image_layout);
+                vk::PipelineStageFlags src_pipeline_stage_flags = pipeline_stage_flags(old_vk_image_layout);
+                vk::PipelineStageFlags dst_pipeline_stage_flags = pipeline_stage_flags(new_vk_image_layout);
 
-            // setup barrier make sure that image is properly setup
-            vk::ImageMemoryBarrier img_mem_barrier;
-            img_mem_barrier.setOldLayout(old_vk_image_layout);
-            img_mem_barrier.setNewLayout(new_vk_image_layout);
-            img_mem_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-            img_mem_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-            img_mem_barrier.setImage(m_vk_image);
-            img_mem_barrier.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
-            img_mem_barrier.subresourceRange.setBaseMipLevel(0);
-            img_mem_barrier.subresourceRange.setLevelCount(1);
-            img_mem_barrier.subresourceRange.setBaseArrayLayer(0);
-            img_mem_barrier.subresourceRange.setLayerCount(1);
-            img_mem_barrier.setSrcAccessMask(src_access_mask);
-            img_mem_barrier.setDstAccessMask(dst_access_mask);
+                // setup barrier make sure that image is properly setup
+                vk::ImageMemoryBarrier img_mem_barrier;
+                img_mem_barrier.setOldLayout(old_vk_image_layout);
+                img_mem_barrier.setNewLayout(new_vk_image_layout);
+                img_mem_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
+                img_mem_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
+                img_mem_barrier.setImage(m_vk_image);
+                img_mem_barrier.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
+                img_mem_barrier.subresourceRange.setBaseMipLevel(0);
+                img_mem_barrier.subresourceRange.setLevelCount(1);
+                img_mem_barrier.subresourceRange.setBaseArrayLayer(0);
+                img_mem_barrier.subresourceRange.setLayerCount(1);
+                img_mem_barrier.setSrcAccessMask(src_access_mask);
+                img_mem_barrier.setDstAccessMask(dst_access_mask);
 
-            cmd_buf.pipelineBarrier(src_pipeline_stage_flags,
-                                    dst_pipeline_stage_flags,
-                                    vk::DependencyFlagBits(0),
-                                    nullptr,
-                                    nullptr,
-                                    { img_mem_barrier });
-        });
+                cmd_buf.pipelineBarrier(src_pipeline_stage_flags,
+                                        dst_pipeline_stage_flags,
+                                        vk::DependencyFlagBits(0),
+                                        nullptr,
+                                        nullptr,
+                                        { img_mem_barrier });
+            });
         if (!name.empty())
         {
             device.name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
@@ -157,7 +160,7 @@ struct Texture
         {
             device.name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
             device.name_vkhpp_object<vk::ImageView, vk::ImageView::CType>(*m_vk_image_view,
-                                                                           name + "_image_view");
+                                                                          name + "_image_view");
         }
 
         // copy image
@@ -208,9 +211,10 @@ struct Texture
         }
         else
         {
-            device.one_time_command_submit([&](vk::CommandBuffer cmd_buf) {
-                transition_image_layout(cmd_buf, m_vk_image, vk::ImageLayout::eUndefined, initial_layout);
-            });
+            device.one_time_command_submit(
+                [&](vk::CommandBuffer cmd_buf) {
+                    transition_image_layout(cmd_buf, m_vk_image, vk::ImageLayout::eUndefined, initial_layout);
+                });
         }
 
         m_resolution      = int3(resolution, 0);

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "pch/pch.h"
-#include "vkacommon.h"
 
 #ifdef USE_VKA
+
+    #include "vka_common.h"
 
 namespace VKA_NAME
 {
@@ -136,19 +137,23 @@ struct Entry
                                                         { vk::PhysicalDeviceType::eIntegratedGpu, 100 },
                                                         { vk::PhysicalDeviceType::eVirtualGpu, 10 },
                                                         { vk::PhysicalDeviceType::eCpu, 1 } };
-        auto get_gpu_rank                           = [&](const vk::PhysicalDeviceType type) {
-            return (ranks.count(type) == 0) ? 0 : ranks[type];
-        };
-        std::sort(results.begin(), results.end(), [&](const PhysicalDevice & lhs, const PhysicalDevice & rhs) {
-            const auto l_prop = lhs.m_vk_pdevice.getProperties();
-            const auto r_prop = rhs.m_vk_pdevice.getProperties();
-            if (get_gpu_rank(l_prop.deviceType) > get_gpu_rank(r_prop.deviceType)) return true;
-            if (get_gpu_rank(l_prop.deviceType) < get_gpu_rank(r_prop.deviceType)) return false;
-            if (l_prop.apiVersion > r_prop.apiVersion) return true;
-            if (l_prop.apiVersion < r_prop.apiVersion) return false;
-            if (l_prop.deviceID >= r_prop.deviceID) return true;
-            return false;
-        });
+        auto                                  get_gpu_rank = [&](const vk::PhysicalDeviceType type)
+        { return (ranks.count(type) == 0) ? 0 : ranks[type]; };
+        std::sort(results.begin(),
+                  results.end(),
+                  [&](const PhysicalDevice & lhs, const PhysicalDevice & rhs)
+                  {
+                      const auto l_prop = lhs.m_vk_pdevice.getProperties();
+                      const auto r_prop = rhs.m_vk_pdevice.getProperties();
+                      if (get_gpu_rank(l_prop.deviceType) > get_gpu_rank(r_prop.deviceType))
+                          return true;
+                      if (get_gpu_rank(l_prop.deviceType) < get_gpu_rank(r_prop.deviceType))
+                          return false;
+                      if (l_prop.apiVersion > r_prop.apiVersion) return true;
+                      if (l_prop.apiVersion < r_prop.apiVersion) return false;
+                      if (l_prop.deviceID >= r_prop.deviceID) return true;
+                      return false;
+                  });
 
         // return result
         return results;

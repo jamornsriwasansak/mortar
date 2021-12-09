@@ -1,14 +1,13 @@
 #pragma once
 
-#include "vkacommon.h"
+#include "pch/pch.h"
 
 #ifdef USE_VKA
 
-#include "pch/pch.h"
-
-#include "vkadevice.h"
-#include "vkaswapchain.h"
-#include "vkatexture.h"
+    #include "vka_common.h"
+    #include "vka_device.h"
+    #include "vka_swapchain.h"
+    #include "vka_texture.h"
 
 namespace VKA_NAME
 {
@@ -98,9 +97,9 @@ struct ImGuiRenderPass
         init_info.CheckVkResultFn = nullptr;
         ImGui_ImplVulkan_Init(&init_info, static_cast<VkRenderPass>(m_vk_render_pass.get()));
 
-        device.one_time_command_submit([&](vk::CommandBuffer cmd_buf) {
-            ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(cmd_buf));
-        });
+        device.one_time_command_submit(
+            [&](vk::CommandBuffer cmd_buf)
+            { ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(cmd_buf)); });
 
         init_or_resize_framebuffer(device, swapchain);
     }

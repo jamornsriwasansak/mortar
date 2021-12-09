@@ -1,14 +1,14 @@
 #pragma once
 
-#include "vkacommon.h"
+#include "pch/pch.h"
 
 #ifdef USE_VKA
 
-#include "vkadevice.h"
-
-#include "../shadercompiler/hlsldxccompiler.h"
-#include "rhi/commontypes/rhishadersrc.h"
-#include "spirvreflection.h"
+    #include "../shadercompiler/hlsldxccompiler.h"
+    #include "rhi/common/rhi_shader_src.h"
+    #include "spirv_reflection.h"
+    #include "vka_common.h"
+    #include "vka_device.h"
 
 namespace VKA_NAME
 {

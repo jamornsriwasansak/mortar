@@ -1,11 +1,11 @@
 #pragma once
 
-#include "vkacommon.h"
+#include "vka_common.h"
 
 #ifdef USE_VKA
 
-#include "vkadevice.h"
-#include "vkatexture.h"
+    #include "vka_device.h"
+    #include "vka_texture.h"
 
 namespace VKA_NAME
 {

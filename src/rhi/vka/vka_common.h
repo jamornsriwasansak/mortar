@@ -7,8 +7,8 @@
 #include "core/glfwhandler.h"
 #include "core/logger.h"
 #include "core/uniquehandle.h"
-#include "rhi/commontypes/rhienums.h"
-#include "rhi/commontypes/rhishadersrc.h"
+#include "rhi/common/rhi_enums.h"
+#include "rhi/common/rhi_shader_src.h"
 
 #define VKCK(ResultEvalExpression)                                                                     \
     do                                                                                                 \

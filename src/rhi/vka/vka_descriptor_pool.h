@@ -1,10 +1,11 @@
 #pragma once
 
-#include "vkacommon.h"
+#include "pch/pch.h"
 
 #ifdef USE_VKA
 
-#include "vkadevice.h"
+    #include "vka_common.h"
+    #include "vka_device.h"
 
 namespace VKA_NAME
 {
