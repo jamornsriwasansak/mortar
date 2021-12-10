@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
-    #include "dxadevice.h"
-    #include "dxilreflection.h"
+    #include "dxa_device.h"
+    #include "dxil_reflection.h"
     #include "pch/pch.h"
     #include "rhi/common/rhi_shader_src.h"
     #include "rhi/shadercompiler/hlsldxccompiler.h"

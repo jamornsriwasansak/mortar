@@ -4,15 +4,15 @@
 
 #ifdef USE_DXA
 
-    #include "dxabuffer.h"
-    #include "dxacommon.h"
-    #include "dxadescriptorpool.h"
-    #include "dxarasterpipeline.h"
-    #include "dxaraytracingaccel.h"
-    #include "dxaraytracingpipeline.h"
-    #include "dxasampler.h"
-    #include "dxatexture.h"
-    #include "dxilreflection.h"
+    #include "dxa_buffer.h"
+    #include "dxa_common.h"
+    #include "dxa_descriptorpool.h"
+    #include "dxa_rasterpipeline.h"
+    #include "dxa_raytracingaccel.h"
+    #include "dxa_raytracingpipeline.h"
+    #include "dxa_sampler.h"
+    #include "dxa_texture.h"
+    #include "dxil_reflection.h"
 
 namespace DXA_NAME
 {

@@ -1,17 +1,15 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
 #include "core/uniquehandle.h"
 
 namespace DXA_NAME
 {
-struct Semaphore
+struct Fence
 {
-    // in dx, fence can be used as semaphore
-
-    struct SemaphoreHandleDeleter
+    struct FenceHandleDeleter
     {
         void
         operator()(HANDLE handle)
@@ -22,10 +20,12 @@ struct Semaphore
     };
 
     ComPtr<ID3D12Fence> m_dx_fence = nullptr;
-    UINT64 m_expected_fence_value;
-    UniquePtrHandle<HANDLE, SemaphoreHandleDeleter> m_fence_handle;
+    UINT64 m_expected_fence_value = 0;
+    UniquePtrHandle<HANDLE, FenceHandleDeleter> m_fence_handle;
 
-    Semaphore(const std::string & name, const Device & device)
+    Fence() {}
+
+    Fence(const std::string & name, const Device & device)
     {
         m_expected_fence_value = 1;
 
@@ -41,6 +41,22 @@ struct Semaphore
 
         // name fence
         device.name_dx_object(m_dx_fence, name);
+    }
+
+    void
+    wait(std::chrono::milliseconds duration = std::chrono::milliseconds::max())
+    {
+        if (m_dx_fence->GetCompletedValue() < m_expected_fence_value)
+        {
+            DXCK(m_dx_fence->SetEventOnCompletion(m_expected_fence_value, *m_fence_handle));
+            ::WaitForSingleObjectEx(*m_fence_handle, static_cast<DWORD>(duration.count()), FALSE);
+        }
+    }
+
+    void
+    reset()
+    {
+        m_expected_fence_value++;
     }
 };
 } // namespace DXA_NAME

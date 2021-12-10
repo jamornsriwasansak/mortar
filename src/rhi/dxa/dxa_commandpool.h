@@ -4,9 +4,9 @@
 
 #ifdef USE_DXA
 
-    #include "dxacommandlist.h"
-    #include "dxacommon.h"
-    #include "dxadevice.h"
+    #include "dxa_commandlist.h"
+    #include "dxa_common.h"
+    #include "dxa_device.h"
 
 namespace DXA_NAME
 {

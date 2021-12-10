@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
 namespace DXA_NAME

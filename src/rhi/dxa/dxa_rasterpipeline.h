@@ -1,13 +1,13 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
     #include "../shadercompiler/hlsldxccompiler.h"
     #include "../shadercompiler/shader_binary_manager.h"
     #include "core/logger.h"
-    #include "dxaframebufferbinding.h"
-    #include "dxilreflection.h"
+    #include "dxa_framebufferbinding.h"
+    #include "dxil_reflection.h"
 
 
 namespace DXA_NAME

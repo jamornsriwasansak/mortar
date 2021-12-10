@@ -4,18 +4,18 @@
 
 #ifdef USE_DXA
 
-    #include "dxabuffer.h"
-    #include "dxacommon.h"
-    #include "dxadescriptor.h"
-    #include "dxaentry.h"
-    #include "dxafence.h"
-    #include "dxaframebufferbinding.h"
-    #include "dxaimguirenderpass.h"
-    #include "dxarasterpipeline.h"
-    #include "dxaraytracingpipeline.h"
-    #include "dxasemaphore.h"
-    #include "dxaswapchain.h"
-    #include "dxatexture.h"
+    #include "dxa_buffer.h"
+    #include "dxa_common.h"
+    #include "dxa_descriptor.h"
+    #include "dxa_entry.h"
+    #include "dxa_fence.h"
+    #include "dxa_framebufferbinding.h"
+    #include "dxa_imguirenderpass.h"
+    #include "dxa_rasterpipeline.h"
+    #include "dxa_raytracingpipeline.h"
+    #include "dxa_semaphore.h"
+    #include "dxa_swapchain.h"
+    #include "dxa_texture.h"
 
 namespace DXA_NAME
 {

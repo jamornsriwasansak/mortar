@@ -1,11 +1,11 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
-    #include "dxadevice.h"
-    #include "dxaswapchain.h"
-    #include "dxatexture.h"
+    #include "dxa_device.h"
+    #include "dxa_swapchain.h"
+    #include "dxa_texture.h"
 
     #include "backends/imgui_impl_dx12.h"
     #include "backends/imgui_impl_glfw.h"

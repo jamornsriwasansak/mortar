@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
-    #include "dxabuffer.h"
-    #include "dxastagingbuffermanager.h"
+    #include "dxa_buffer.h"
+    #include "dxa_stagingbuffermanager.h"
 
 namespace DXA_NAME
 {

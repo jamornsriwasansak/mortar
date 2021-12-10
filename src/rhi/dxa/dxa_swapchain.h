@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
-    #include "dxadevice.h"
-    #include "dxasemaphore.h"
+    #include "dxa_device.h"
+    #include "dxa_semaphore.h"
 
 namespace DXA_NAME
 {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
-    #include "dxaentry.h"
+    #include "dxa_entry.h"
 
     #ifdef USE_NSIGHT_AFTERMATH
         #include "NsightAftermathGpuCrashTracker.h"

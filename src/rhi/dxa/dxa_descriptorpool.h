@@ -1,9 +1,9 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
-    #include "dxadevice.h"
+    #include "dxa_device.h"
 
 namespace DXA_NAME
 {

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "dxacommon.h"
+#include "dxa_common.h"
 #ifdef USE_DXA
 
-    #include "dxaswapchain.h"
-    #include "dxatexture.h"
+    #include "dxa_swapchain.h"
+    #include "dxa_texture.h"
 
 namespace DXA_NAME
 {
