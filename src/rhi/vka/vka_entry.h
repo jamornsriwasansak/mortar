@@ -44,7 +44,7 @@ struct Entry
     bool                      m_debug;
     vk::UniqueInstance        m_vk_instance;
     PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
-    vk::SurfaceKHR            m_vk_surface;
+    vk::UniqueSurfaceKHR      m_vk_surface;
 
     // TODO:: move this to somewhere else
     static constexpr uint32_t DefaultApiVersion = 120;
@@ -109,7 +109,11 @@ struct Entry
             Logger::Critical<true>(__FUNCTION__, " creating surface failed ", vk::to_string(vk::Result(err)));
         }
         Logger::Info(__FUNCTION__, " created surface");
-        m_vk_surface = vk::SurfaceKHR(vksurface);
+
+        m_vk_surface =
+            vk::UniqueSurfaceKHR(vk::SurfaceKHR(vksurface),
+                                 vk::ObjectDestroy<vk::Instance, decltype(VULKAN_HPP_DEFAULT_DISPATCHER)>(
+                                     m_vk_instance.get()));
     }
 
     std::vector<PhysicalDevice>
@@ -128,7 +132,7 @@ struct Entry
             uint32_t api_version = device.getProperties().apiVersion;
             if (m_vk_api_made_version <= api_version)
             {
-                results.emplace_back(device, *m_vk_instance, m_vk_surface, m_vk_api_made_version, m_debug);
+                results.emplace_back(device, *m_vk_instance, m_vk_surface.get(), m_vk_api_made_version, m_debug);
             }
         }
 
