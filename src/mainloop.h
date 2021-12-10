@@ -264,6 +264,12 @@ struct MainLoop
         // wait until all resource are not used
         for (PerFlightResource & per_flight_resource : m_per_flight_resources)
         {
+            // wait until flight is done
+            per_flight_resource.wait();
+
+            // flush the command pool
+            per_flight_resource.m_flight_fence.reset();
+            per_flight_resource.m_graphics_command_pool.flush(per_flight_resource.m_flight_fence);
             per_flight_resource.wait();
         }
 
