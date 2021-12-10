@@ -76,8 +76,8 @@ struct Device
     };
     UniquePtrHandle<VkAfterCrash_Device, VkAfterCrashDeviceDeleter> m_vkac_device;
     UniquePtrHandle<VkAfterCrash_Buffer, VkAfterCrashBufferDeleter> m_vkac_buffer;
-    #endif
     uint32_t * m_vkac_crash_data = nullptr;
+    #endif
 
     Device() {}
 
@@ -107,7 +107,7 @@ struct Device
                                      physical_device.m_device_extensions,
                                      m_features,
                                      queue_family_indices);
-        name_vkhpp_object<vk::Device, vk::Device::CType>(m_vk_ldevice.get(), name + "_ldevice");
+        name_vkhpp_object(m_vk_ldevice.get(), name + "_ldevice");
 
         // init default dispatcher
         VULKAN_HPP_DEFAULT_DISPATCHER.init(m_vk_ldevice.get());
@@ -117,18 +117,15 @@ struct Device
         m_vk_present_queue  = m_vk_ldevice->getQueue(m_family_indices.m_present, 0);
         m_vk_compute_queue  = m_vk_ldevice->getQueue(m_family_indices.m_compute, 0);
         m_vk_transfer_queue = m_vk_ldevice->getQueue(m_family_indices.m_transfer, 0);
-        name_vkhpp_object<vk::Queue, vk::Queue::CType>(m_vk_graphics_queue,
-                                                       name + "_graphics_queue");
-        name_vkhpp_object<vk::Queue, vk::Queue::CType>(m_vk_present_queue, name + "_present_queue");
-        name_vkhpp_object<vk::Queue, vk::Queue::CType>(m_vk_compute_queue, name + "_compute_queue");
-        name_vkhpp_object<vk::Queue, vk::Queue::CType>(m_vk_transfer_queue,
-                                                       name + "_transfer_queue");
+        name_vkhpp_object(m_vk_graphics_queue, name + "_graphics_queue");
+        name_vkhpp_object(m_vk_present_queue, name + "_present_queue");
+        name_vkhpp_object(m_vk_compute_queue, name + "_compute_queue");
+        name_vkhpp_object(m_vk_transfer_queue, name + "_transfer_queue");
         Logger::Info(__FUNCTION__, " get all necessary queues");
 
         // create command pool for one time submit
         m_vk_graphics_command_pool = create_command_pool(m_vk_ldevice.get(), m_family_indices.m_graphics);
-        name_vkhpp_object<vk::CommandPool, vk::CommandPool::CType>(m_vk_graphics_command_pool.get(),
-                                                                   name + "_graphics_command_pool");
+        name_vkhpp_object(m_vk_graphics_command_pool.get(), name + "_graphics_command_pool");
 
         // allocate vma
         VmaAllocatorCreateInfo vma_allocator_ci = {};
@@ -209,7 +206,7 @@ struct Device
     #endif
     }
 
-    template <typename HppType, typename CType>
+    template <typename HppType, typename CType = HppType::CType>
     void
     name_vkhpp_object(const HppType & vk_object, const std::string & name = "") const
     {

@@ -90,9 +90,8 @@ struct Texture
             });
         if (!name.empty())
         {
-            device.name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
-            device.name_vkhpp_object<vk::ImageView, vk::ImageView::CType>(*m_vk_image_view,
-                                                                          name + "_image_view");
+            device.name_vkhpp_object(m_vk_image, name);
+            device.name_vkhpp_object(*m_vk_image_view, name + "_image_view");
         }
     }
 
@@ -158,9 +157,8 @@ struct Texture
 
         if (!name.empty())
         {
-            device.name_vkhpp_object<vk::Image, vk::Image::CType>(m_vk_image, name);
-            device.name_vkhpp_object<vk::ImageView, vk::ImageView::CType>(*m_vk_image_view,
-                                                                          name + "_image_view");
+            device.name_vkhpp_object(m_vk_image, name);
+            device.name_vkhpp_object(*m_vk_image_view, name + "_image_view");
         }
 
         // copy image

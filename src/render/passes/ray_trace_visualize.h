@@ -173,14 +173,16 @@ struct RayTraceVisualizePass
 #endif
 
         // descriptor sets 0
-        descriptor_sets[0] = Rhi::DescriptorSet(&ctx.m_device, m_rt_pipeline, &ctx.m_descriptor_pool, 0);
+        descriptor_sets[0] =
+            Rhi::DescriptorSet(&ctx.m_device, m_rt_pipeline, &ctx.m_per_flight_resource.m_descriptor_pool, 0);
         descriptor_sets[0]
             .set_u_rw_texture(0, target_texture_buffer)
             .set_b_constant_buffer(0, m_cb_params)
             .update();
 
         // descriptor sets 1
-        descriptor_sets[1] = Rhi::DescriptorSet(&ctx.m_device, m_rt_pipeline, &ctx.m_descriptor_pool, 1);
+        descriptor_sets[1] =
+            Rhi::DescriptorSet(&ctx.m_device, m_rt_pipeline, &ctx.m_per_flight_resource.m_descriptor_pool, 1);
         for (size_t i = 0; i < std::min(ctx.m_scene_resource.m_d_textures.size(),
                                         size_t(EngineSetting::MaxNumBindlessTextures));
              i++)

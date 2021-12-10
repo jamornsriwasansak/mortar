@@ -13,7 +13,7 @@ namespace VKA_NAME
 {
 struct CommandPool
 {
-    const Rhi::Device &   m_device;
+    const Device &        m_device;
     vk::UniqueCommandPool m_vk_cmd_pool;
     vk::Queue             m_vk_queue;
 
@@ -45,7 +45,7 @@ struct CommandPool
         }
         m_vk_cmd_pool = device.m_vk_ldevice->createCommandPoolUnique(command_pool_ci);
 
-        device.name_vkhpp_object<vk::CommandPool, vk::CommandPool::CType>(m_vk_cmd_pool.get(), name);
+        device.name_vkhpp_object(m_vk_cmd_pool.get(), name);
     }
 
     CommandList

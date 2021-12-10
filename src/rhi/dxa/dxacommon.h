@@ -4,8 +4,8 @@
 
 #ifdef USE_DXA
 
-    #include "rhi/commontypes/rhienums.h"
-    #include "rhi/commontypes/rhishadersrc.h"
+    #include "rhi/common/rhi_enums.h"
+    #include "rhi/common/rhi_shader_src.h"
     //
     #include "core/glfwhandler.h"
     #include "core/logger.h"
@@ -66,10 +66,8 @@ struct DescriptorGpuCpuHandle
     offset(const UINT offset) const
     {
         DescriptorHandle handle;
-        handle.m_dx_cpu_handle =
-            CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dx_cpu_handle_start, offset);
-        handle.m_dx_gpu_handle =
-            CD3DX12_GPU_DESCRIPTOR_HANDLE(m_dx_gpu_handle_start, offset);
+        handle.m_dx_cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dx_cpu_handle_start, offset);
+        handle.m_dx_gpu_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_dx_gpu_handle_start, offset);
         return handle;
     }
 };
@@ -88,8 +86,7 @@ struct DescriptorCpuHandle
     offset(const UINT offset) const
     {
         DescriptorHandle handle;
-        handle.m_dx_cpu_handle =
-            CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dx_cpu_handle_start, offset);
+        handle.m_dx_cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dx_cpu_handle_start, offset);
         return handle;
     }
 };
@@ -100,7 +97,7 @@ struct DescriptorHeap
     ID3D12Device5 *              m_dx_device          = nullptr;
     ComPtr<ID3D12DescriptorHeap> m_dx_descriptor_heap = nullptr;
     UINT                         m_dx_offset          = 0;
-    size_t                       m_dx_handle_size     = 0;
+    UINT                         m_dx_handle_size     = 0;
     THandleStart                 m_handle_start;
 
     DescriptorHeap() {}
@@ -108,11 +105,11 @@ struct DescriptorHeap
     DescriptorHeap(ID3D12Device5 *             dx_device,
                    D3D12_DESCRIPTOR_HEAP_FLAGS heap_flags,
                    D3D12_DESCRIPTOR_HEAP_TYPE  heap_type,
-                   const size_t                num_descriptors)
+                   const UINT                  num_descriptors)
     : m_dx_device(dx_device)
     {
         D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
-        heap_desc.NumDescriptors             = static_cast<UINT>(num_descriptors);
+        heap_desc.NumDescriptors             = num_descriptors;
         heap_desc.Flags                      = heap_flags;
         heap_desc.Type                       = heap_type;
         DXCK(m_dx_device->CreateDescriptorHeap(&heap_desc, IID_PPV_ARGS(m_dx_descriptor_heap.GetAddressOf())));
@@ -122,10 +119,10 @@ struct DescriptorHeap
     }
 
     DescriptorHandle
-    request_handle(size_t num_handles)
+    request_handle(const size_t num_handles)
     {
         DescriptorHandle handle = m_handle_start.offset(m_dx_offset);
-        handle.num_handles = num_handles;
+        handle.num_handles      = num_handles;
         m_dx_offset += static_cast<UINT>(m_dx_handle_size * num_handles);
         return handle;
     }

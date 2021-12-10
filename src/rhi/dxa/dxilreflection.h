@@ -4,9 +4,9 @@
 
 #ifdef USE_DXA
 
-#include "rhi/commontypes/rhishadersrc.h"
-//
-#include "core/logger.h"
+    #include "rhi/common/rhi_shader_src.h"
+    //
+    #include "core/logger.h"
 
 struct DxilReflection
 {
@@ -24,17 +24,17 @@ struct DxilReflection
         using Space     = size_t;
         using BindPoint = size_t;
         std::list<ComPtr<ID3D12LibraryReflection>> m_library_reflections;
-        std::list<ComPtr<ID3D12ShaderReflection>> m_shader_reflections;
-        std::vector<D3D12_INPUT_ELEMENT_DESC> m_vertex_input_element_descs;
-        std::list<D3D12_DESCRIPTOR_RANGE> m_descriptor_ranges;
-        std::vector<D3D12_ROOT_PARAMETER> m_root_parameters;
+        std::list<ComPtr<ID3D12ShaderReflection>>  m_shader_reflections;
+        std::vector<D3D12_INPUT_ELEMENT_DESC>      m_vertex_input_element_descs;
+        std::list<D3D12_DESCRIPTOR_RANGE>          m_descriptor_ranges;
+        std::vector<D3D12_ROOT_PARAMETER>          m_root_parameters;
         std::map<std::tuple<D3D_SHADER_INPUT_TYPE, Space, BindPoint>, DescriptorInfo> m_space_bindings;
     };
 
     ComPtr<ID3D12ShaderReflection>
     reflect_dxil(IDxcBlob * blob, std::optional<ComPtr<IDxcBlob>> root_signature_blob = std::nullopt) const
     {
-        HRESULT hr;
+        HRESULT                        hr;
         ComPtr<ID3D12ShaderReflection> result;
 
         // create container reflection
@@ -79,7 +79,7 @@ struct DxilReflection
     ComPtr<ID3D12LibraryReflection>
     reflect_dxil_lib(IDxcBlob * blob, std::optional<ComPtr<IDxcBlob>> root_signature_blob = std::nullopt) const
     {
-        HRESULT hr;
+        HRESULT                         hr;
         ComPtr<ID3D12LibraryReflection> result;
 
         // create container reflection
@@ -129,7 +129,7 @@ struct DxilReflection
         using BindPoint = size_t;
         struct Binding
         {
-            size_t m_bind_count                   = 0;
+            size_t               m_bind_count     = 0;
             D3D12_ROOT_PARAMETER m_root_parameter = {};
         };
         std::map<std::tuple<D3D_SHADER_INPUT_TYPE, Space, BindPoint>, Binding> bindings;
@@ -138,17 +138,17 @@ struct DxilReflection
 
         for (size_t i_blob = 0; i_blob < blobs.size(); i_blob++)
         {
-            IDxcBlob * blob                 = blobs[i_blob].first.Get();
+            IDxcBlob *                blob  = blobs[i_blob].first.Get();
             DXA_NAME::ShaderStageEnum stage = blobs[i_blob].second;
 
-            D3D12_LIBRARY_DESC library_desc                = {};
-            ID3D12LibraryReflection * library_reflection   = nullptr;
-            D3D12_FUNCTION_DESC func_desc                  = {};
+            D3D12_LIBRARY_DESC         library_desc        = {};
+            ID3D12LibraryReflection *  library_reflection  = nullptr;
+            D3D12_FUNCTION_DESC        func_desc           = {};
             ID3D12FunctionReflection * function_reflection = nullptr;
-            D3D12_SHADER_DESC shader_desc                  = {};
-            ID3D12ShaderReflection * shader_reflection     = nullptr;
-            UINT num_bound_resources                       = 0;
-            const bool is_library = stage == DXA_NAME::ShaderStageEnum::AnyHit ||
+            D3D12_SHADER_DESC          shader_desc         = {};
+            ID3D12ShaderReflection *   shader_reflection   = nullptr;
+            UINT                       num_bound_resources = 0;
+            const bool                 is_library = stage == DXA_NAME::ShaderStageEnum::AnyHit ||
                                     stage == DXA_NAME::ShaderStageEnum::ClosestHit ||
                                     stage == DXA_NAME::ShaderStageEnum::Miss ||
                                     stage == DXA_NAME::ShaderStageEnum::RayGen ||
@@ -285,9 +285,9 @@ private:
     }
 
     D3D12_ROOT_PARAMETER
-    get_suitable_root_parameter(std::list<D3D12_DESCRIPTOR_RANGE> * desc_ranges,
+    get_suitable_root_parameter(std::list<D3D12_DESCRIPTOR_RANGE> *  desc_ranges,
                                 const D3D12_SHADER_INPUT_BIND_DESC & binding_desc,
-                                const DXA_NAME::ShaderStageEnum shader_stage) const
+                                const DXA_NAME::ShaderStageEnum      shader_stage) const
     {
         // add root parameter
         CD3DX12_ROOT_PARAMETER root_parameter = {};

@@ -69,7 +69,7 @@ struct Buffer
         device_address_info.setBuffer(vk::Buffer(m_vma_buffer_bundle->m_vk_buffer));
         m_device_address = device.m_vk_ldevice->getBufferAddress(device_address_info);
 
-        device.name_vkhpp_object<vk::Buffer, vk::Buffer::CType>(vk::Buffer(vma_vk_buffer), name);
+        device.name_vkhpp_object(vk::Buffer(vma_vk_buffer), name);
     }
 
     bool

@@ -48,7 +48,7 @@ struct RenderToFramebufferPass
         // setup descriptor set
         std::array<Rhi::DescriptorSet, 1> beauty_desc_sets;
         beauty_desc_sets[0] =
-            Rhi::DescriptorSet(&ctx.m_device, m_raster_pipeline, &ctx.m_descriptor_pool, 0);
+            Rhi::DescriptorSet(&ctx.m_device, m_raster_pipeline, &ctx.m_per_flight_resource.m_descriptor_pool, 0);
         beauty_desc_sets[0].set_t_texture(0, tex).set_s_sampler(0, m_sampler).update();
 
         // raster

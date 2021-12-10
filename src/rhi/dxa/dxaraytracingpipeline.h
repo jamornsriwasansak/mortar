@@ -6,7 +6,7 @@
     #include "dxadevice.h"
     #include "dxilreflection.h"
     #include "pch/pch.h"
-    #include "rhi/commontypes/rhishadersrc.h"
+    #include "rhi/common/rhi_shader_src.h"
     #include "rhi/shadercompiler/hlsldxccompiler.h"
 
 namespace DXA_NAME
@@ -274,7 +274,8 @@ struct RayTracingPipeline
              const std::string &                 name)
     {
 
-        auto num_shader_entries = [&](const ShaderStageEnum stage) -> size_t {
+        auto num_shader_entries = [&](const ShaderStageEnum stage) -> size_t
+        {
             size_t result = 0;
             for (auto & src : rt_lib.m_shader_srcs)
             {
@@ -286,7 +287,8 @@ struct RayTracingPipeline
             return result;
         };
 
-        auto num_max_inputs = [&](const ShaderStageEnum stage) -> size_t {
+        auto num_max_inputs = [&](const ShaderStageEnum stage) -> size_t
+        {
             size_t max_inputs = 0;
             for (size_t i = 0; i < shader_entries.size(); i++)
             {
@@ -300,7 +302,8 @@ struct RayTracingPipeline
             return max_inputs;
         };
 
-        auto get_record_size = [&](const ShaderStageEnum stage) -> size_t {
+        auto get_record_size = [&](const ShaderStageEnum stage) -> size_t
+        {
             size_t result = 0;
             result += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
             result += num_max_inputs(stage) * 8; // 8 bytes per input
@@ -584,7 +587,8 @@ struct RayTracingShaderTable
         const size_t shader_table_size = rounded_raygen_size + rounded_miss_size + rounded_hitgroup_size;
 
         // allocate resource
-        m_shader_table_buffer = [&]() {
+        m_shader_table_buffer = [&]()
+        {
             // Create shader table buffer
             D3D12MA::ALLOCATION_DESC alloc_desc = {};
             alloc_desc.Flags                    = D3D12MA::ALLOCATION_FLAG_COMMITTED;
@@ -595,11 +599,11 @@ struct RayTracingShaderTable
             CD3DX12_RESOURCE_DESC buffer_desc =
                 CD3DX12_RESOURCE_DESC::Buffer(shader_table_size, D3D12_RESOURCE_FLAG_NONE);
             DXCK(device.m_d3d12ma->CreateResource(&alloc_desc,
-                                                   &buffer_desc,
-                                                   D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                   nullptr,
-                                                   &allocation,
-                                                   IID_PPV_ARGS(&resource)));
+                                                  &buffer_desc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                  nullptr,
+                                                  &allocation,
+                                                  IID_PPV_ARGS(&resource)));
             return D3D12MAHandle<D3D12MA::Allocation>(allocation);
         }();
 

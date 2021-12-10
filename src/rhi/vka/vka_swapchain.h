@@ -4,9 +4,9 @@
 
 #ifdef USE_VKA
 
-#include "vka_common.h"
-#include "vka_device.h"
-#include "vka_semaphore.h"
+    #include "vka_common.h"
+    #include "vka_device.h"
+    #include "vka_semaphore.h"
 
 namespace VKA_NAME
 {
@@ -137,7 +137,7 @@ private:
         m_num_images   = static_cast<uint32_t>(num_swapchain_images);
 
         // name our stuff
-        device.name_vkhpp_object<vk::SwapchainKHR, vk::SwapchainKHR::CType>(m_vk_swapchain.get(), m_name);
+        device.name_vkhpp_object(m_vk_swapchain.get(), m_name);
     }
 
     std::tuple<vk::Format, vk::ColorSpaceKHR>

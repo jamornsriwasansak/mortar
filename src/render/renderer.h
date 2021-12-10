@@ -10,13 +10,13 @@
 
 struct Renderer
 {
-    struct PerFlightResource
+    struct PerFlightRenderResource
     {
         Rhi::Texture m_rt_result;
     };
 
     std::vector<Rhi::FramebufferBindings> m_raster_fbindings;
-    std::vector<PerFlightResource>        m_per_flight_resources;
+    std::vector<PerFlightRenderResource>  m_per_flight_resources;
 
     // all raytrace mode (rays start from the camera)
     enum class RayTraceMode : int
@@ -47,7 +47,7 @@ struct Renderer
     {
     }
 
-    std::vector<Rhi::FramebufferBindings>
+    static std::vector<Rhi::FramebufferBindings>
     construct_framebuffer_bindings(const Rhi::Device &                           device,
                                    const std::span<const Rhi::Texture * const> & swapchain_attachment)
     {
@@ -61,10 +61,10 @@ struct Renderer
         return result;
     }
 
-    std::vector<PerFlightResource>
+    static std::vector<PerFlightRenderResource>
     construct_per_flight_resource(Rhi::Device & device, const int2 resolution, const size_t num_flights)
     {
-        std::vector<PerFlightResource> result;
+        std::vector<PerFlightRenderResource> result;
         result.reserve(num_flights);
         for (size_t i = 0; i < num_flights; i++)
         {
@@ -97,8 +97,8 @@ struct Renderer
     void
     loop(const RenderContext & ctx)
     {
-        Rhi::CommandList          cmd_list = ctx.m_graphics_command_pool.get_command_list();
-        const PerFlightResource & per_flight_resource = m_per_flight_resources[ctx.m_flight_index];
+        Rhi::CommandList cmd_list = ctx.m_per_flight_resource.m_graphics_command_pool.get_command_list();
+        const PerFlightRenderResource & per_flight_render_resource = m_per_flight_resources[ctx.m_flight_index];
 
         if (ctx.m_is_shaders_dirty)
         {
@@ -131,12 +131,15 @@ struct Renderer
             case Renderer::RayTraceMode::VisualizeDebug:
                 m_pass_ray_trace_visualize.render(cmd_list,
                                                   ctx,
-                                                  per_flight_resource.m_rt_result,
+                                                  per_flight_render_resource.m_rt_result,
                                                   m_pass_ray_trace_visualize_params,
                                                   ctx.m_resolution);
                 break;
             case Renderer::RayTraceMode::PrimitivePathTracing:
-                m_pass_ray_trace_primitive_pathtrace.render(cmd_list, ctx, per_flight_resource.m_rt_result, ctx.m_resolution);
+                m_pass_ray_trace_primitive_pathtrace.render(cmd_list,
+                                                            ctx,
+                                                            per_flight_render_resource.m_rt_result,
+                                                            ctx.m_resolution);
                 break;
             default:
                 break;
@@ -144,17 +147,17 @@ struct Renderer
         }
 
         // transition
-        cmd_list.transition_texture(per_flight_resource.m_rt_result,
+        cmd_list.transition_texture(per_flight_render_resource.m_rt_result,
                                     Rhi::TextureStateEnum::NonFragmentShaderVisible,
                                     Rhi::TextureStateEnum::FragmentShaderVisible);
-        cmd_list.transition_texture(ctx.m_swapchain_texture,
+        cmd_list.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
                                     Rhi::TextureStateEnum::Present,
                                     Rhi::TextureStateEnum::ColorAttachment);
 
         // run final pass
         m_pass_render_to_framebuffer.run(cmd_list,
                                          ctx,
-                                         per_flight_resource.m_rt_result,
+                                         per_flight_render_resource.m_rt_result,
                                          m_raster_fbindings[ctx.m_image_index]);
 
         // render imgui onto swapchain
@@ -164,14 +167,16 @@ struct Renderer
         }
 
         // transition
-        cmd_list.transition_texture(ctx.m_swapchain_texture,
+        cmd_list.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
                                     Rhi::TextureStateEnum::ColorAttachment,
                                     Rhi::TextureStateEnum::Present);
-        cmd_list.transition_texture(per_flight_resource.m_rt_result,
+        cmd_list.transition_texture(per_flight_render_resource.m_rt_result,
                                     Rhi::TextureStateEnum::FragmentShaderVisible,
                                     Rhi::TextureStateEnum::NonFragmentShaderVisible);
 
         cmd_list.end();
-        cmd_list.submit(&ctx.m_flight_fence, &ctx.m_image_ready_semaphore, &ctx.m_image_presentable_semaphore);
+        cmd_list.submit(&ctx.m_per_flight_resource.m_flight_fence,
+                        &ctx.m_per_flight_resource.m_image_ready_semaphore,
+                        &ctx.m_per_flight_resource.m_image_presentable_semaphore);
     }
 };

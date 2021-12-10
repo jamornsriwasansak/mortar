@@ -70,7 +70,7 @@ struct DescriptorSet
         set_ai.setDescriptorSetCount(1);
         set_ai.setPSetLayouts(&vk_desc_set);
         m_vk_descriptor_set = std::move(device->m_vk_ldevice->allocateDescriptorSets(set_ai)[0]);
-        device->name_vkhpp_object<vk::DescriptorSet, vk::DescriptorSet::CType>(m_vk_descriptor_set, name);
+        device->name_vkhpp_object(m_vk_descriptor_set, name);
     }
 
 

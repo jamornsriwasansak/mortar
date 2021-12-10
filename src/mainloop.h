@@ -2,6 +2,8 @@
 
 #include "core/camera.h"
 #include "core/gui_event_coordinator.h"
+#include "per_flight_resource.h"
+#include "per_swap_resource.h"
 #include "render/render_context.h"
 #include "render/renderer.h"
 #include "rhi/rhi.h"
@@ -9,56 +11,6 @@
 
 struct MainLoop
 {
-    struct PerFlightResource
-    {
-        Rhi::Fence          m_flight_fence;
-        Rhi::CommandPool    m_graphics_command_pool;
-        Rhi::CommandPool    m_compute_command_pool;
-        Rhi::CommandPool    m_transfer_command_pool;
-        Rhi::DescriptorPool m_descriptor_pool;
-        Rhi::Semaphore      m_image_ready_semaphore;
-        Rhi::Semaphore      m_image_presentable_semaphore;
-
-        PerFlightResource(const std::string & name, const Rhi::Device & device)
-        : m_flight_fence(name + "_flight_fence", device),
-          m_graphics_command_pool(name + "_graphics_command_pool", device, Rhi::CommandQueueType::Graphics),
-          m_compute_command_pool(name + "_graphics_command_pool", device, Rhi::CommandQueueType::Compute),
-          m_transfer_command_pool(name + "_graphics_command_pool", device, Rhi::CommandQueueType::Transfer),
-          m_descriptor_pool(name + "_descriptor_pool", device),
-          m_image_ready_semaphore(name + "_image_read_semaphore", device),
-          m_image_presentable_semaphore(name + "_image_presentable_semaphore", device)
-        {
-        }
-
-        void
-        wait()
-        {
-            m_flight_fence.wait();
-        }
-
-        void
-        reset()
-        {
-            m_flight_fence.reset();
-            m_graphics_command_pool.reset();
-            m_compute_command_pool.reset();
-            m_transfer_command_pool.reset();
-            m_descriptor_pool.reset();
-        }
-    };
-
-    struct PerSwapResource
-    {
-        Rhi::Texture m_swapchain_texture;
-        Rhi::Fence * m_swapchain_image_fence;
-
-        PerSwapResource(const std::string & name, Rhi::Device & device, const Rhi::Swapchain & swapchain, const size_t i_image)
-        : m_swapchain_texture(name + "_swapchain_texture", device, swapchain, i_image, float4(0.0f, 0.0f, 0.0f, 0.0f)),
-          m_swapchain_image_fence(nullptr)
-        {
-        }
-    };
-
     Window & m_window;
 
     Rhi::Device &             m_device;
@@ -206,12 +158,8 @@ struct MainLoop
 
         // context parameters for each frame
         RenderContext ctx(m_device,
-                          per_flight_resource.m_graphics_command_pool,
-                          per_flight_resource.m_descriptor_pool,
-                          per_flight_resource.m_image_ready_semaphore,
-                          per_flight_resource.m_image_presentable_semaphore,
-                          per_flight_resource.m_flight_fence,
-                          per_swap_resource.m_swapchain_texture,
+                          per_flight_resource,
+                          per_swap_resource,
                           m_staging_buffer_manager,
                           m_imgui_render_pass,
                           m_shader_binary_manager,

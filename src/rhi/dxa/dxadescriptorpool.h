@@ -12,14 +12,12 @@ struct DescriptorPool
     DescriptorHeap<DescriptorGpuCpuHandle> m_cbv_srv_uav_heap;
     DescriptorHeap<DescriptorGpuCpuHandle> m_sampler_heap;
 
-    static constexpr size_t NumDescriptors = 500;
-
-    DescriptorPool(const std::string & name, const Device & device)
+    DescriptorPool(const std::string & name, const Device & device, const uint32_t num_descriptors)
     : m_cbv_srv_uav_heap(device.m_dx_device.Get(),
                          D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
                          D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-                         NumDescriptors),
-      m_sampler_heap(device.m_dx_device.Get(), D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, NumDescriptors)
+                         num_descriptors),
+      m_sampler_heap(device.m_dx_device.Get(), D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, num_descriptors)
     {
         device.name_dx_object(m_cbv_srv_uav_heap.m_dx_descriptor_heap, name + "_cbv_srv_uav_heap");
         device.name_dx_object(m_sampler_heap.m_dx_descriptor_heap, name + "_sampler_heap");
