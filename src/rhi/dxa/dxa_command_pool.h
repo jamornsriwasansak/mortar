@@ -4,7 +4,7 @@
 
 #ifdef USE_DXA
 
-    #include "dxa_commandlist.h"
+    #include "dxa_command_list.h"
     #include "dxa_common.h"
     #include "dxa_device.h"
 
@@ -12,11 +12,11 @@ namespace DXA_NAME
 {
 struct CommandPool
 {
-    ComPtr<ID3D12CommandAllocator> m_dx_command_allocator = nullptr;
-    ComPtr<ID3D12CommandQueue>     m_dx_command_queue     = nullptr;
-    D3D12_COMMAND_LIST_TYPE        m_command_list_type    = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    std::vector<CommandList>       m_pre_alloc_cmd_lists  = {};
-    size_t                         m_cmd_buffer_index     = 0;
+    ComPtr<ID3D12CommandAllocator> m_dx_command_allocator  = nullptr;
+    ComPtr<ID3D12CommandQueue>     m_dx_command_queue      = nullptr;
+    D3D12_COMMAND_LIST_TYPE        m_command_list_type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    std::vector<CommandBuffer>     m_pre_alloc_cmd_buffers = {};
+    size_t                         m_cmd_buffer_index      = 0;
     const Device &                 m_device;
     std::string                    m_name;
 
@@ -45,10 +45,10 @@ struct CommandPool
         device.name_dx_object(m_dx_command_queue, name);
     }
 
-    CommandList
-    get_command_list()
+    CommandBuffer
+    get_command_buffer()
     {
-        if (m_cmd_buffer_index == m_pre_alloc_cmd_lists.size())
+        if (m_cmd_buffer_index == m_pre_alloc_cmd_buffers.size())
         {
             ComPtr<ID3D12GraphicsCommandList4> cmd_list;
             DXCK(m_device.m_dx_device->CreateCommandList(0,
@@ -56,11 +56,11 @@ struct CommandPool
                                                          m_dx_command_allocator.Get(),
                                                          NULL,
                                                          IID_PPV_ARGS(&cmd_list)));
-            // DXCK(cmd_list->Close());
-            m_pre_alloc_cmd_lists.emplace_back(m_dx_command_queue.Get(), cmd_list);
+            // DXCK(cmd_buffer->Close());
+            m_pre_alloc_cmd_buffers.emplace_back(m_dx_command_queue.Get(), cmd_list);
             m_device.name_dx_object(cmd_list, m_name + "_list_" + std::to_string(m_cmd_buffer_index));
         }
-        return m_pre_alloc_cmd_lists[m_cmd_buffer_index++];
+        return m_pre_alloc_cmd_buffers[m_cmd_buffer_index++];
     }
 
     void
@@ -68,9 +68,9 @@ struct CommandPool
     {
         m_cmd_buffer_index = 0;
         DXCK(m_dx_command_allocator->Reset());
-        for (size_t i = 0; i < m_pre_alloc_cmd_lists.size(); i++)
+        for (size_t i = 0; i < m_pre_alloc_cmd_buffers.size(); i++)
         {
-            m_pre_alloc_cmd_lists[i].m_dx_cmd_list->Reset(m_dx_command_allocator.Get(), nullptr);
+            m_pre_alloc_cmd_buffers[i].m_dx_cmd_buffer->Reset(m_dx_command_allocator.Get(), nullptr);
         }
     }
 

@@ -19,19 +19,19 @@
 
 namespace DXA_NAME
 {
-struct CommandList
+struct CommandBuffer
 {
-    ComPtr<ID3D12GraphicsCommandList4> m_dx_cmd_list  = nullptr;
-    ID3D12CommandQueue *               m_dx_cmd_queue = nullptr;
+    ComPtr<ID3D12GraphicsCommandList4> m_dx_cmd_buffer = nullptr;
+    ID3D12CommandQueue *               m_dx_cmd_queue  = nullptr;
 
     // TODO:: avoid std::list
     std::list<std::vector<D3D12_VERTEX_BUFFER_VIEW>> m_bound_vertex_buffer_views;
     ID3D12RootSignature *                            m_dx_root_signature = nullptr;
 
-    CommandList() {}
+    CommandBuffer() {}
 
-    CommandList(ID3D12CommandQueue * dx_cmd_queue, ComPtr<ID3D12GraphicsCommandList4> & dx_cmd_list)
-    : m_dx_cmd_queue(dx_cmd_queue), m_dx_cmd_list(dx_cmd_list)
+    CommandBuffer(ID3D12CommandQueue * dx_cmd_queue, ComPtr<ID3D12GraphicsCommandList4> & dx_cmd_buffer)
+    : m_dx_cmd_queue(dx_cmd_queue), m_dx_cmd_buffer(dx_cmd_buffer)
     {
     }
 
@@ -49,7 +49,7 @@ struct CommandList
             desc_sets->m_descriptor_pool->m_cbv_srv_uav_heap.m_dx_descriptor_heap.Get(),
             desc_sets->m_descriptor_pool->m_sampler_heap.m_dx_descriptor_heap.Get()
         };
-        m_dx_cmd_list->SetDescriptorHeaps(_countof(heaps), heaps);
+        m_dx_cmd_buffer->SetDescriptorHeaps(_countof(heaps), heaps);
 
         for (size_t i_set = 0; i_set < num_desc_sets; i_set++)
         {
@@ -63,13 +63,13 @@ struct CommandList
             {
                 if (is_graphics)
                 {
-                    m_dx_cmd_list->SetGraphicsRootConstantBufferView(
+                    m_dx_cmd_buffer->SetGraphicsRootConstantBufferView(
                         static_cast<UINT>(desc_set.m_root_cbvs[i].m_root_signature_index),
                         desc_set.m_root_cbvs[i].m_virtual_address);
                 }
                 else
                 {
-                    m_dx_cmd_list->SetComputeRootConstantBufferView(
+                    m_dx_cmd_buffer->SetComputeRootConstantBufferView(
                         static_cast<UINT>(desc_set.m_root_cbvs[i].m_root_signature_index),
                         desc_set.m_root_cbvs[i].m_virtual_address);
                 }
@@ -80,13 +80,13 @@ struct CommandList
             {
                 if (is_graphics)
                 {
-                    m_dx_cmd_list->SetGraphicsRootConstantBufferView(
+                    m_dx_cmd_buffer->SetGraphicsRootConstantBufferView(
                         static_cast<UINT>(desc_set.m_root_srvs[i].m_root_signature_index),
                         desc_set.m_root_srvs[i].m_virtual_address);
                 }
                 else
                 {
-                    m_dx_cmd_list->SetComputeRootShaderResourceView(
+                    m_dx_cmd_buffer->SetComputeRootShaderResourceView(
                         static_cast<UINT>(desc_set.m_root_srvs[i].m_root_signature_index),
                         desc_set.m_root_srvs[i].m_virtual_address);
                 }
@@ -97,13 +97,13 @@ struct CommandList
             {
                 if (is_graphics)
                 {
-                    m_dx_cmd_list->SetGraphicsRootDescriptorTable(
+                    m_dx_cmd_buffer->SetGraphicsRootDescriptorTable(
                         static_cast<UINT>(desc_set.m_root_descriptor_tables[i].m_root_signature_index),
                         desc_set.m_root_descriptor_tables[i].m_gpu_handle);
                 }
                 else
                 {
-                    m_dx_cmd_list->SetComputeRootDescriptorTable(
+                    m_dx_cmd_buffer->SetComputeRootDescriptorTable(
                         static_cast<UINT>(desc_set.m_root_descriptor_tables[i].m_root_signature_index),
                         desc_set.m_root_descriptor_tables[i].m_gpu_handle);
                 }
@@ -143,7 +143,7 @@ struct CommandList
                                             : static_cast<UINT>(size_in_bytes);
         index_buffer_view.Format      = static_cast<DXGI_FORMAT>(index_type);
 
-        m_dx_cmd_list->IASetIndexBuffer(&index_buffer_view);
+        m_dx_cmd_buffer->IASetIndexBuffer(&index_buffer_view);
     }
 
     void
@@ -168,7 +168,7 @@ struct CommandList
         }
 
         // set render targets
-        m_dx_cmd_list->OMSetRenderTargets(static_cast<UINT>(num_rtv_handles), rtv_handles, FALSE, dsv_handle);
+        m_dx_cmd_buffer->OMSetRenderTargets(static_cast<UINT>(num_rtv_handles), rtv_handles, FALSE, dsv_handle);
     }
 
     /*
@@ -177,20 +177,20 @@ struct CommandList
     {
         ID3D12DescriptorHeap * heaps[] = { Dev(0)->m_dx_cbv_srv_uav_descriptor_heap.Get(),
                                            Dev(0)->m_dx_sampler_heap.Get() };
-        m_dx_cmd_list->SetDescriptorHeaps(_countof(heaps), heaps);
+        m_dx_cmd_buffer->SetDescriptorHeaps(_countof(heaps), heaps);
 
         // set sample handle
-        m_dx_cmd_list->SetGraphicsRootDescriptorTable(2u, mat_sys.m_texture_gpu_handle);
+        m_dx_cmd_buffer->SetGraphicsRootDescriptorTable(2u, mat_sys.m_texture_gpu_handle);
 
         // set sampler
-        m_dx_cmd_list->SetGraphicsRootDescriptorTable(3u, mat_sys.m_sampler_gpu_handle);
+        m_dx_cmd_buffer->SetGraphicsRootDescriptorTable(3u, mat_sys.m_sampler_gpu_handle);
     }
 
     void
     bind_material(const Buffer & mat_buf)
     {
         // bind root signature and pipeline state
-        m_dx_cmd_list->SetGraphicsRootConstantBufferView(1u, mat_buf.m_allocation->GetResource()->GetGPUVirtualAddress());
+        m_dx_cmd_buffer->SetGraphicsRootConstantBufferView(1u, mat_buf.m_allocation->GetResource()->GetGPUVirtualAddress());
     }
     */
 
@@ -209,33 +209,33 @@ struct CommandList
             size_in_bytes == std::numeric_limits<size_t>::max() ? buffer.m_size_in_bytes : size_in_bytes);
 
         // finally set vertexbuffer
-        m_dx_cmd_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
+        m_dx_cmd_buffer->IASetVertexBuffers(0, 1, &vertex_buffer_view);
     }
 
     void
     bind_ray_trace_pipeline(const RayTracingPipeline & pipeline)
     {
-        m_dx_cmd_list->SetComputeRootSignature(pipeline.m_dx_global_root_signature.Get());
-        m_dx_cmd_list->SetPipelineState1(pipeline.m_dx_rt_pso.Get());
+        m_dx_cmd_buffer->SetComputeRootSignature(pipeline.m_dx_global_root_signature.Get());
+        m_dx_cmd_buffer->SetPipelineState1(pipeline.m_dx_rt_pso.Get());
     }
 
     void
     bind_raster_pipeline(const RasterPipeline & pipeline)
     {
-        m_dx_cmd_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        m_dx_cmd_list->SetGraphicsRootSignature(pipeline.m_dx_root_signature.Get());
+        m_dx_cmd_buffer->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_dx_cmd_buffer->SetGraphicsRootSignature(pipeline.m_dx_root_signature.Get());
         // set pipeline state, viewport and scissor.
         // viewport and scissor are simulataneously set to emulate vulkan constraint
-        m_dx_cmd_list->SetPipelineState(pipeline.m_dx_pso.Get());
-        m_dx_cmd_list->RSSetViewports(1, &pipeline.m_dx_viewport);
-        m_dx_cmd_list->RSSetScissorRects(1, &pipeline.m_dx_scissor_rect);
+        m_dx_cmd_buffer->SetPipelineState(pipeline.m_dx_pso.Get());
+        m_dx_cmd_buffer->RSSetViewports(1, &pipeline.m_dx_viewport);
+        m_dx_cmd_buffer->RSSetScissorRects(1, &pipeline.m_dx_scissor_rect);
     }
 
     void
     bind_ray_tracing_pipeline(const RayTracingPipeline & pipeline)
     {
-        m_dx_cmd_list->SetComputeRootSignature(pipeline.m_dx_global_root_signature.Get());
-        m_dx_cmd_list->SetPipelineState1(pipeline.m_dx_rt_pso.Get());
+        m_dx_cmd_buffer->SetComputeRootSignature(pipeline.m_dx_global_root_signature.Get());
+        m_dx_cmd_buffer->SetPipelineState1(pipeline.m_dx_rt_pso.Get());
     }
 
     void
@@ -245,11 +245,11 @@ struct CommandList
                        const size_t   src_offset_in_bytes,
                        const size_t   size_in_bytes)
     {
-        m_dx_cmd_list->CopyBufferRegion(dst_buffer.m_allocation->GetResource(),
-                                        dst_offset_in_bytes,
-                                        src_buffer.m_allocation->GetResource(),
-                                        src_offset_in_bytes,
-                                        size_in_bytes);
+        m_dx_cmd_buffer->CopyBufferRegion(dst_buffer.m_allocation->GetResource(),
+                                          dst_offset_in_bytes,
+                                          src_buffer.m_allocation->GetResource(),
+                                          src_offset_in_bytes,
+                                          size_in_bytes);
     }
 
     void
@@ -260,7 +260,7 @@ struct CommandList
     void
     copy_texture(const Texture & src, const Texture & dst)
     {
-        m_dx_cmd_list->CopyResource(src.m_dx_resource, dst.m_dx_resource);
+        m_dx_cmd_buffer->CopyResource(src.m_dx_resource, dst.m_dx_resource);
     }
 
     void
@@ -271,24 +271,24 @@ struct CommandList
         clear_color[1] = render_target.m_clear_value[1];
         clear_color[2] = render_target.m_clear_value[2];
         clear_color[3] = render_target.m_clear_value[3];
-        m_dx_cmd_list->ClearRenderTargetView(render_target.m_dx_dsv_rtv_cpu_handle, clear_color, 0, nullptr);
+        m_dx_cmd_buffer->ClearRenderTargetView(render_target.m_dx_dsv_rtv_cpu_handle, clear_color, 0, nullptr);
     }
 
     void
     clear_depth_render_target(const Texture & render_target)
     {
-        m_dx_cmd_list->ClearDepthStencilView(render_target.m_dx_dsv_rtv_cpu_handle,
-                                             D3D12_CLEAR_FLAG_DEPTH,
-                                             render_target.m_clear_value[0],
-                                             0,
-                                             0,
-                                             nullptr);
+        m_dx_cmd_buffer->ClearDepthStencilView(render_target.m_dx_dsv_rtv_cpu_handle,
+                                               D3D12_CLEAR_FLAG_DEPTH,
+                                               render_target.m_clear_value[0],
+                                               0,
+                                               0,
+                                               nullptr);
     }
 
     void
     draw_instanced(const UINT vertex_count_per_instance, const UINT instance_count, const UINT first_vertex, const UINT first_instance)
     {
-        m_dx_cmd_list->DrawInstanced(vertex_count_per_instance, instance_count, first_vertex, first_instance);
+        m_dx_cmd_buffer->DrawInstanced(vertex_count_per_instance, instance_count, first_vertex, first_instance);
     }
 
     void
@@ -298,17 +298,17 @@ struct CommandList
                            const size_t base_vertex_location    = 0,
                            const size_t start_instance_location = 0)
     {
-        m_dx_cmd_list->DrawIndexedInstanced(static_cast<UINT>(index_count_per_instance),
-                                            static_cast<UINT>(instance_count),
-                                            static_cast<UINT>(start_index_location),
-                                            static_cast<INT>(base_vertex_location),
-                                            static_cast<UINT>(start_instance_location));
+        m_dx_cmd_buffer->DrawIndexedInstanced(static_cast<UINT>(index_count_per_instance),
+                                              static_cast<UINT>(instance_count),
+                                              static_cast<UINT>(start_index_location),
+                                              static_cast<INT>(base_vertex_location),
+                                              static_cast<UINT>(start_instance_location));
     }
 
     void
     end()
     {
-        DXCK(m_dx_cmd_list->Close());
+        DXCK(m_dx_cmd_buffer->Close());
         m_dx_root_signature = nullptr;
     }
 
@@ -319,7 +319,7 @@ struct CommandList
             swapchain.m_dx_swapchain_resource_pointers[swapchain.m_image_index].Get(),
             D3D12_RESOURCE_STATE_PRESENT,
             D3D12_RESOURCE_STATE_RENDER_TARGET);
-        m_dx_cmd_list->ResourceBarrier(1, &barrier_present_to_rtv);
+        m_dx_cmd_buffer->ResourceBarrier(1, &barrier_present_to_rtv);
     }
 
     void
@@ -329,7 +329,7 @@ struct CommandList
             swapchain.m_dx_swapchain_resource_pointers[swapchain.m_image_index].Get(),
             D3D12_RESOURCE_STATE_RENDER_TARGET,
             D3D12_RESOURCE_STATE_PRESENT);
-        m_dx_cmd_list->ResourceBarrier(1, &barrier_rtv_to_present);
+        m_dx_cmd_buffer->ResourceBarrier(1, &barrier_rtv_to_present);
     }
 
     void
@@ -337,14 +337,14 @@ struct CommandList
     {
         ImGui::Render();
         ID3D12DescriptorHeap * p[] = { imgui_render_pass.m_dx_descriptor_heap.Get() };
-        m_dx_cmd_list->SetDescriptorHeaps(1, p);
-        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_dx_cmd_list.Get());
+        m_dx_cmd_buffer->SetDescriptorHeaps(1, p);
+        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_dx_cmd_buffer.Get());
     }
 
     void
     submit(Fence * fence, Semaphore * semaphore_wait = nullptr, Semaphore * semaphore_signal = nullptr)
     {
-        ID3D12CommandList * const command_lists[] = { m_dx_cmd_list.Get() };
+        ID3D12CommandList * const command_lists[] = { m_dx_cmd_buffer.Get() };
         if (semaphore_wait != nullptr)
         {
             DXCK(m_dx_cmd_queue->Wait(semaphore_wait->m_dx_fence.Get(), semaphore_wait->m_expected_fence_value));
@@ -375,7 +375,7 @@ struct CommandList
         desc.Height                   = static_cast<UINT>(height);
         desc.Depth                    = static_cast<UINT>(depth);
 
-        m_dx_cmd_list->DispatchRays(&desc);
+        m_dx_cmd_buffer->DispatchRays(&desc);
     }
 
     void
@@ -386,7 +386,7 @@ struct CommandList
         barrier.Transition.StateBefore = static_cast<D3D12_RESOURCE_STATES>(pre_enum);
         barrier.Transition.StateAfter  = static_cast<D3D12_RESOURCE_STATES>(post_enum);
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        m_dx_cmd_list->ResourceBarrier(1, &barrier);
+        m_dx_cmd_buffer->ResourceBarrier(1, &barrier);
     }
 
     void
@@ -397,14 +397,14 @@ struct CommandList
         barrier.Transition.StateBefore = static_cast<D3D12_RESOURCE_STATES>(pre_enum);
         barrier.Transition.StateAfter  = static_cast<D3D12_RESOURCE_STATES>(post_enum);
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        m_dx_cmd_list->ResourceBarrier(1, &barrier);
+        m_dx_cmd_buffer->ResourceBarrier(1, &barrier);
     }
 
     void
     update_push_constant(const void * data, const size_t size_in_bytes)
     {
         assert(size_in_bytes % 4 == 0);
-        m_dx_cmd_list->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size_in_bytes / 4), data, 0);
+        m_dx_cmd_buffer->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size_in_bytes / 4), data, 0);
     }
 };
 } // namespace DXA_NAME

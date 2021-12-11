@@ -59,7 +59,10 @@ struct RayTracePathTracer
     }
 
     void
-    render(Rhi::CommandList & cmd_list, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const uint2 target_resolution)
+    render(Rhi::CommandBuffer &  cmd_buffer,
+           const RenderContext & ctx,
+           const Rhi::Texture &  target_texture_buffer,
+           const uint2           target_resolution)
     {
         RaytraceVisualizeCbParams cb_params;
         CameraProperties          cam_props = ctx.m_fps_camera.get_camera_props();
@@ -118,8 +121,8 @@ struct RayTracePathTracer
             .set_t_structured_buffer(6, ctx.m_scene_resource.m_d_materials, sizeof(StandardMaterial), EngineSetting::MaxNumStandardMaterials)
             .update();
 
-        cmd_list.bind_ray_trace_pipeline(m_rt_pipeline);
-        cmd_list.bind_ray_trace_descriptor_set(descriptor_sets);
-        cmd_list.trace_rays(m_rt_sbt, target_resolution.x, target_resolution.y);
+        cmd_buffer.bind_ray_trace_pipeline(m_rt_pipeline);
+        cmd_buffer.bind_ray_trace_descriptor_set(descriptor_sets);
+        cmd_buffer.trace_rays(m_rt_sbt, target_resolution.x, target_resolution.y);
     }
 };

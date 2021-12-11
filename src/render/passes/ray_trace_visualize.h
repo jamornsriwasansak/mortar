@@ -155,7 +155,7 @@ struct RayTraceVisualizePass
     }
 
     void
-    render(Rhi::CommandList & cmd_list, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const RayTraceVisualizeParams & params, const uint2 target_resolution)
+    render(Rhi::CommandBuffer & cmd_buffer, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const RayTraceVisualizeParams & params, const uint2 target_resolution)
     {
         RaytraceVisualizeCbParams cb_params;
         CameraProperties          cam_props = ctx.m_fps_camera.get_camera_props();
@@ -235,11 +235,11 @@ struct RayTraceVisualizePass
             .set_u_rw_structured_buffer(0, m_debug_print_buffer, sizeof(uint32_t), DEBUG_RayTraceVisualizePrintChar4BufferSize)
             .update();
 
-        cmd_list.copy_buffer_region(m_cpu_temp_buffer, 0, m_debug_print_buffer, 0, sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize);
+        cmd_buffer.copy_buffer_region(m_cpu_temp_buffer, 0, m_debug_print_buffer, 0, sizeof(uint32_t) * DEBUG_RayTraceVisualizePrintChar4BufferSize);
 #endif
 
-        cmd_list.bind_ray_trace_pipeline(m_rt_pipeline);
-        cmd_list.bind_ray_trace_descriptor_set(descriptor_sets);
-        cmd_list.trace_rays(m_rt_sbt, target_resolution.x, target_resolution.y);
+        cmd_buffer.bind_ray_trace_pipeline(m_rt_pipeline);
+        cmd_buffer.bind_ray_trace_descriptor_set(descriptor_sets);
+        cmd_buffer.trace_rays(m_rt_sbt, target_resolution.x, target_resolution.y);
     }
 };
