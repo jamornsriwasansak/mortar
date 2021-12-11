@@ -4,7 +4,7 @@
 
 #ifdef USE_DXA
 
-    #include "dxa_command_list.h"
+    #include "dxa_command_buffer.h"
     #include "dxa_common.h"
     #include "dxa_device.h"
 
