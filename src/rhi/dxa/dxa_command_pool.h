@@ -12,20 +12,18 @@ namespace DXA_NAME
 {
 struct CommandPool
 {
-    ComPtr<ID3D12CommandAllocator> m_dx_command_allocator  = nullptr;
-    ComPtr<ID3D12CommandQueue>     m_dx_command_queue      = nullptr;
-    D3D12_COMMAND_LIST_TYPE        m_command_list_type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    std::vector<CommandBuffer>     m_pre_alloc_cmd_buffers = {};
-    size_t                         m_cmd_buffer_index      = 0;
-    const Device &                 m_device;
-    std::string                    m_name;
+    ComPtr<ID3D12CommandQueue> m_dx_command_queue      = nullptr;
+    D3D12_COMMAND_LIST_TYPE    m_command_list_type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    std::vector<CommandBuffer> m_pre_alloc_cmd_buffers = {};
+    size_t                     m_cmd_buffer_index      = 0;
+    const Device &             m_device;
+    std::string                m_name;
 
     CommandPool(const std::string & name, const Device & device, const CommandQueueType command_queue_type)
     : m_device(device),
       m_command_list_type(static_cast<D3D12_COMMAND_LIST_TYPE>(command_queue_type)),
       m_name(name)
     {
-        device.m_dx_device->CreateCommandAllocator(m_command_list_type, IID_PPV_ARGS(&m_dx_command_allocator));
         switch (command_queue_type)
         {
         case CommandQueueType::Graphics:
@@ -51,14 +49,12 @@ struct CommandPool
         if (m_cmd_buffer_index == m_pre_alloc_cmd_buffers.size())
         {
             ComPtr<ID3D12GraphicsCommandList4> cmd_list;
-            DXCK(m_device.m_dx_device->CreateCommandList(0,
-                                                         m_command_list_type,
-                                                         m_dx_command_allocator.Get(),
-                                                         NULL,
-                                                         IID_PPV_ARGS(&cmd_list)));
-            // DXCK(cmd_buffer->Close());
-            m_pre_alloc_cmd_buffers.emplace_back(m_dx_command_queue.Get(), cmd_list);
+            ComPtr<ID3D12CommandAllocator>     cmd_allocator;
+            DXCK(m_device.m_dx_device->CreateCommandAllocator(m_command_list_type, IID_PPV_ARGS(&cmd_allocator)));
+            DXCK(m_device.m_dx_device->CreateCommandList(0, m_command_list_type, cmd_allocator.Get(), NULL, IID_PPV_ARGS(&cmd_list)));
+            m_pre_alloc_cmd_buffers.emplace_back(m_dx_command_queue.Get(), cmd_list, cmd_allocator);
             m_device.name_dx_object(cmd_list, m_name + "_list_" + std::to_string(m_cmd_buffer_index));
+            m_device.name_dx_object(cmd_list, m_name + "_allocator_" + std::to_string(m_cmd_buffer_index));
         }
         return m_pre_alloc_cmd_buffers[m_cmd_buffer_index++];
     }
@@ -66,19 +62,20 @@ struct CommandPool
     void
     reset()
     {
-        m_cmd_buffer_index = 0;
-        DXCK(m_dx_command_allocator->Reset());
-        for (size_t i = 0; i < m_pre_alloc_cmd_buffers.size(); i++)
+        for (size_t i = 0; i < m_cmd_buffer_index; i++)
         {
-            m_pre_alloc_cmd_buffers[i].m_dx_cmd_buffer->Reset(m_dx_command_allocator.Get(), nullptr);
+            CommandBuffer & buffer = m_pre_alloc_cmd_buffers[i];
+            DXCK(buffer.m_dx_command_allocator->Reset());
+            DXCK(buffer.m_dx_command_list->Reset(buffer.m_dx_command_allocator.Get(), nullptr));
         }
+        m_cmd_buffer_index = 0;
     }
 
     void
     flush(Fence & fence)
     {
         fence.reset();
-        m_dx_command_queue->Signal(fence.m_dx_fence.Get(), fence.m_expected_fence_value);
+        DXCK(m_dx_command_queue->Signal(fence.m_dx_fence.Get(), fence.m_expected_fence_value));
     }
 };
 } // namespace DXA_NAME
