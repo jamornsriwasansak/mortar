@@ -97,7 +97,8 @@ struct Renderer
     void
     loop(const RenderContext & ctx)
     {
-        Rhi::CommandList cmd_list = ctx.m_per_flight_resource.m_graphics_command_pool.get_command_list();
+        Rhi::CommandBuffer cmd_buffer =
+            ctx.m_per_flight_resource.m_graphics_command_pool.get_command_buffer();
         const PerFlightRenderResource & per_flight_render_resource = m_per_flight_resources[ctx.m_flight_index];
 
         if (ctx.m_is_shaders_dirty)
@@ -105,7 +106,7 @@ struct Renderer
             // init_or_reload_shader(ctx);
         }
 
-        cmd_list.begin();
+        cmd_buffer.begin();
 
         // update all parameters
         m_pass_ray_trace_visualize_params.draw_gui(m_gui_event_coordinator);
@@ -129,14 +130,14 @@ struct Renderer
             switch (m_ray_trace_mode)
             {
             case Renderer::RayTraceMode::VisualizeDebug:
-                m_pass_ray_trace_visualize.render(cmd_list,
+                m_pass_ray_trace_visualize.render(cmd_buffer,
                                                   ctx,
                                                   per_flight_render_resource.m_rt_result,
                                                   m_pass_ray_trace_visualize_params,
                                                   ctx.m_resolution);
                 break;
             case Renderer::RayTraceMode::PrimitivePathTracing:
-                m_pass_ray_trace_primitive_pathtrace.render(cmd_list,
+                m_pass_ray_trace_primitive_pathtrace.render(cmd_buffer,
                                                             ctx,
                                                             per_flight_render_resource.m_rt_result,
                                                             ctx.m_resolution);
@@ -147,15 +148,15 @@ struct Renderer
         }
 
         // transition
-        cmd_list.transition_texture(per_flight_render_resource.m_rt_result,
-                                    Rhi::TextureStateEnum::NonFragmentShaderVisible,
-                                    Rhi::TextureStateEnum::FragmentShaderVisible);
-        cmd_list.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
-                                    Rhi::TextureStateEnum::Present,
-                                    Rhi::TextureStateEnum::ColorAttachment);
+        cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
+                                      Rhi::TextureStateEnum::NonFragmentShaderVisible,
+                                      Rhi::TextureStateEnum::FragmentShaderVisible);
+        cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
+                                      Rhi::TextureStateEnum::Present,
+                                      Rhi::TextureStateEnum::ColorAttachment);
 
         // run final pass
-        m_pass_render_to_framebuffer.run(cmd_list,
+        m_pass_render_to_framebuffer.run(cmd_buffer,
                                          ctx,
                                          per_flight_render_resource.m_rt_result,
                                          m_raster_fbindings[ctx.m_image_index]);
@@ -163,20 +164,20 @@ struct Renderer
         // render imgui onto swapchain
         if (ctx.m_should_imgui_drawn)
         {
-            cmd_list.render_imgui(ctx.m_imgui_render_pass, ctx.m_image_index);
+            cmd_buffer.render_imgui(ctx.m_imgui_render_pass, ctx.m_image_index);
         }
 
         // transition
-        cmd_list.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
-                                    Rhi::TextureStateEnum::ColorAttachment,
-                                    Rhi::TextureStateEnum::Present);
-        cmd_list.transition_texture(per_flight_render_resource.m_rt_result,
-                                    Rhi::TextureStateEnum::FragmentShaderVisible,
-                                    Rhi::TextureStateEnum::NonFragmentShaderVisible);
+        cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
+                                      Rhi::TextureStateEnum::ColorAttachment,
+                                      Rhi::TextureStateEnum::Present);
+        cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
+                                      Rhi::TextureStateEnum::FragmentShaderVisible,
+                                      Rhi::TextureStateEnum::NonFragmentShaderVisible);
 
-        cmd_list.end();
-        cmd_list.submit(&ctx.m_per_flight_resource.m_flight_fence,
-                        &ctx.m_per_flight_resource.m_image_ready_semaphore,
-                        &ctx.m_per_flight_resource.m_image_presentable_semaphore);
+        cmd_buffer.end();
+        cmd_buffer.submit(&ctx.m_per_flight_resource.m_flight_fence,
+                          &ctx.m_per_flight_resource.m_image_ready_semaphore,
+                          &ctx.m_per_flight_resource.m_image_presentable_semaphore);
     }
 };

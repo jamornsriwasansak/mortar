@@ -46,14 +46,14 @@ struct BufferCopyInfo
 static_assert(sizeof(vk::BufferCopy) == sizeof(BufferCopyInfo),
               "sizeof(vk::BufferCopy) == sizeof(BufferCopyInfo)");
 
-struct CommandList
+struct CommandBuffer
 {
     vk::Queue         m_vk_queue          = {};
     vk::CommandBuffer m_vk_command_buffer = {};
 
-    CommandList() {}
+    CommandBuffer() {}
 
-    CommandList(const vk::Queue queue, const vk::CommandBuffer command_buffer)
+    CommandBuffer(const vk::Queue queue, const vk::CommandBuffer command_buffer)
     : m_vk_queue(queue), m_vk_command_buffer(command_buffer)
     {
     }

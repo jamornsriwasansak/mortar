@@ -37,13 +37,13 @@ struct RenderToFramebufferPass
     }
 
     void
-    run(Rhi::CommandList & cmd_list, const RenderContext & ctx, const Rhi::Texture & tex, const Rhi::FramebufferBindings & fb)
+    run(Rhi::CommandBuffer & cmd_buffer, const RenderContext & ctx, const Rhi::Texture & tex, const Rhi::FramebufferBindings & fb)
     {
         // begin render pass
-        cmd_list.begin_render_pass(fb);
+        cmd_buffer.begin_render_pass(fb);
 
         // draw result
-        cmd_list.bind_raster_pipeline(m_raster_pipeline);
+        cmd_buffer.bind_raster_pipeline(m_raster_pipeline);
 
         // setup descriptor set
         std::array<Rhi::DescriptorSet, 1> beauty_desc_sets;
@@ -52,12 +52,12 @@ struct RenderToFramebufferPass
         beauty_desc_sets[0].set_t_texture(0, tex).set_s_sampler(0, m_sampler).update();
 
         // raster
-        cmd_list.bind_graphics_descriptor_set(beauty_desc_sets);
-        cmd_list.bind_vertex_buffer(ctx.m_scene_resource.m_d_vbuf_position, sizeof(CompactVertex));
-        cmd_list.bind_index_buffer(ctx.m_scene_resource.m_d_ibuf, Rhi::IndexType::Uint32);
-        cmd_list.draw_instanced(3, 1, 0, 0);
+        cmd_buffer.bind_graphics_descriptor_set(beauty_desc_sets);
+        cmd_buffer.bind_vertex_buffer(ctx.m_scene_resource.m_d_vbuf_position, sizeof(CompactVertex));
+        cmd_buffer.bind_index_buffer(ctx.m_scene_resource.m_d_ibuf, Rhi::IndexType::Uint32);
+        cmd_buffer.draw_instanced(3, 1, 0, 0);
 
         // end render pass
-        cmd_list.end_render_pass();
+        cmd_buffer.end_render_pass();
     }
 };

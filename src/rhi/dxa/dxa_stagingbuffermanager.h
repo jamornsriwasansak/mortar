@@ -46,7 +46,7 @@ struct StagingBufferManager
                                                    IID_PPV_ARGS(&m_dx_command_list)));
 
         // set name
-        device.name_dx_object(m_dx_command_list, name + "_cmd_list");
+        device.name_dx_object(m_dx_command_list, name + "_cmd_buffer");
         device.name_dx_object(m_direct_command_allocator, name + "_cmd_allocator");
     }
 

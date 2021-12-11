@@ -93,7 +93,8 @@ struct SceneResource
         m_d_vbuf_position = Rhi::Buffer("scene_m_d_vbuf_position",
                                         m_device,
                                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
-                                            Rhi::BufferUsageEnum::VertexBuffer | Rhi::BufferUsageEnum::RayTracingAccelStructBufferInput,
+                                            Rhi::BufferUsageEnum::VertexBuffer |
+                                            Rhi::BufferUsageEnum::RayTracingAccelStructBufferInput,
                                         Rhi::MemoryUsageEnum::GpuOnly,
                                         sizeof(float3) * EngineSetting::MaxNumVertices);
         m_d_vbuf_packed   = Rhi::Buffer("scene_m_d_vbuf_packed",
@@ -105,7 +106,8 @@ struct SceneResource
         m_d_ibuf          = Rhi::Buffer("scene_m_d_ibuf",
                                m_device,
                                Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer |
-                                   Rhi::BufferUsageEnum::IndexBuffer | Rhi::BufferUsageEnum::RayTracingAccelStructBufferInput,
+                                   Rhi::BufferUsageEnum::IndexBuffer |
+                                   Rhi::BufferUsageEnum::RayTracingAccelStructBufferInput,
                                Rhi::MemoryUsageEnum::GpuOnly,
                                Rhi::GetSizeInBytes(m_ibuf_index_type) * EngineSetting::MaxNumIndices);
 
@@ -195,7 +197,7 @@ struct SceneResource
             model.m_material_idx  = material_offset + geometry_info.m_src_material_index;
         }
 
-        Rhi::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
+        Rhi::CommandBuffer cmd_buffer = m_transfer_cmd_pool.get_command_buffer();
 
         Rhi::Buffer staging_buffer("scene_staging_buffer_vb",
                                    m_device,
@@ -223,27 +225,27 @@ struct SceneResource
         static_assert(Rhi::GetSizeInBytes(m_vbuf_position_type) == sizeof(vb_positions1[0]));
         static_assert(Rhi::GetSizeInBytes(m_ibuf_index_type) == sizeof(ib1[0]));
 
-        cmd_list.begin();
-        cmd_list.copy_buffer_region(m_d_vbuf_position,
-                                    m_num_vertices * Rhi::GetSizeInBytes(m_vbuf_position_type),
-                                    staging_buffer,
-                                    0,
-                                    vb_positions1.size() * sizeof(vb_positions1[0]));
-        cmd_list.copy_buffer_region(m_d_ibuf,
-                                    m_num_indices * Rhi::GetSizeInBytes(m_ibuf_index_type),
-                                    staging_buffer2,
-                                    0,
-                                    ib1.size() * sizeof(ib1[0]));
-        cmd_list.copy_buffer_region(m_d_vbuf_packed,
-                                    m_num_vertices * sizeof(CompactVertex),
-                                    staging_buffer3,
-                                    0,
-                                    vb_packed1.size() * sizeof(vb_packed1[0]));
-        cmd_list.end();
+        cmd_buffer.begin();
+        cmd_buffer.copy_buffer_region(m_d_vbuf_position,
+                                      m_num_vertices * Rhi::GetSizeInBytes(m_vbuf_position_type),
+                                      staging_buffer,
+                                      0,
+                                      vb_positions1.size() * sizeof(vb_positions1[0]));
+        cmd_buffer.copy_buffer_region(m_d_ibuf,
+                                      m_num_indices * Rhi::GetSizeInBytes(m_ibuf_index_type),
+                                      staging_buffer2,
+                                      0,
+                                      ib1.size() * sizeof(ib1[0]));
+        cmd_buffer.copy_buffer_region(m_d_vbuf_packed,
+                                      m_num_vertices * sizeof(CompactVertex),
+                                      staging_buffer3,
+                                      0,
+                                      vb_packed1.size() * sizeof(vb_packed1[0]));
+        cmd_buffer.end();
 
         Rhi::Fence tmp_fence("fence upload " + path.string(), staging_buffer_manager.m_device);
         tmp_fence.reset();
-        cmd_list.submit(&tmp_fence);
+        cmd_buffer.submit(&tmp_fence);
         tmp_fence.wait();
 
         m_num_vertices += vb_positions1.size();
@@ -442,8 +444,8 @@ struct SceneResource
             staging_buffer_manager.submit_all_pending_upload();
         }
 
-        Rhi::CommandList cmd_list = m_transfer_cmd_pool.get_command_list();
-        cmd_list.begin();
+        Rhi::CommandBuffer cmd_buffer = m_transfer_cmd_pool.get_command_buffer();
+        cmd_buffer.begin();
 
         // build material buffer
         Rhi::Buffer staging_buffer("scene_staging_buffer_material",
@@ -456,7 +458,11 @@ struct SceneResource
                         m_h_materials.data(),
                         m_h_materials.size() * sizeof(m_h_materials[0]));
             staging_buffer.unmap();
-            cmd_list.copy_buffer_region(m_d_materials, 0, staging_buffer, 0, m_h_materials.size() * sizeof(m_h_materials[0]));
+            cmd_buffer.copy_buffer_region(m_d_materials,
+                                          0,
+                                          staging_buffer,
+                                          0,
+                                          m_h_materials.size() * sizeof(m_h_materials[0]));
         }
 
         // build mesh table
@@ -503,24 +509,24 @@ struct SceneResource
                         base_instance_table.size() * sizeof(base_instance_table[0]));
             staging_buffer2.unmap();
             staging_buffer3.unmap();
-            cmd_list.copy_buffer_region(m_d_geometry_table,
-                                        0,
-                                        staging_buffer2,
-                                        0,
-                                        sizeof(GeometryTableEntry) * geometry_table.size());
-            cmd_list.copy_buffer_region(m_d_base_instance_table,
-                                        0,
-                                        staging_buffer3,
-                                        0,
-                                        sizeof(BaseInstanceTableEntry) * base_instance_table.size());
+            cmd_buffer.copy_buffer_region(m_d_geometry_table,
+                                          0,
+                                          staging_buffer2,
+                                          0,
+                                          sizeof(GeometryTableEntry) * geometry_table.size());
+            cmd_buffer.copy_buffer_region(m_d_base_instance_table,
+                                          0,
+                                          staging_buffer3,
+                                          0,
+                                          sizeof(BaseInstanceTableEntry) * base_instance_table.size());
             m_num_base_instance_table_entries = base_instance_table.size();
             m_num_geometry_table_entries      = geometry_table.size();
         }
-        cmd_list.end();
+        cmd_buffer.end();
 
         Rhi::Fence fence("scene_commit_fence", m_device);
         fence.reset();
-        cmd_list.submit(&fence);
+        cmd_buffer.submit(&fence);
         fence.wait();
     }
 };

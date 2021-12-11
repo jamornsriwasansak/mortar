@@ -4,7 +4,7 @@
 
 #ifdef USE_VKA
 
-    #include "vka_command_list.h"
+    #include "vka_command_buffer.h"
     #include "vka_common.h"
     #include "vka_device.h"
     #include "vka_fence.h"
@@ -17,9 +17,9 @@ struct CommandPool
     vk::UniqueCommandPool m_vk_cmd_pool;
     vk::Queue             m_vk_queue;
 
-    std::vector<CommandList> m_pre_alloc_cmd_lists;
-    size_t                   m_cmd_buffer_index = 0;
-    std::string              m_name;
+    std::vector<CommandBuffer> m_pre_alloc_cmd_buffers;
+    size_t                     m_cmd_buffer_index = 0;
+    std::string                m_name;
 
     CommandPool(const std::string & name, const Device & device, const CommandQueueType command_queue_type)
     : m_device(device), m_name(name)
@@ -48,19 +48,19 @@ struct CommandPool
         device.name_vkhpp_object(m_vk_cmd_pool.get(), name);
     }
 
-    CommandList
-    get_command_list()
+    CommandBuffer
+    get_command_buffer()
     {
-        if (m_cmd_buffer_index == m_pre_alloc_cmd_lists.size())
+        if (m_cmd_buffer_index == m_pre_alloc_cmd_buffers.size())
         {
             vk::CommandBufferAllocateInfo allocate_info;
             allocate_info.setCommandPool(m_vk_cmd_pool.get());
             allocate_info.setCommandBufferCount(1);
             vk::CommandBuffer command_buffer =
                 m_device.m_vk_ldevice->allocateCommandBuffers(allocate_info)[0];
-            m_pre_alloc_cmd_lists.emplace_back(m_vk_queue, command_buffer);
+            m_pre_alloc_cmd_buffers.emplace_back(m_vk_queue, command_buffer);
         }
-        return m_pre_alloc_cmd_lists[m_cmd_buffer_index++];
+        return m_pre_alloc_cmd_buffers[m_cmd_buffer_index++];
     }
 
     void
