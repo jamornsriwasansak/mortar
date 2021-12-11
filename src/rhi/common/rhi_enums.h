@@ -550,3 +550,27 @@ enum class RayTracingBuildHint : uint8_t
 };
 }
 #endif
+
+#ifdef USE_DXA
+namespace DXA_NAME
+{
+enum class QueryType
+{
+    Occlusion         = D3D12_QUERY_HEAP_TYPE_OCCLUSION,
+    PipelineStatistic = D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS,
+    Timestamp         = D3D12_QUERY_HEAP_TYPE_COPY_QUEUE_TIMESTAMP
+};
+}
+#endif
+
+#ifdef USE_VKA
+namespace VKA_NAME
+{
+enum class QueryType
+{
+    Occlusion          = VK_QUERY_TYPE_OCCLUSION,
+    PipelineStatistics = VK_QUERY_TYPE_PIPELINE_STATISTICS,
+    Timestamp          = VK_QUERY_TYPE_TIMESTAMP
+};
+}
+#endif
