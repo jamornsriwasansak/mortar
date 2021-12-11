@@ -394,9 +394,15 @@ struct CommandBuffer
     }
 
     void
-    write_timestamp(const QueryPool & query_pool, const uint32_t query_index)
+    write_timestamp(QueryPool & query_pool, const uint32_t query_index)
     {
         m_dx_command_list->EndQuery(query_pool.m_dx_query_heap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, query_index);
+        m_dx_command_list->ResolveQueryData(query_pool.m_dx_query_heap.Get(),
+                                            D3D12_QUERY_TYPE_TIMESTAMP,
+                                            static_cast<UINT>(query_index),
+                                            static_cast<UINT>(1),
+                                            query_pool.m_query_result_readback_buffer.m_allocation->GetResource(),
+                                            sizeof(uint64_t) * query_index);
     }
 };
 } // namespace DXA_NAME

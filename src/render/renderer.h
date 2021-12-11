@@ -4,6 +4,7 @@
 #include "passes/final_composite.h"
 #include "passes/ray_trace_path_tracer.h"
 #include "passes/ray_trace_visualize.h"
+#include "profiler.h"
 #include "render_context.h"
 #include "rhi/rhi.h"
 #include "scene_resource.h"
@@ -13,6 +14,24 @@ struct Renderer
     struct PerFlightRenderResource
     {
         Rhi::Texture m_rt_result;
+        Profiler     m_profiler;
+
+        static constexpr uint32_t NumMaxProfilerMarkers = 500;
+
+        PerFlightRenderResource(const std::string & name, Rhi::Device & device, const int2 resolution)
+        : m_profiler(name + "_profiler", device, NumMaxProfilerMarkers),
+          m_rt_result(name + "_rt_result",
+                      device,
+                      Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment |
+                          Rhi::TextureUsageEnum::Sampled,
+                      Rhi::TextureStateEnum::NonFragmentShaderVisible,
+                      Rhi::FormatEnum::R32G32B32A32_SFloat,
+                      resolution,
+                      nullptr,
+                      nullptr,
+                      float4(0.0f, 0.0f, 0.0f, 0.0f))
+        {
+        }
     };
 
     std::vector<Rhi::FramebufferBindings> m_raster_fbindings;
@@ -68,16 +87,7 @@ struct Renderer
         result.reserve(num_flights);
         for (size_t i = 0; i < num_flights; i++)
         {
-            result.emplace_back(Rhi::Texture("flight_" + std::to_string(i) + "_ray_tracing_result",
-                                             device,
-                                             Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment |
-                                                 Rhi::TextureUsageEnum::Sampled,
-                                             Rhi::TextureStateEnum::NonFragmentShaderVisible,
-                                             Rhi::FormatEnum::R32G32B32A32_SFloat,
-                                             resolution,
-                                             nullptr,
-                                             nullptr,
-                                             float4(0.0f, 0.0f, 0.0f, 0.0f)));
+            result.emplace_back("flight_" + std::to_string(i), device, resolution);
         }
         return result;
     }
@@ -99,7 +109,12 @@ struct Renderer
     {
         Rhi::CommandBuffer cmd_buffer =
             ctx.m_per_flight_resource.m_graphics_command_pool.get_command_buffer();
-        const PerFlightRenderResource & per_flight_render_resource = m_per_flight_resources[ctx.m_flight_index];
+        PerFlightRenderResource & per_flight_render_resource = m_per_flight_resources[ctx.m_flight_index];
+
+        Profiler & profiler = per_flight_render_resource.m_profiler;
+        profiler.summarize();
+
+        profiler.reset();
 
         if (ctx.m_is_shaders_dirty)
         {
@@ -108,72 +123,83 @@ struct Renderer
 
         cmd_buffer.begin();
 
-        // update all parameters
-        m_pass_ray_trace_visualize_params.draw_gui(m_gui_event_coordinator);
-
-        // raytrace mode
-        bool p_open = true;
-        if (m_gui_event_coordinator.m_display_main_pipeline_mode)
+        if (ctx.m_do_profile)
         {
-            if (ImGui::Begin("Renderer Raytrace Mode", &m_gui_event_coordinator.m_display_main_pipeline_mode))
-            {
-                ImGui::RadioButton("VisualizeDebug",
-                                   reinterpret_cast<int *>(&m_ray_trace_mode),
-                                   static_cast<int>(RayTraceMode::VisualizeDebug));
-                ImGui::RadioButton("PrimitivePathTracing",
-                                   reinterpret_cast<int *>(&m_ray_trace_mode),
-                                   static_cast<int>(RayTraceMode::PrimitivePathTracing));
-            }
-            ImGui::End();
-
-            // visualize
-            switch (m_ray_trace_mode)
-            {
-            case Renderer::RayTraceMode::VisualizeDebug:
-                m_pass_ray_trace_visualize.render(cmd_buffer,
-                                                  ctx,
-                                                  per_flight_render_resource.m_rt_result,
-                                                  m_pass_ray_trace_visualize_params,
-                                                  ctx.m_resolution);
-                break;
-            case Renderer::RayTraceMode::PrimitivePathTracing:
-                m_pass_ray_trace_primitive_pathtrace.render(cmd_buffer,
-                                                            ctx,
-                                                            per_flight_render_resource.m_rt_result,
-                                                            ctx.m_resolution);
-                break;
-            default:
-                break;
-            }
         }
 
-        // transition
-        cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
-                                      Rhi::TextureStateEnum::NonFragmentShaderVisible,
-                                      Rhi::TextureStateEnum::FragmentShaderVisible);
-        cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
-                                      Rhi::TextureStateEnum::Present,
-                                      Rhi::TextureStateEnum::ColorAttachment);
+        auto [begin_, end_] = profiler.get_new_profiling_interval_query_indices("yo");
+        cmd_buffer.write_timestamp(per_flight_render_resource.m_profiler.m_query_pool, begin_);
 
-        // run final pass
-        m_pass_render_to_framebuffer.run(cmd_buffer,
-                                         ctx,
-                                         per_flight_render_resource.m_rt_result,
-                                         m_raster_fbindings[ctx.m_image_index]);
-
-        // render imgui onto swapchain
-        if (ctx.m_should_imgui_drawn)
         {
-            cmd_buffer.render_imgui(ctx.m_imgui_render_pass, ctx.m_image_index);
+            // update all parameters
+            m_pass_ray_trace_visualize_params.draw_gui(m_gui_event_coordinator);
+
+            // raytrace mode
+            bool p_open = true;
+            if (m_gui_event_coordinator.m_display_main_pipeline_mode)
+            {
+                if (ImGui::Begin("Renderer Raytrace Mode", &m_gui_event_coordinator.m_display_main_pipeline_mode))
+                {
+                    ImGui::RadioButton("VisualizeDebug",
+                                       reinterpret_cast<int *>(&m_ray_trace_mode),
+                                       static_cast<int>(RayTraceMode::VisualizeDebug));
+                    ImGui::RadioButton("PrimitivePathTracing",
+                                       reinterpret_cast<int *>(&m_ray_trace_mode),
+                                       static_cast<int>(RayTraceMode::PrimitivePathTracing));
+                }
+                ImGui::End();
+
+                // visualize
+                switch (m_ray_trace_mode)
+                {
+                case Renderer::RayTraceMode::VisualizeDebug:
+                    m_pass_ray_trace_visualize.render(cmd_buffer,
+                                                      ctx,
+                                                      per_flight_render_resource.m_rt_result,
+                                                      m_pass_ray_trace_visualize_params,
+                                                      ctx.m_resolution);
+                    break;
+                case Renderer::RayTraceMode::PrimitivePathTracing:
+                    m_pass_ray_trace_primitive_pathtrace.render(cmd_buffer,
+                                                                ctx,
+                                                                per_flight_render_resource.m_rt_result,
+                                                                ctx.m_resolution);
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            // transition
+            cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
+                                          Rhi::TextureStateEnum::NonFragmentShaderVisible,
+                                          Rhi::TextureStateEnum::FragmentShaderVisible);
+            cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
+                                          Rhi::TextureStateEnum::Present,
+                                          Rhi::TextureStateEnum::ColorAttachment);
+
+            // run final pass
+            m_pass_render_to_framebuffer.run(cmd_buffer,
+                                             ctx,
+                                             per_flight_render_resource.m_rt_result,
+                                             m_raster_fbindings[ctx.m_image_index]);
+
+            // render imgui onto swapchain
+            if (ctx.m_should_imgui_drawn)
+            {
+                cmd_buffer.render_imgui(ctx.m_imgui_render_pass, ctx.m_image_index);
+            }
+
+            // transition
+            cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
+                                          Rhi::TextureStateEnum::ColorAttachment,
+                                          Rhi::TextureStateEnum::Present);
+            cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
+                                          Rhi::TextureStateEnum::FragmentShaderVisible,
+                                          Rhi::TextureStateEnum::NonFragmentShaderVisible);
         }
 
-        // transition
-        cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
-                                      Rhi::TextureStateEnum::ColorAttachment,
-                                      Rhi::TextureStateEnum::Present);
-        cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
-                                      Rhi::TextureStateEnum::FragmentShaderVisible,
-                                      Rhi::TextureStateEnum::NonFragmentShaderVisible);
+        cmd_buffer.write_timestamp(per_flight_render_resource.m_profiler.m_query_pool, end_);
 
         cmd_buffer.end();
         cmd_buffer.submit(&ctx.m_per_flight_resource.m_flight_fence,

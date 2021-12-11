@@ -13,6 +13,7 @@ struct PerFlightResource
     Rhi::DescriptorPool m_descriptor_pool;
     Rhi::Semaphore      m_image_ready_semaphore;
     Rhi::Semaphore      m_image_presentable_semaphore;
+    Rhi::QueryPool      m_timestamp_query_pool;
 
     std::chrono::high_resolution_clock::time_point m_host_reset_time;
 
@@ -26,7 +27,8 @@ struct PerFlightResource
       m_transfer_command_pool(name + "_graphics_command_pool", device, Rhi::CommandQueueType::Transfer),
       m_descriptor_pool(name + "_descriptor_pool", device, num_descriptors),
       m_image_ready_semaphore(name + "_image_read_semaphore", device),
-      m_image_presentable_semaphore(name + "_image_presentable_semaphore", device)
+      m_image_presentable_semaphore(name + "_image_presentable_semaphore", device),
+      m_timestamp_query_pool(name + "_timestamp_query_pool", device, Rhi::QueryType::Timestamp, num_queries)
     {
     }
 

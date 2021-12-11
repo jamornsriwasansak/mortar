@@ -558,7 +558,7 @@ enum class QueryType
 {
     Occlusion         = D3D12_QUERY_HEAP_TYPE_OCCLUSION,
     PipelineStatistic = D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS,
-    Timestamp         = D3D12_QUERY_HEAP_TYPE_COPY_QUEUE_TIMESTAMP
+    Timestamp         = D3D12_QUERY_HEAP_TYPE_TIMESTAMP
 };
 }
 #endif
