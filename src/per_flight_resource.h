@@ -22,9 +22,9 @@ struct PerFlightResource
 
     PerFlightResource(const std::string & name, const Rhi::Device & device)
     : m_flight_fence(name + "_flight_fence", device),
-      m_graphics_command_pool(name + "_graphics_command_pool", device, Rhi::CommandQueueType::Graphics),
-      m_compute_command_pool(name + "_graphics_command_pool", device, Rhi::CommandQueueType::Compute),
-      m_transfer_command_pool(name + "_graphics_command_pool", device, Rhi::CommandQueueType::Transfer),
+      m_graphics_command_pool(name + "_graphics_command_pool", device, Rhi::QueueType::Graphics),
+      m_compute_command_pool(name + "_graphics_command_pool", device, Rhi::QueueType::Compute),
+      m_transfer_command_pool(name + "_graphics_command_pool", device, Rhi::QueueType::Transfer),
       m_descriptor_pool(name + "_descriptor_pool", device, num_descriptors),
       m_image_ready_semaphore(name + "_image_read_semaphore", device),
       m_image_presentable_semaphore(name + "_image_presentable_semaphore", device),

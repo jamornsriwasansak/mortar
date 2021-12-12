@@ -71,7 +71,7 @@ HasOnlyFlag(const EnumType & value, const EnumType & flag)
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class ShaderStageEnum : uint16_t
+enum class ShaderStageEnum : uint32_t
 {
     None         = 0,
     Vertex       = 1 << 0,
@@ -115,7 +115,7 @@ DEFINE_ENUM_FLAG_OPERATORS(ShaderStageEnum);
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class MemoryUsageEnum
+enum class MemoryUsageEnum : uint32_t
 {
     None,
     CpuOnly,
@@ -129,7 +129,7 @@ enum class MemoryUsageEnum
 #ifdef USE_VKA
 namespace VKA_NAME
 {
-enum class MemoryUsageEnum
+enum class MemoryUsageEnum : uint32_t
 {
     None     = VMA_MEMORY_USAGE_MAX_ENUM,
     CpuOnly  = VMA_MEMORY_USAGE_CPU_ONLY,
@@ -188,7 +188,7 @@ DEFINE_ENUM_FLAG_OPERATORS(BufferUsageEnum);
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class TextureUsageEnum : uint16_t
+enum class TextureUsageEnum : uint32_t
 {
     None            = D3D12_RESOURCE_FLAG_NONE,
     Sampled         = 0,
@@ -226,7 +226,7 @@ DEFINE_ENUM_FLAG_OPERATORS(TextureUsageEnum);
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class TextureStateEnum : uint16_t
+enum class TextureStateEnum : uint32_t
 {
     None                     = 0,
     ColorAttachment          = D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -267,7 +267,7 @@ enum class TextureStateEnum : uint32_t
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class FormatEnum : uint8_t
+enum class FormatEnum : uint32_t
 {
     None                = DXGI_FORMAT_UNKNOWN,
     Depth32_SFloat      = DXGI_FORMAT_D32_FLOAT,
@@ -321,7 +321,7 @@ GetSizeInBytes(const FormatEnum & format_enum)
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class RayTracingGeometryFlag : uint8_t
+enum class RayTracingGeometryFlag : uint32_t
 {
     None   = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE,
     Opaque = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE
@@ -343,7 +343,7 @@ enum class RayTracingGeometryFlag : uint32_t
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class IndexType : uint8_t
+enum class IndexType : uint32_t
 {
     None   = DXGI_FORMAT_UNKNOWN,
     Uint8  = DXGI_FORMAT_R8_UINT,
@@ -428,7 +428,7 @@ GetVertexType()
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class RayTracingAccelBuildFlag : uint8_t
+enum class RayTracingAccelBuildFlag : uint32_t
 {
     None            = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE,
     AllowCompaction = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION,
@@ -460,7 +460,7 @@ enum class RayTracingAccelBuildFlag : uint32_t
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class LoadOp : uint8_t
+enum class LoadOp : uint32_t
 {
     None,
     Load,
@@ -472,7 +472,7 @@ enum class LoadOp : uint8_t
 #ifdef USE_VKA
 namespace VKA_NAME
 {
-enum class LoadOp : uint8_t
+enum class LoadOp : uint32_t
 {
     None  = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     Load  = VK_ATTACHMENT_LOAD_OP_LOAD,
@@ -505,7 +505,7 @@ struct EnumHelper
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class CommandQueueType : uint8_t
+enum class QueueType : uint32_t
 {
     Graphics = D3D12_COMMAND_LIST_TYPE_DIRECT,
     Compute  = D3D12_COMMAND_LIST_TYPE_COMPUTE,
@@ -517,7 +517,7 @@ enum class CommandQueueType : uint8_t
 #ifdef USE_VKA
 namespace VKA_NAME
 {
-enum class CommandQueueType : uint8_t
+enum class QueueType : uint32_t
 {
     Graphics = VK_QUEUE_GRAPHICS_BIT,
     Compute  = VK_QUEUE_COMPUTE_BIT,
@@ -529,7 +529,7 @@ enum class CommandQueueType : uint8_t
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class RayTracingBuildHint : uint8_t
+enum class RayTracingBuildHint : uint32_t
 {
     NonDeformable = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
     Deformable    = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD |
@@ -542,7 +542,7 @@ enum class RayTracingBuildHint : uint8_t
 #ifdef USE_VKA
 namespace VKA_NAME
 {
-enum class RayTracingBuildHint : uint8_t
+enum class RayTracingBuildHint : uint32_t
 {
     NonDeformable = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
     Deformable    = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
@@ -554,7 +554,7 @@ enum class RayTracingBuildHint : uint8_t
 #ifdef USE_DXA
 namespace DXA_NAME
 {
-enum class QueryType
+enum class QueryType : uint32_t
 {
     Occlusion         = D3D12_QUERY_HEAP_TYPE_OCCLUSION,
     PipelineStatistic = D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS,
@@ -566,7 +566,7 @@ enum class QueryType
 #ifdef USE_VKA
 namespace VKA_NAME
 {
-enum class QueryType
+enum class QueryType : uint32_t
 {
     Occlusion          = VK_QUERY_TYPE_OCCLUSION,
     PipelineStatistics = VK_QUERY_TYPE_PIPELINE_STATISTICS,

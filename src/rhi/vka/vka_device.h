@@ -4,6 +4,7 @@
 
 #ifdef USE_VKA
 
+    #include "rhi/common/rhi_enums.h"
     #include "rhi/vka/vka_common.h"
     //#define USE_VULKAN_AFTER_CRASH
     #ifdef USE_VULKAN_AFTER_CRASH
@@ -22,6 +23,7 @@ struct Device
         bool m_support_raytracing   = false;
         bool m_support_mesh_shader  = false;
         bool m_support_debug_marker = false;
+        bool m_support_profiling    = false;
     };
 
     // device
@@ -32,12 +34,10 @@ struct Device
     vk::SurfaceKHR               m_vk_surface;
 
     // device queue and its command pool
-    vk::Queue                m_vk_graphics_queue;
-    vk::Queue                m_vk_present_queue;
-    vk::Queue                m_vk_compute_queue;
-    vk::Queue                m_vk_transfer_queue;
-    vk::UniqueCommandPool    m_vk_graphics_command_pool;
-    vk::UniqueDescriptorPool m_vk_descriptor_pool;
+    vk::Queue m_vk_graphics_queue;
+    vk::Queue m_vk_present_queue;
+    vk::Queue m_vk_compute_queue;
+    vk::Queue m_vk_transfer_queue;
     struct QueueFamilyIndices
     {
         uint32_t m_graphics = std::numeric_limits<uint32_t>::max();
@@ -76,7 +76,7 @@ struct Device
     };
     UniquePtrHandle<VkAfterCrash_Device, VkAfterCrashDeviceDeleter> m_vkac_device;
     UniquePtrHandle<VkAfterCrash_Buffer, VkAfterCrashBufferDeleter> m_vkac_buffer;
-    uint32_t * m_vkac_crash_data = nullptr;
+    uint32_t *                                                      m_vkac_crash_data = nullptr;
     #endif
 
     Device() {}
@@ -92,6 +92,7 @@ struct Device
         if (m_debug)
         {
             m_features.m_support_debug_marker = true;
+            m_features.m_support_profiling    = true;
         }
 
         // find queues
@@ -122,10 +123,6 @@ struct Device
         name_vkhpp_object(m_vk_compute_queue, name + "_compute_queue");
         name_vkhpp_object(m_vk_transfer_queue, name + "_transfer_queue");
         Logger::Info(__FUNCTION__, " get all necessary queues");
-
-        // create command pool for one time submit
-        m_vk_graphics_command_pool = create_command_pool(m_vk_ldevice.get(), m_family_indices.m_graphics);
-        name_vkhpp_object(m_vk_graphics_command_pool.get(), name + "_graphics_command_pool");
 
         // allocate vma
         VmaAllocatorCreateInfo vma_allocator_ci = {};
@@ -224,38 +221,102 @@ struct Device
     void
     one_time_command_submit(const std::function<void(vk::CommandBuffer)> & func) const
     {
-        // create a temp command buffer
-        vk::CommandBufferAllocateInfo alloc_info = {};
+        // Create a temp command poll
+        vk::UniqueCommandPool command_pool;
         {
-            alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
-            alloc_info.setCommandPool(*m_vk_graphics_command_pool);
-            alloc_info.setCommandBufferCount(1);
+            vk::CommandPoolCreateInfo pool_ci = {};
+            pool_ci.setQueueFamilyIndex(m_family_indices.m_graphics);
+            command_pool = m_vk_ldevice->createCommandPoolUnique(pool_ci);
         }
-        std::vector<vk::UniqueCommandBuffer> command_buffers =
-            m_vk_ldevice->allocateCommandBuffersUnique(alloc_info);
-        vk::CommandBuffer & command_buffer = command_buffers[0].get();
+        name_vkhpp_object(command_pool.get(), "tmp_command_pool_for" __FUNCTION__);
 
-        // tell driver that we gonna submit but only once
+        // Allocate a temp command buffer
+        vk::CommandBuffer command_buffer;
+        {
+            vk::CommandBufferAllocateInfo alloc_info = {};
+            alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
+            alloc_info.setCommandPool(command_pool.get());
+            alloc_info.setCommandBufferCount(1);
+            m_vk_ldevice->allocateCommandBuffers(&alloc_info, &command_buffer);
+        }
+        name_vkhpp_object(command_pool.get(), "tmp_command_buffer_for" __FUNCTION__);
+
+        // Tell we gonna submit but only once
         vk::CommandBufferBeginInfo command_buffer_bi;
         {
             command_buffer_bi.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
         }
 
-        // record command
+        // Record command
         command_buffer.begin(command_buffer_bi);
         func(command_buffer);
         command_buffer.end();
 
-        // create submission
+        // Create submission
         vk::SubmitInfo submit_info = {};
         {
             submit_info.setCommandBufferCount(1);
             submit_info.setPCommandBuffers(&command_buffer);
         }
 
-        // submit
+        // Submit
         m_vk_graphics_queue.submit({ submit_info }, nullptr);
+
+        // wait
         m_vk_graphics_queue.waitIdle();
+    }
+
+    uint32_t
+    get_queue_family_index(const QueueType queue_type) const
+    {
+        if (queue_type == QueueType::Compute)
+        {
+            return m_family_indices.m_compute;
+        }
+        else if (queue_type == QueueType::Transfer)
+        {
+            return m_family_indices.m_transfer;
+        }
+        else if (queue_type == QueueType::Graphics)
+        {
+            return m_family_indices.m_graphics;
+        }
+
+        Logger::Critical<true>(__FUNCTION__, "unsupported queue type");
+
+        return 0;
+    }
+
+    vk::Queue
+    get_queue(const QueueType queue_type) const
+    {
+        if (queue_type == QueueType::Compute)
+        {
+            return m_vk_compute_queue;
+        }
+        else if (queue_type == QueueType::Transfer)
+        {
+            return m_vk_transfer_queue;
+        }
+        else if (queue_type == QueueType::Graphics)
+        {
+            return m_vk_graphics_queue;
+        }
+
+        Logger::Critical<true>(__FUNCTION__, "unsupported queue type");
+
+        return vk::Queue();
+    }
+
+    std::pair<uint64_t, uint64_t>
+    get_sync_calibrate_cpu_gpu_time(const QueueType queue_type)
+    {
+        std::array<vk::CalibratedTimestampInfoEXT, 2> timestamp_infos;
+        timestamp_infos[0].setTimeDomain(vk::TimeDomainEXT::eQueryPerformanceCounter);
+        timestamp_infos[1].setTimeDomain(vk::TimeDomainEXT::eDevice);
+        const std::pair<std::vector<uint64_t>, uint64_t> result =
+            m_vk_ldevice->getCalibratedTimestampsEXT(timestamp_infos);
+        return std::make_pair(result.first[0], result.first[1]);
     }
 
 private:
@@ -303,6 +364,7 @@ private:
         {
             all_extensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         }
+		all_extensions.push_back(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
 
         // specify device features
         vk::PhysicalDeviceFeatures device_features = {};
@@ -356,16 +418,6 @@ private:
             Logger::Critical<true>(__FUNCTION__ " could not create device " + std::string(e.what()));
         }
         return device;
-    }
-
-    vk::UniqueCommandPool
-    create_command_pool(const vk::Device & device, const uint32_t graphics_queue_family_index)
-    {
-        vk::CommandPoolCreateInfo pool_ci = {};
-        {
-            pool_ci.setQueueFamilyIndex(graphics_queue_family_index);
-        }
-        return device.createCommandPoolUnique(pool_ci);
     }
 
     QueueFamilyIndices
