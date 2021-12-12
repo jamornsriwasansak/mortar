@@ -56,7 +56,6 @@ struct Profiler
         {
             profiling_interval.m_begin_time = timestamps[profiling_interval.m_begin_query_index];
             profiling_interval.m_end_time   = timestamps[profiling_interval.m_end_query_index];
-            std::cout << profiling_interval.m_end_time - profiling_interval.m_begin_time << std::endl;
         }
     }
 };
