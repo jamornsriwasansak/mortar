@@ -191,12 +191,14 @@ struct GpuProfilerGui
                             const float corner_y = profiling_interval.m_num_scope_layers * button_height;
 
                             // Compute button Width
-                            float button_width =
-                                static_cast<float>(profiling_interval.m_end_timestamp -
-                                                   profiling_interval.m_begin_timestamp) *
-                                width_from_timestamp;
-                            
-                            if (button_width > 100000.0f) button_width = 0.0000001f;
+                            float button_width = static_cast<float>(profiling_interval.m_end_timestamp -
+                                                                    profiling_interval.m_begin_timestamp) *
+                                                 width_from_timestamp;
+
+                            // Work around when button_width is too long and breaks things
+                            // or when button_width is infinitely short and does not display anything
+                            if (button_width > 100000.0f || button_width == 0.0f)
+                                button_width = 0.0000001f;
 
                             // Draw button (profiling range)
                             ImGui::SetCursorPos(ImVec2(corner_x + padding.x, corner_y + padding.y));
