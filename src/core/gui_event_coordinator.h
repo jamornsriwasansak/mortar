@@ -5,9 +5,10 @@
 struct GuiEventCoordinator
 {
     bool m_use_all_debug_gui               = true;
-    bool m_use_profiler                    = true;
     bool m_display_raytrace_visualize_menu = true;
     bool m_display_main_pipeline_mode      = true;
+    bool m_display_profiler_gui            = true;
+    bool m_show_profiler_gui               = true;
 
     bool
     is_gui_being_used() const

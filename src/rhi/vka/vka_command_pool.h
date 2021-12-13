@@ -21,30 +21,13 @@ struct CommandPool
     size_t                     m_cmd_buffer_index = 0;
     std::string                m_name;
 
-    CommandPool(const std::string & name, const Device & device, const CommandQueueType command_queue_type)
+    CommandPool(const std::string & name, const Device & device, const QueueType queue_type)
     : m_device(device), m_name(name)
     {
         vk::CommandPoolCreateInfo command_pool_ci;
-        switch (command_queue_type)
-        {
-        case CommandQueueType::Graphics:
-            command_pool_ci.setQueueFamilyIndex(device.m_family_indices.m_graphics);
-            m_vk_queue = device.m_vk_graphics_queue;
-            break;
-        case CommandQueueType::Compute:
-            command_pool_ci.setQueueFamilyIndex(device.m_family_indices.m_compute);
-            m_vk_queue = device.m_vk_compute_queue;
-            break;
-        case CommandQueueType::Transfer:
-            command_pool_ci.setQueueFamilyIndex(device.m_family_indices.m_transfer);
-            m_vk_queue = device.m_vk_transfer_queue;
-            break;
-        default:
-            Logger::Critical<true>(__FUNCTION__, " reach end switch case for command_queue_type");
-            break;
-        }
+        command_pool_ci.setQueueFamilyIndex(device.get_queue_family_index(queue_type));
+        m_vk_queue    = device.get_queue(queue_type);
         m_vk_cmd_pool = device.m_vk_ldevice->createCommandPoolUnique(command_pool_ci);
-
         device.name_vkhpp_object(m_vk_cmd_pool.get(), name);
     }
 
@@ -56,8 +39,8 @@ struct CommandPool
             vk::CommandBufferAllocateInfo allocate_info;
             allocate_info.setCommandPool(m_vk_cmd_pool.get());
             allocate_info.setCommandBufferCount(1);
-            vk::CommandBuffer command_buffer =
-                m_device.m_vk_ldevice->allocateCommandBuffers(allocate_info)[0];
+            vk::CommandBuffer command_buffer;
+            m_device.m_vk_ldevice->allocateCommandBuffers(&allocate_info, &command_buffer);
             m_pre_alloc_cmd_buffers.emplace_back(m_vk_queue, command_buffer);
         }
         return m_pre_alloc_cmd_buffers[m_cmd_buffer_index++];

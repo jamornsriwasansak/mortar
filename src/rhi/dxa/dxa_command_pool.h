@@ -4,7 +4,7 @@
 
 #ifdef USE_DXA
 
-    #include "dxa_command_list.h"
+    #include "dxa_command_buffer.h"
     #include "dxa_common.h"
     #include "dxa_device.h"
 
@@ -19,24 +19,24 @@ struct CommandPool
     const Device &             m_device;
     std::string                m_name;
 
-    CommandPool(const std::string & name, const Device & device, const CommandQueueType command_queue_type)
+    CommandPool(const std::string & name, const Device & device, const QueueType queue_type)
     : m_device(device),
-      m_command_list_type(static_cast<D3D12_COMMAND_LIST_TYPE>(command_queue_type)),
+      m_command_list_type(static_cast<D3D12_COMMAND_LIST_TYPE>(queue_type)),
       m_name(name)
     {
-        switch (command_queue_type)
+        switch (queue_type)
         {
-        case CommandQueueType::Graphics:
+        case QueueType::Graphics:
             m_dx_command_queue = device.m_dx_direct_queue;
             break;
-        case CommandQueueType::Compute:
+        case QueueType::Compute:
             m_dx_command_queue = device.m_dx_compute_queue;
             break;
-        case CommandQueueType::Transfer:
+        case QueueType::Transfer:
             m_dx_command_queue = device.m_dx_copy_queue;
             break;
         default:
-            Logger::Critical<true>(__FUNCTION__, " reach end switch case for command_queue_type");
+            Logger::Critical<true>(__FUNCTION__, " reach end switch case for queue_type");
             break;
         }
 

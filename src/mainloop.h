@@ -121,6 +121,8 @@ struct MainLoop
     void
     loop(const size_t i_flight)
     {
+        bool do_profile = true;
+
         // in the first step we poll all the events
         GlfwHandler::Inst().poll_events();
 
@@ -130,6 +132,8 @@ struct MainLoop
         {
             return;
         }
+
+        const std::pair<uint64_t, uint64_t> cpu_gpu_time = m_device.get_sync_calibrate_cpu_gpu_time(Rhi::QueueType::Graphics);
 
         // wait for resource in this flight to be ready
         // after per_flight_resource finished waiting, then reset all resource
@@ -169,7 +173,8 @@ struct MainLoop
                           m_scene_resource,
                           m_camera,
                           reload_shader,
-                          true);
+                          true,
+                          do_profile);
 
         // mark imgui new frame
         // then draw imgui main dock
@@ -187,6 +192,7 @@ struct MainLoop
 
         // loop the renderer
         m_renderer.loop(ctx);
+        // profile(m_device, per_flight_resource);
         if (ctx.m_should_imgui_drawn)
         {
             m_imgui_render_pass.end_frame();
@@ -239,9 +245,9 @@ struct MainLoop
         // m_scene.add_render_object(&m_scene.m_scene_graph_root, "scenes/cube/cube.obj", m_staging_buffer_manager);
 
         SceneDesc scene_desc;
-        for (size_t j = 0; j < 1; j++)
+        for (size_t j = 0; j < 100; j++)
         {
-            for (size_t i = 0; i < 1; i++)
+            for (size_t i = 0; i < 100; i++)
             {
                 const float4x4 scale = glm::scale(glm::identity<float4x4>(), float3(1.0f));
                 const float4x4 translate =

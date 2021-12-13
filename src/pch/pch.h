@@ -80,7 +80,6 @@
     #include <map>
     #include <mutex>
     #include <numeric>
-    #include <optional>
     #include <ostream>
     #include <set>
     #include <span>

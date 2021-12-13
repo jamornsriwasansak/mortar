@@ -109,6 +109,41 @@ struct Device
     #endif
     }
 
+    // Retrieve ns/ticks (tick = smallest period between Gpu's timestamps)
+    float
+    get_timestamp_period() const
+    {
+        UINT64 frequency;
+        m_dx_direct_queue->GetTimestampFrequency(&frequency);
+        return 1e9f / static_cast<float>(frequency);
+    }
+
+    std::pair<uint64_t, uint64_t>
+    get_sync_calibrate_cpu_gpu_time(QueueType queue_type)
+    {
+        ComPtr<ID3D12CommandQueue> queue = nullptr;
+        switch (queue_type)
+        {
+        case QueueType::Graphics:
+            queue = m_dx_direct_queue;
+            break;
+        case QueueType::Compute:
+            queue = m_dx_compute_queue;
+            break;
+        case QueueType::Transfer:
+            queue = m_dx_copy_queue;
+            break;
+        default:
+            Logger::Critical<true>(__FUNCTION__, " reach end switch case for queue_type");
+            break;
+        }
+
+        uint64_t cpu_time;
+        uint64_t gpu_time;
+        queue->GetClockCalibration(&gpu_time, &cpu_time);
+        return std::make_pair(cpu_time, gpu_time);
+    }
+
     inline bool
     enable_debug() const
     {

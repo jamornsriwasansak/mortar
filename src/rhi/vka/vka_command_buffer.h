@@ -11,6 +11,7 @@
     #include "vka_fence.h"
     #include "vka_framebuffer_binding.h"
     #include "vka_imgui_render_pass.h"
+    #include "vka_query_pool.h"
     #include "vka_raster_pipeline.h"
     #include "vka_raytracing_pipeline.h"
     #include "vka_semaphore.h"
@@ -48,8 +49,9 @@ static_assert(sizeof(vk::BufferCopy) == sizeof(BufferCopyInfo),
 
 struct CommandBuffer
 {
-    vk::Queue         m_vk_queue          = {};
-    vk::CommandBuffer m_vk_command_buffer = {};
+    vk::Queue                m_vk_queue                         = {};
+    vk::CommandBuffer        m_vk_command_buffer                = {};
+    std::vector<QueryPool *> m_query_pools_reset_by_this_buffer = {};
 
     CommandBuffer() {}
 
@@ -171,9 +173,14 @@ struct CommandBuffer
     }
 
     void
-    end() const
+    end()
     {
         m_vk_command_buffer.end();
+        for (QueryPool * query_pool : m_query_pools_reset_by_this_buffer)
+        {
+            query_pool->m_is_ready_for_query = false;
+        }
+        m_query_pools_reset_by_this_buffer.clear();
     }
 
     vk::PipelineStageFlags
@@ -314,6 +321,14 @@ struct CommandBuffer
                                          width,
                                          height,
                                          depth);
+    }
+
+    void
+    write_timestamp(Rhi::QueryPool & query_pool, const uint32_t query_index)
+    {
+        m_vk_command_buffer.writeTimestamp(vk::PipelineStageFlagBits::eAllCommands,
+                                           query_pool.m_vk_query_pool.get(),
+                                           query_index);
     }
 };
 } // namespace VKA_NAME

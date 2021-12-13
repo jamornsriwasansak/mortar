@@ -11,6 +11,7 @@
     #include "dxa_fence.h"
     #include "dxa_framebufferbinding.h"
     #include "dxa_imguirenderpass.h"
+    #include "dxa_query_pool.h"
     #include "dxa_rasterpipeline.h"
     #include "dxa_raytracingpipeline.h"
     #include "dxa_semaphore.h"
@@ -24,7 +25,7 @@ struct CommandBuffer
     // allocator holds the memory
     // command list is the interface
     // while command list can be reused, reusing makes designing the api quite difficult.
-    ComPtr<ID3D12GraphicsCommandList4> m_dx_command_list    = nullptr;
+    ComPtr<ID3D12GraphicsCommandList4> m_dx_command_list      = nullptr;
     ComPtr<ID3D12CommandAllocator>     m_dx_command_allocator = nullptr;
     ID3D12CommandQueue *               m_dx_command_queue     = nullptr;
 
@@ -37,7 +38,9 @@ struct CommandBuffer
     CommandBuffer(ID3D12CommandQueue *                 dx_command_queue,
                   ComPtr<ID3D12GraphicsCommandList4> & dx_command_list,
                   ComPtr<ID3D12CommandAllocator> &     dx_command_allocator)
-    : m_dx_command_queue(dx_command_queue), m_dx_command_list(dx_command_list), m_dx_command_allocator(dx_command_allocator)
+    : m_dx_command_queue(dx_command_queue),
+      m_dx_command_list(dx_command_list),
+      m_dx_command_allocator(dx_command_allocator)
     {
     }
 
@@ -177,29 +180,6 @@ struct CommandBuffer
         m_dx_command_list->OMSetRenderTargets(static_cast<UINT>(num_rtv_handles), rtv_handles, FALSE, dsv_handle);
     }
 
-    /*
-    void
-    bind_material_system(const MaterialSystem & mat_sys)
-    {
-        ID3D12DescriptorHeap * heaps[] = { Dev(0)->m_dx_cbv_srv_uav_descriptor_heap.Get(),
-                                           Dev(0)->m_dx_sampler_heap.Get() };
-        m_dx_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
-
-        // set sample handle
-        m_dx_command_list->SetGraphicsRootDescriptorTable(2u, mat_sys.m_texture_gpu_handle);
-
-        // set sampler
-        m_dx_command_list->SetGraphicsRootDescriptorTable(3u, mat_sys.m_sampler_gpu_handle);
-    }
-
-    void
-    bind_material(const Buffer & mat_buf)
-    {
-        // bind root signature and pipeline state
-        m_dx_command_list->SetGraphicsRootConstantBufferView(1u, mat_buf.m_allocation->GetResource()->GetGPUVirtualAddress());
-    }
-    */
-
     void
     bind_vertex_buffer(const Buffer & buffer,
                        const size_t   stride_size_in_bytes,
@@ -252,10 +232,10 @@ struct CommandBuffer
                        const size_t   size_in_bytes)
     {
         m_dx_command_list->CopyBufferRegion(dst_buffer.m_allocation->GetResource(),
-                                          dst_offset_in_bytes,
-                                          src_buffer.m_allocation->GetResource(),
-                                          src_offset_in_bytes,
-                                          size_in_bytes);
+                                            dst_offset_in_bytes,
+                                            src_buffer.m_allocation->GetResource(),
+                                            src_offset_in_bytes,
+                                            size_in_bytes);
     }
 
     void
@@ -284,11 +264,11 @@ struct CommandBuffer
     clear_depth_render_target(const Texture & render_target)
     {
         m_dx_command_list->ClearDepthStencilView(render_target.m_dx_dsv_rtv_cpu_handle,
-                                               D3D12_CLEAR_FLAG_DEPTH,
-                                               render_target.m_clear_value[0],
-                                               0,
-                                               0,
-                                               nullptr);
+                                                 D3D12_CLEAR_FLAG_DEPTH,
+                                                 render_target.m_clear_value[0],
+                                                 0,
+                                                 0,
+                                                 nullptr);
     }
 
     void
@@ -305,10 +285,10 @@ struct CommandBuffer
                            const size_t start_instance_location = 0)
     {
         m_dx_command_list->DrawIndexedInstanced(static_cast<UINT>(index_count_per_instance),
-                                              static_cast<UINT>(instance_count),
-                                              static_cast<UINT>(start_index_location),
-                                              static_cast<INT>(base_vertex_location),
-                                              static_cast<UINT>(start_instance_location));
+                                                static_cast<UINT>(instance_count),
+                                                static_cast<UINT>(start_index_location),
+                                                static_cast<INT>(base_vertex_location),
+                                                static_cast<UINT>(start_instance_location));
     }
 
     void
@@ -364,7 +344,7 @@ struct CommandBuffer
             if (semaphore_signal != nullptr)
             {
                 DXCK(m_dx_command_queue->Signal(semaphore_signal->m_dx_fence.Get(),
-                                            semaphore_signal->m_expected_fence_value));
+                                                semaphore_signal->m_expected_fence_value));
             }
         }
     }
@@ -411,6 +391,18 @@ struct CommandBuffer
     {
         assert(size_in_bytes % 4 == 0);
         m_dx_command_list->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size_in_bytes / 4), data, 0);
+    }
+
+    void
+    write_timestamp(QueryPool & query_pool, const uint32_t query_index)
+    {
+        m_dx_command_list->EndQuery(query_pool.m_dx_query_heap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, query_index);
+        m_dx_command_list->ResolveQueryData(query_pool.m_dx_query_heap.Get(),
+                                            D3D12_QUERY_TYPE_TIMESTAMP,
+                                            static_cast<UINT>(query_index),
+                                            static_cast<UINT>(1),
+                                            query_pool.m_query_result_readback_buffer.m_allocation->GetResource(),
+                                            sizeof(uint64_t) * query_index);
     }
 };
 } // namespace DXA_NAME

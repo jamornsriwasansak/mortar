@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dxa_buffer.h"
-#include "dxa_command_list.h"
+#include "dxa_command_buffer.h"
 #include "dxa_command_pool.h"
 #include "dxa_descriptor.h"
 #include "dxa_descriptorpool.h"
@@ -10,6 +10,7 @@
 #include "dxa_fence.h"
 #include "dxa_framebufferbinding.h"
 #include "dxa_imguirenderpass.h"
+#include "dxa_query_pool.h"
 #include "dxa_rasterpipeline.h"
 #include "dxa_raytracingaccel.h"
 #include "dxa_raytracingpipeline.h"

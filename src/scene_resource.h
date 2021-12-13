@@ -87,7 +87,7 @@ struct SceneResource
 
     SceneResource(Rhi::Device & device)
     : m_device(device),
-      m_transfer_cmd_pool("scene_resource_transfer_cmd_pool", device, Rhi::CommandQueueType::Transfer)
+      m_transfer_cmd_pool("scene_resource_transfer_cmd_pool", device, Rhi::QueueType::Transfer)
     {
         // index buffer vertex buffer
         m_d_vbuf_position = Rhi::Buffer("scene_m_d_vbuf_position",
