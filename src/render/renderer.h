@@ -162,7 +162,7 @@ struct Renderer
         cmd_buffer.begin();
 
         {
-            GpuProfilingScope rendering("rendering", cmd_buffer, gpu_profiler);
+            GpuProfilingScope rendering("Rendering", cmd_buffer, gpu_profiler);
 
             // Raytrace mode
             bool p_open = true;
@@ -183,7 +183,7 @@ struct Renderer
                 // Raytracing!
                 if (m_ray_trace_mode == Renderer::RayTraceMode::VisualizeDebug)
                 {
-                    GpuProfilingScope raytrace_scope1("raytrace visualize debug", cmd_buffer, gpu_profiler);
+                    GpuProfilingScope raytrace_scope1("Raytrace visualize debug", cmd_buffer, gpu_profiler);
                     m_pass_ray_trace_visualize.render(cmd_buffer,
                                                       ctx,
                                                       per_flight_render_resource.m_rt_result,
@@ -192,7 +192,7 @@ struct Renderer
                 }
                 else if (m_ray_trace_mode == Renderer::RayTraceMode::PrimitivePathTracing)
                 {
-                    GpuProfilingScope raytrace_scope2("raytrace primitive path tracing", cmd_buffer, gpu_profiler);
+                    GpuProfilingScope raytrace_scope2("Raytrace primitive path tracing", cmd_buffer, gpu_profiler);
                     m_pass_ray_trace_primitive_pathtrace.render(cmd_buffer,
                                                                 ctx,
                                                                 per_flight_render_resource.m_rt_result,
@@ -202,6 +202,7 @@ struct Renderer
 
             // Transition
             {
+                GpuProfilingScope imgui_scope("Transit present to color attachment", cmd_buffer, gpu_profiler);
                 cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
                                               Rhi::TextureStateEnum::NonFragmentShaderVisible,
                                               Rhi::TextureStateEnum::FragmentShaderVisible);
@@ -212,7 +213,7 @@ struct Renderer
 
             // Run final pass
             {
-                GpuProfilingScope render_to_framebuffer("render rtresult to framebuffer", cmd_buffer, gpu_profiler);
+                GpuProfilingScope render_to_framebuffer("Render rtresult to framebuffer", cmd_buffer, gpu_profiler);
                 m_pass_render_to_framebuffer.run(cmd_buffer,
                                                  ctx,
                                                  per_flight_render_resource.m_rt_result,
@@ -222,12 +223,13 @@ struct Renderer
             // Render imgui onto swapchain
             if (ctx.m_should_imgui_drawn)
             {
-                GpuProfilingScope imgui_scope("imgui", cmd_buffer, gpu_profiler);
+                GpuProfilingScope imgui_scope("Imgui", cmd_buffer, gpu_profiler);
                 cmd_buffer.render_imgui(ctx.m_imgui_render_pass, ctx.m_image_index);
             }
 
             // Transition
             {
+                GpuProfilingScope imgui_scope("Transit swapchain for present", cmd_buffer, gpu_profiler);
                 cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
                                               Rhi::TextureStateEnum::ColorAttachment,
                                               Rhi::TextureStateEnum::Present);
