@@ -109,6 +109,15 @@ struct Device
     #endif
     }
 
+    // Retrieve ns/ticks (tick = smallest period between Gpu's timestamps)
+    float
+    get_timestamp_period() const
+    {
+        UINT64 frequency;
+        m_dx_direct_queue->GetTimestampFrequency(&frequency);
+        return 1e9f / static_cast<float>(frequency);
+    }
+
     std::pair<uint64_t, uint64_t>
     get_sync_calibrate_cpu_gpu_time(QueueType queue_type)
     {

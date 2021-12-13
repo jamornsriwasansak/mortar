@@ -21,6 +21,7 @@ struct RenderContext
     FpsCamera &                 m_fps_camera;
     bool                        m_is_shaders_dirty;
     bool                        m_should_imgui_drawn;
+    bool                        m_do_profile;
 
     RenderContext(Rhi::Device &               device,
                   PerFlightResource &         per_flight_resource,
@@ -33,8 +34,9 @@ struct RenderContext
                   int2                        resolution,
                   SceneResource &             scene_resource,
                   FpsCamera &                 fps_camera,
-                  bool                        is_shaders_dirty,
-                  bool                        should_imgui_drawn)
+                  const bool                  is_shaders_dirty,
+                  const bool                  should_imgui_drawn,
+                  const bool                  do_profile)
     : m_device(device),
       m_per_flight_resource(per_flight_resource),
       m_per_swap_resource(per_swap_resource),
@@ -47,7 +49,8 @@ struct RenderContext
       m_scene_resource(scene_resource),
       m_fps_camera(fps_camera),
       m_is_shaders_dirty(is_shaders_dirty),
-      m_should_imgui_drawn(should_imgui_drawn)
+      m_should_imgui_drawn(should_imgui_drawn),
+      m_do_profile(do_profile)
     {
     }
 };

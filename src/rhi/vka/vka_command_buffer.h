@@ -326,12 +326,6 @@ struct CommandBuffer
     void
     write_timestamp(Rhi::QueryPool & query_pool, const uint32_t query_index)
     {
-        if (!query_pool.m_is_ready_for_query)
-        {
-            m_vk_command_buffer.resetQueryPool(query_pool.m_vk_query_pool.get(), 0, query_pool.m_num_queries);
-            query_pool.m_is_ready_for_query = true;
-            m_query_pools_reset_by_this_buffer.push_back(&query_pool);
-        }
         m_vk_command_buffer.writeTimestamp(vk::PipelineStageFlagBits::eAllCommands,
                                            query_pool.m_vk_query_pool.get(),
                                            query_index);

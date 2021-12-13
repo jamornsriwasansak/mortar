@@ -20,6 +20,7 @@ struct QueryPool
       m_device(device),
       m_num_queries(num_queries)
     {
+        device.m_vk_ldevice->resetQueryPool(m_vk_query_pool.get(), 0, m_num_queries);
         m_device.name_vkhpp_object(m_vk_query_pool.get(), name);
     }
 
@@ -30,6 +31,12 @@ struct QueryPool
         query_pool_ci.setQueryCount(num_queries);
         query_pool_ci.setQueryType(static_cast<vk::QueryType>(query_type));
         return device.m_vk_ldevice->createQueryPoolUnique(query_pool_ci);
+    }
+
+    void
+    reset()
+    {
+        m_device.m_vk_ldevice->resetQueryPool(m_vk_query_pool.get(), 0, m_num_queries);
     }
 
     std::vector<uint64_t>

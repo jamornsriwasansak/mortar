@@ -18,7 +18,7 @@ struct QueryPool
     : m_dx_query_heap(construct_query_heap(device, query_type, num_queries)),
       m_query_result_readback_buffer(name + "_readback_buffer",
                                      device,
-                                     static_cast<BufferUsageEnum>(D3D12_RESOURCE_STATE_RESOLVE_DEST),
+                                     static_cast<BufferUsageEnum>(D3D12_RESOURCE_STATE_COPY_DEST),
                                      MemoryUsageEnum::GpuToCpu,
                                      num_queries * sizeof(uint64_t))
     {
@@ -35,6 +35,12 @@ struct QueryPool
         ComPtr<ID3D12QueryHeap> result;
         DXCK(device.m_dx_device->CreateQueryHeap(&query_heap_desc, IID_PPV_ARGS(&result)));
         return result;
+    }
+
+    void
+    reset()
+    {
+        // do nothing
     }
 
     std::vector<uint64_t>

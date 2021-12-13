@@ -309,7 +309,7 @@ struct Device
     }
 
     std::pair<uint64_t, uint64_t>
-    get_sync_calibrate_cpu_gpu_time(const QueueType queue_type)
+    get_sync_calibrate_cpu_gpu_time(const QueueType queue_type) const
     {
         std::array<vk::CalibratedTimestampInfoEXT, 2> timestamp_infos;
         timestamp_infos[0].setTimeDomain(vk::TimeDomainEXT::eQueryPerformanceCounter);
@@ -317,6 +317,12 @@ struct Device
         const std::pair<std::vector<uint64_t>, uint64_t> result =
             m_vk_ldevice->getCalibratedTimestampsEXT(timestamp_infos);
         return std::make_pair(result.first[0], result.first[1]);
+    }
+
+    float
+    get_timestamp_period() const
+    {
+        return m_vk_pdevice.getProperties().limits.timestampPeriod;
     }
 
 private:
@@ -393,6 +399,7 @@ private:
         device_vulkan12_features.setUniformAndStorageBuffer8BitAccess(VK_TRUE);
         device_vulkan12_features.setShaderFloat16(VK_TRUE);
         device_vulkan12_features.setPNext(&feature_16bit_storage);
+        device_vulkan12_features.setHostQueryReset(VK_TRUE);
 
         // allow Uniform and Storage buffer to not to be restricted by std140 and std430 (aligned by 32)
         device_vulkan12_features.setScalarBlockLayout(VK_TRUE);

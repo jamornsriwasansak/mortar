@@ -44,6 +44,7 @@ add_custom_command(
 target_compile_features(mortar PRIVATE cxx_std_20)
 target_compile_definitions(mortar PRIVATE IMGUI_USER_CONFIG="pch/imgui_config.h")
 target_compile_definitions(mortar PRIVATE __STDC_WANT_SECURE_LIB__=1 _SCL_SECURE_NO_WARNINGS NOMINMAX)
+target_precompile_headers(mortar PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/pch/pch.h>")
 if (MSVC)
     #target_compile_options(mortar PRIVATE /W4 /WX)
     target_compile_options(mortar PRIVATE /W4 /analyze)
