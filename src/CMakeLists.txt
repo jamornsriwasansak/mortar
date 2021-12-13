@@ -20,7 +20,6 @@ target_include_directories(
     mortar SYSTEM PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${IMGUI_INCLUDE_DIRS}
-    ${SPDLOG_INCLUDE_DIRS}
     ${VULKAN_INCLUDE_DIRS}
     ${DXC_INCLUDE_DIRS}
     ${GLM_INCLUDE_DIRS}

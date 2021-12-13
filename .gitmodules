@@ -16,9 +16,6 @@
 [submodule "dep/glm"]
 	path = dep/glm
 	url = https://github.com/g-truc/glm
-[submodule "dep/spdlog"]
-	path = dep/spdlog
-	url = https://github.com/gabime/spdlog
 [submodule "dep/SPIRV-Reflect"]
 	path = dep/SPIRV-Reflect
 	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
