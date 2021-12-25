@@ -29,7 +29,7 @@ RayGen()
     const float3 lookat = mul(u_cbparams.m_camera_inv_proj, float4(ndc.x, ndc.y, 1.0f, 1.0f)).xyz;
     const float3 direction = mul(u_cbparams.m_camera_inv_view, float4(normalize(lookat), 0.0f)).xyz;
 
-    Payload payload;
+    Payload payload; 
     payload.m_miss  = true;
     payload.m_color = float3(0.0f, 0.0f, 0.0f);
 

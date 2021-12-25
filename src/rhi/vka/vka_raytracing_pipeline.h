@@ -106,8 +106,14 @@ struct RayTracingPipeline
         m_vk_descriptor_set_layouts.clear();
         for (auto & bindings : reflection.m_descriptor_set_bindings)
         {
+            vk::DescriptorSetLayoutBindingFlagsCreateInfo binding_flag_ci;
+            vk::DescriptorBindingFlags flags = vk::DescriptorBindingFlagBits::ePartiallyBound;
+            std::vector<vk::DescriptorBindingFlags> binding_flags(bindings.size(), flags);
+            binding_flag_ci.setBindingFlags(binding_flags);
+
             vk::DescriptorSetLayoutCreateInfo desc_layout_info_ci;
             desc_layout_info_ci.setBindings(bindings);
+            desc_layout_info_ci.setPNext(&binding_flag_ci);
             m_vk_descriptor_set_layouts.emplace_back(
                 device.m_vk_ldevice->createDescriptorSetLayoutUnique(desc_layout_info_ci));
         }

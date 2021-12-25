@@ -8,8 +8,10 @@
     #define REGISTER(SPACE, VARIABLE_NAME, TYPE, BINDING) \
     VARIABLE_NAME:                                        \
         register(TYPE##BINDING, space##SPACE)
+
     #define REGISTER_ARRAY(SPACE, VARIABLE_NAME, ARRAY_SIZE, TYPE, BINDING) \
         VARIABLE_NAME[ARRAY_SIZE] : register(TYPE##BINDING, space##SPACE)
+
     #define REGISTER_WRAP_BEGIN(NAME)
     #define REGISTER_WRAP_END
 #else
@@ -32,6 +34,7 @@ struct DescriptorsBase
             NAME(std::span<Rhi::DescriptorSet> descriptor_sets) : DescriptorsBase(descriptor_sets) \
             {                                                                                      \
             }
+
     #define REGISTER_WRAP_END \
         }                     \
         ;

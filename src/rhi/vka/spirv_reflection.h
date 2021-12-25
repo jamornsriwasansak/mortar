@@ -262,7 +262,7 @@ private:
                     // could not find binding. create a new one
                     vk::DescriptorSetLayoutBinding set_layout_binding;
                     set_layout_binding.setBinding(desc_binding->binding);
-                    set_layout_binding.setDescriptorCount(desc_binding->count); // TODO:: check if this is correct
+                    set_layout_binding.setDescriptorCount(desc_binding->count);
                     set_layout_binding.setDescriptorType(
                         static_cast<vk::DescriptorType>(desc_binding->descriptor_type));
                     set_layout_binding.setStageFlags(vk_shader_stage);

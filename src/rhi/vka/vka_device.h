@@ -370,7 +370,7 @@ private:
         {
             all_extensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         }
-		all_extensions.push_back(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+        all_extensions.push_back(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
 
         // specify device features
         vk::PhysicalDeviceFeatures device_features = {};
@@ -398,8 +398,10 @@ private:
         device_vulkan12_features.setRuntimeDescriptorArray(VK_TRUE);
         device_vulkan12_features.setUniformAndStorageBuffer8BitAccess(VK_TRUE);
         device_vulkan12_features.setShaderFloat16(VK_TRUE);
-        device_vulkan12_features.setPNext(&feature_16bit_storage);
         device_vulkan12_features.setHostQueryReset(VK_TRUE);
+        device_vulkan12_features.setRuntimeDescriptorArray(VK_TRUE);
+        device_vulkan12_features.setDescriptorBindingPartiallyBound(VK_TRUE);
+        device_vulkan12_features.setPNext(&feature_16bit_storage);
 
         // allow Uniform and Storage buffer to not to be restricted by std140 and std430 (aligned by 32)
         device_vulkan12_features.setScalarBlockLayout(VK_TRUE);

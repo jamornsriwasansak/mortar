@@ -1,13 +1,13 @@
 #pragma once
 
-#include "cpp_compatible.h"
-#include "shared/bindless_table.h"
-#include "shared/camera_params.h"
-#include "shared/compact_vertex.h"
-#include "shared/standard_material.h"
-
 #ifndef RT_VISUALIZE_CB_PARAMS
     #define RT_VISUALIZE_CB_PARAMS
+
+    #include "cpp_compatible.h"
+    #include "shared/bindless_table.h"
+    #include "shared/camera_params.h"
+    #include "shared/compact_vertex.h"
+    #include "shared/standard_material.h"
 
 enum class RaytraceVisualizeModeEnum : uint32_t
 {

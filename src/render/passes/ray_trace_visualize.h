@@ -147,10 +147,6 @@ struct RayTraceVisualizePass
         {
             registers.u_textures.set(ctx.m_scene_resource.m_d_textures[i], i);
         }
-        for (size_t i = ctx.m_scene_resource.m_d_textures.size(); i < EngineSetting::MaxNumBindlessTextures; i++)
-        {
-            registers.u_textures.set(ctx.m_scene_resource.m_d_textures[0], i);
-        }
 
         descriptor_sets[0].update();
         descriptor_sets[1].update();
