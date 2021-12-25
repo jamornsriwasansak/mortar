@@ -55,15 +55,17 @@ struct CommandBuffer
         assert(desc_sets->m_updated);
 
         ID3D12DescriptorHeap * heaps[] = {
-            desc_sets->m_descriptor_pool->m_cbv_srv_uav_heap.m_dx_descriptor_heap.Get(),
-            desc_sets->m_descriptor_pool->m_sampler_heap.m_dx_descriptor_heap.Get()
+            desc_sets->m_descriptor_pool.m_cbv_srv_uav_heap.m_dx_descriptor_heap.Get(),
+            desc_sets->m_descriptor_pool.m_sampler_heap.m_dx_descriptor_heap.Get()
         };
         m_dx_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
 
         for (size_t i_set = 0; i_set < num_desc_sets; i_set++)
         {
-            assert(desc_sets[0].m_descriptor_pool == desc_sets[i_set].m_descriptor_pool);
-            assert(desc_sets[0].m_descriptor_pool == desc_sets[i_set].m_descriptor_pool);
+            assert(desc_sets[0].m_descriptor_pool.m_cbv_srv_uav_heap.m_dx_descriptor_heap.Get() ==
+                   desc_sets[i_set].m_descriptor_pool.m_cbv_srv_uav_heap.m_dx_descriptor_heap.Get());
+            assert(desc_sets[0].m_descriptor_pool.m_sampler_heap.m_dx_descriptor_heap.Get() ==
+                   desc_sets[i_set].m_descriptor_pool.m_sampler_heap.m_dx_descriptor_heap.Get());
 
             const DescriptorSet & desc_set = desc_sets[i_set];
 

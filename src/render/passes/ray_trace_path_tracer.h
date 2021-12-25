@@ -15,7 +15,7 @@ struct RayTracePathTracer
                   device,
                   Rhi::BufferUsageEnum::ConstantBuffer,
                   Rhi::MemoryUsageEnum::CpuToGpu,
-                  sizeof(RaytraceVisualizeCbParams)),
+                  sizeof(RaytracePathTracingCbParams)),
       m_common_sampler("ray_trace_path_trace_sampler", device),
       m_rt_pipeline("ray_trace_path_trace_pipeline", device, construct_rt_config(), shader_binary_manager, 16, 64, 2),
       m_rt_sbt("raytrace_visualize_sbt", device, m_rt_pipeline)
@@ -64,27 +64,25 @@ struct RayTracePathTracer
            const Rhi::Texture &  target_texture_buffer,
            const uint2           target_resolution)
     {
-        RaytraceVisualizeCbParams cb_params;
-        CameraProperties          cam_props = ctx.m_fps_camera.get_camera_props();
-        cb_params.m_camera_inv_proj         = inverse(cam_props.m_proj);
-        cb_params.m_camera_inv_view         = inverse(cam_props.m_view);
-        cb_params.m_mode                    = RaytraceVisualizeModeEnum::ModeInstanceId;
-        std::memcpy(m_cb_params.map(), &cb_params, sizeof(RaytraceVisualizeCbParams));
+        RaytracePathTracingCbParams cb_params;
+        CameraProperties            cam_props = ctx.m_fps_camera.get_camera_props();
+        cb_params.m_camera_inv_proj           = inverse(cam_props.m_proj);
+        cb_params.m_camera_inv_view           = inverse(cam_props.m_view);
+        std::memcpy(m_cb_params.map(), &cb_params, sizeof(RaytracePathTracingCbParams));
         m_cb_params.unmap();
 
-        std::array<Rhi::DescriptorSet, 2> descriptor_sets;
+        std::array<Rhi::DescriptorSet, 2> descriptor_sets{
+            Rhi::DescriptorSet(ctx.m_device, m_rt_pipeline, ctx.m_per_flight_resource.m_descriptor_pool, 0),
+            Rhi::DescriptorSet(ctx.m_device, m_rt_pipeline, ctx.m_per_flight_resource.m_descriptor_pool, 1)
+        };
 
         // descriptor sets 0
-        descriptor_sets[0] =
-            Rhi::DescriptorSet(&ctx.m_device, m_rt_pipeline, &ctx.m_per_flight_resource.m_descriptor_pool, 0);
         descriptor_sets[0]
             .set_u_rw_texture(0, target_texture_buffer)
             .set_b_constant_buffer(0, m_cb_params)
             .update();
 
         // descriptor sets 1
-        descriptor_sets[1] =
-            Rhi::DescriptorSet(&ctx.m_device, m_rt_pipeline, &ctx.m_per_flight_resource.m_descriptor_pool, 1);
         for (size_t i = 0; i < std::min(ctx.m_scene_resource.m_d_textures.size(),
                                         size_t(EngineSetting::MaxNumBindlessTextures));
              i++)

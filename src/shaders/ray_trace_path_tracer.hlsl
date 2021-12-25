@@ -16,7 +16,7 @@ struct Attributes
     float2 uv;
 };
 
-ConstantBuffer<RaytraceVisualizeCbParams> u_cbparams : register(b0, space0);
+ConstantBuffer<RaytracePathTracingCbParams> u_cbparams : register(b0, space0);
 RWTexture2D<float4> u_output : register(u0, space0);
 
 SamplerState u_sampler : register(s0, space1);
@@ -109,66 +109,6 @@ ClosestHit(inout Payload payload, const Attributes attrib)
     const float2 texcoord   = texcoord0 * (1.0f - barycentric.x - barycentric.y) +
                             texcoord1 * barycentric.x + texcoord2 * barycentric.y;
     const StandardMaterial mat = u_materials[geometry_entry.m_material_idx];
-
-    const RaytraceVisualizeModeEnum mode = u_cbparams.m_mode;
-
-    if (mode == RaytraceVisualizeModeEnum::ModeInstanceId)
-    {
-        payload.m_color = color_from_uint(InstanceIndex());
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeBaseInstanceId)
-    {
-        payload.m_color = color_from_uint(InstanceID());
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeGeometryId)
-    {
-        payload.m_color = color_from_uint(GeometryIndex());
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeTriangleId)
-    {
-        payload.m_color = color_from_uint(PrimitiveIndex());
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeBaryCentricCoords)
-    {
-        payload.m_color = half3(1.0h - attrib.uv.x - attrib.uv.y, attrib.uv.x, attrib.uv.y);
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModePosition)
-    {
-        payload.m_color = half3(WorldRayOrigin() + WorldRayDirection() * RayTCurrent());
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeGeometryNormal)
-    {
-        payload.m_color = half3(normalize(cross(position1 - position0, position2 - position0)));
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeShadingNormal)
-    {
-        payload.m_color = half3(snormal);
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeTextureCoords)
-    {
-        payload.m_color = half3(texcoord, 0.0h);
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeDepth)
-    {
-        // compute depth
-        float depth = length(WorldRayDirection()) * RayTCurrent();
-        // tonemap depth and apply contrast
-        depth           = depth / (depth + 1.0f);
-        depth           = pow(depth, 20.0f);
-        payload.m_color = half3(depth, depth, depth);
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeDiffuseReflectance)
-    {
-        payload.m_color = mat.get_diffuse_refl(texcoord);
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeSpecularReflectance)
-    {
-        payload.m_color = mat.get_specular_refl(texcoord);
-    }
-    else if (mode == RaytraceVisualizeModeEnum::ModeRoughness)
-    {
-        payload.m_color = mat.get_roughness(texcoord).rrr;
-    }
 
 #ifdef DEBUG_RayTraceVisualizePrintClickedInfo
     DebugWriter dwriter;

@@ -41,26 +41,24 @@ struct DescriptorSet
     std::vector<RootSignatureLevelView> m_root_cbvs;
     std::vector<RootSignatureLevelView> m_root_srvs;
 
-    DescriptorPool * m_descriptor_pool = nullptr;
-    const Device *   m_device          = nullptr;
+    DescriptorPool & m_descriptor_pool;
+    const Device &   m_device;
 
     #ifndef NDEBUG
     bool m_updated = false;
     #endif
 
-    DescriptorSet() {}
-
-    DescriptorSet(const Device *                       device,
-                  DescriptorPool *                     descriptor_pool,
+    DescriptorSet(const Device &                       device,
+                  DescriptorPool &                     descriptor_pool,
                   const size_t                         i_set,
                   [[maybe_unused]] const std::string & name = "")
     : m_device(device), m_set(i_set), m_descriptor_pool(descriptor_pool)
     {
     }
 
-    DescriptorSet(const Device *                       device,
+    DescriptorSet(const Device &                       device,
                   const RasterPipeline &               pipeline,
-                  DescriptorPool *                     descriptor_pool,
+                  DescriptorPool &                     descriptor_pool,
                   const size_t                         i_set,
                   [[maybe_unused]] const std::string & name = "")
     : m_device(device),
@@ -70,9 +68,9 @@ struct DescriptorSet
     {
     }
 
-    DescriptorSet(const Device *                       device,
+    DescriptorSet(const Device &                       device,
                   const RayTracingPipeline &           pipeline,
-                  DescriptorPool *                     descriptor_pool,
+                  DescriptorPool &                     descriptor_pool,
                   const size_t                         i_set,
                   [[maybe_unused]] const std::string & name = "")
     : m_device(device),
@@ -84,7 +82,7 @@ struct DescriptorSet
 
     template <typename THeap>
     std::optional<DescriptorHandle>
-    request_handle(D3D_SHADER_INPUT_TYPE type, DescriptorHeap<THeap> * heap, const size_t binding, const size_t i_offset)
+    request_handle(D3D_SHADER_INPUT_TYPE type, DescriptorHeap<THeap> & heap, const size_t binding, const size_t i_offset)
     {
         const auto index       = std::make_tuple(type, m_set, binding);
         const auto iter        = m_descriptor_info->find(index);
@@ -101,7 +99,7 @@ struct DescriptorSet
         DescriptorHandle result;
         if (handle_iter == m_handles.end())
         {
-            DescriptorHandle handle = heap->request_handle(desc_info.m_num_bindings);
+            DescriptorHandle handle = heap.request_handle(desc_info.m_num_bindings);
             m_root_descriptor_tables.push_back(
                 RootDescriptorTable{ desc_info.m_root_signature_index, handle.m_dx_gpu_handle });
             m_handles[index] = handle;
@@ -112,8 +110,8 @@ struct DescriptorSet
             result = handle_iter->second;
         }
 
-        result.m_dx_cpu_handle.ptr += i_offset * heap->m_dx_handle_size;
-        result.m_dx_gpu_handle.ptr += i_offset * heap->m_dx_handle_size;
+        result.m_dx_cpu_handle.ptr += i_offset * heap.m_dx_handle_size;
+        result.m_dx_gpu_handle.ptr += i_offset * heap.m_dx_handle_size;
 
         return result;
     }
@@ -137,7 +135,7 @@ struct DescriptorSet
     set_t_byte_address_buffer(const size_t   binding,
                               const Buffer & buffer,
                               const size_t   stride,
-                              const size_t   num_elements  = 0,
+                              const size_t   num_elements,
                               const size_t   i_buffer      = 0,
                               const size_t   first_element = 0)
     {
@@ -152,11 +150,11 @@ struct DescriptorSet
         srv_desc.Buffer.StructureByteStride      = 0;
         srv_desc.Buffer.NumElements              = static_cast<UINT>(num_elements);
         std::optional<DescriptorHandle> handle =
-            request_handle(D3D_SIT_BYTEADDRESS, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
+            request_handle(D3D_SIT_BYTEADDRESS, m_descriptor_pool.m_cbv_srv_uav_heap, binding, i_buffer);
 
         if (handle.has_value())
         {
-            m_device->m_dx_device->CreateShaderResourceView(buffer.m_allocation->GetResource(),
+            m_device.m_dx_device->CreateShaderResourceView(buffer.m_allocation->GetResource(),
                                                             &srv_desc,
                                                             handle->m_dx_cpu_handle);
         }
@@ -176,7 +174,7 @@ struct DescriptorSet
     set_t_structured_buffer(const size_t   binding,
                             const Buffer & buffer,
                             const size_t   stride,
-                            const size_t   num_elements  = 1,
+                            const size_t   num_elements  = 0,
                             const size_t   i_buffer      = 0,
                             const size_t   first_element = 0)
     {
@@ -188,13 +186,20 @@ struct DescriptorSet
         srv_desc.Buffer.FirstElement             = first_element;
         srv_desc.Buffer.Flags                    = D3D12_BUFFER_SRV_FLAG_NONE;
         srv_desc.Buffer.StructureByteStride      = static_cast<UINT>(stride);
-        srv_desc.Buffer.NumElements              = static_cast<UINT>(num_elements);
+        if (num_elements == 0)
+        {
+            srv_desc.Buffer.NumElements = buffer.m_size_in_bytes / stride;
+        }
+        else
+        {
+            srv_desc.Buffer.NumElements = static_cast<UINT>(num_elements);
+        }
         std::optional<DescriptorHandle> handle =
-            request_handle(D3D_SIT_STRUCTURED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
+            request_handle(D3D_SIT_STRUCTURED, m_descriptor_pool.m_cbv_srv_uav_heap, binding, i_buffer);
 
         if (handle.has_value())
         {
-            m_device->m_dx_device->CreateShaderResourceView(buffer.m_allocation->GetResource(),
+            m_device.m_dx_device->CreateShaderResourceView(buffer.m_allocation->GetResource(),
                                                             &srv_desc,
                                                             handle->m_dx_cpu_handle);
         }
@@ -214,10 +219,10 @@ struct DescriptorSet
     set_s_sampler(const size_t binding, const Sampler & sampler, const size_t i_sampler = 0)
     {
         std::optional<DescriptorHandle> handle =
-            request_handle(D3D_SIT_SAMPLER, &m_descriptor_pool->m_sampler_heap, binding, i_sampler);
+            request_handle(D3D_SIT_SAMPLER, m_descriptor_pool.m_sampler_heap, binding, i_sampler);
         if (handle.has_value())
         {
-            m_device->m_dx_device->CreateSampler(&sampler.sampler_desc, handle->m_dx_cpu_handle);
+            m_device.m_dx_device->CreateSampler(&sampler.sampler_desc, handle->m_dx_cpu_handle);
         }
         else
         {
@@ -241,10 +246,10 @@ struct DescriptorSet
         srv_desc.ViewDimension                   = D3D12_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels             = 1;
         std::optional<DescriptorHandle> handle =
-            request_handle(D3D_SIT_TEXTURE, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_texture);
+            request_handle(D3D_SIT_TEXTURE, m_descriptor_pool.m_cbv_srv_uav_heap, binding, i_texture);
         if (handle.has_value())
         {
-            m_device->m_dx_device->CreateShaderResourceView(texture.m_dx_resource, &srv_desc, handle->m_dx_cpu_handle);
+            m_device.m_dx_device->CreateShaderResourceView(texture.m_dx_resource, &srv_desc, handle->m_dx_cpu_handle);
         }
         else
         {
@@ -277,10 +282,10 @@ struct DescriptorSet
         srv_desc.RaytracingAccelerationStructure.Location =
             tlas.m_tlas_buffer.m_allocation->GetResource()->GetGPUVirtualAddress();
         std::optional<DescriptorHandle> handle =
-            request_handle(D3D_SIT_RTACCELERATIONSTRUCTURE, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, 0);
+            request_handle(D3D_SIT_RTACCELERATIONSTRUCTURE, m_descriptor_pool.m_cbv_srv_uav_heap, binding, 0);
         if (handle.has_value())
         {
-            m_device->m_dx_device->CreateShaderResourceView(nullptr, &srv_desc, handle->m_dx_cpu_handle);
+            m_device.m_dx_device->CreateShaderResourceView(nullptr, &srv_desc, handle->m_dx_cpu_handle);
         }
         else
         {
@@ -302,10 +307,10 @@ struct DescriptorSet
         uav_desc.Format                           = texture.get_view_format();
         uav_desc.ViewDimension                    = D3D12_UAV_DIMENSION_TEXTURE2D;
         std::optional<DescriptorHandle> handle =
-            request_handle(D3D_SIT_UAV_RWTYPED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_texture);
+            request_handle(D3D_SIT_UAV_RWTYPED, m_descriptor_pool.m_cbv_srv_uav_heap, binding, i_texture);
         if (handle.has_value())
         {
-            m_device->m_dx_device->CreateUnorderedAccessView(texture.m_dx_resource,
+            m_device.m_dx_device->CreateUnorderedAccessView(texture.m_dx_resource,
                                                              nullptr,
                                                              &uav_desc,
                                                              handle->m_dx_cpu_handle);
@@ -338,11 +343,11 @@ struct DescriptorSet
         uav_desc.Buffer.NumElements               = static_cast<UINT>(num_elements);
         uav_desc.ViewDimension                    = D3D12_UAV_DIMENSION_BUFFER;
         std::optional<DescriptorHandle> handle =
-            request_handle(D3D_SIT_UAV_RWSTRUCTURED, &m_descriptor_pool->m_cbv_srv_uav_heap, binding, i_buffer);
+            request_handle(D3D_SIT_UAV_RWSTRUCTURED, m_descriptor_pool.m_cbv_srv_uav_heap, binding, i_buffer);
 
         if (handle.has_value())
         {
-            m_device->m_dx_device->CreateUnorderedAccessView(buffer.m_allocation->GetResource(),
+            m_device.m_dx_device->CreateUnorderedAccessView(buffer.m_allocation->GetResource(),
                                                              nullptr,
                                                              &uav_desc,
                                                              handle->m_dx_cpu_handle);

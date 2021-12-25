@@ -64,12 +64,12 @@ struct Renderer
         PrimitivePathTracing
     };
 
-    GuiEventCoordinator &   m_gui_event_coordinator;
-    RayTraceMode            m_ray_trace_mode = RayTraceMode::VisualizeDebug;
-    RayTraceVisualizeParams m_pass_ray_trace_visualize_params;
-    RayTraceVisualizePass   m_pass_ray_trace_visualize;
-    RayTracePathTracer      m_pass_ray_trace_primitive_pathtrace;
-    RenderToFramebufferPass m_pass_render_to_framebuffer;
+    GuiEventCoordinator &     m_gui_event_coordinator;
+    RayTraceMode              m_ray_trace_mode = RayTraceMode::VisualizeDebug;
+    RayTraceVisualizeUiParams m_pass_ray_trace_visualize_params;
+    RayTraceVisualizePass     m_pass_ray_trace_visualize;
+    RayTracePathTracer        m_pass_ray_trace_primitive_pathtrace;
+    RenderToFramebufferPass   m_pass_render_to_framebuffer;
 
     std::unique_ptr<RendererDebugResource> m_debug_resource;
 
@@ -183,7 +183,7 @@ struct Renderer
                 // Raytracing!
                 if (m_ray_trace_mode == Renderer::RayTraceMode::VisualizeDebug)
                 {
-                    GpuProfilingScope raytrace_scope1("Raytrace visualize debug", cmd_buffer, gpu_profiler);
+                    GpuProfilingScope visualize_scope("Raytrace visualize debug", cmd_buffer, gpu_profiler);
                     m_pass_ray_trace_visualize.render(cmd_buffer,
                                                       ctx,
                                                       per_flight_render_resource.m_rt_result,
@@ -192,7 +192,7 @@ struct Renderer
                 }
                 else if (m_ray_trace_mode == Renderer::RayTraceMode::PrimitivePathTracing)
                 {
-                    GpuProfilingScope raytrace_scope2("Raytrace primitive path tracing", cmd_buffer, gpu_profiler);
+                    GpuProfilingScope primitive_path_tracing("Raytrace primitive path tracing", cmd_buffer, gpu_profiler);
                     m_pass_ray_trace_primitive_pathtrace.render(cmd_buffer,
                                                                 ctx,
                                                                 per_flight_render_resource.m_rt_result,
@@ -202,7 +202,7 @@ struct Renderer
 
             // Transition
             {
-                GpuProfilingScope imgui_scope("Transit present to color attachment", cmd_buffer, gpu_profiler);
+                GpuProfilingScope transit_scope("Transit present to color attachment", cmd_buffer, gpu_profiler);
                 cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
                                               Rhi::TextureStateEnum::NonFragmentShaderVisible,
                                               Rhi::TextureStateEnum::FragmentShaderVisible);
@@ -213,7 +213,7 @@ struct Renderer
 
             // Run final pass
             {
-                GpuProfilingScope render_to_framebuffer("Render rtresult to framebuffer", cmd_buffer, gpu_profiler);
+                GpuProfilingScope render_to_framebuffer_scope("Render rtresult to framebuffer", cmd_buffer, gpu_profiler);
                 m_pass_render_to_framebuffer.run(cmd_buffer,
                                                  ctx,
                                                  per_flight_render_resource.m_rt_result,
@@ -229,7 +229,7 @@ struct Renderer
 
             // Transition
             {
-                GpuProfilingScope imgui_scope("Transit swapchain for present", cmd_buffer, gpu_profiler);
+                GpuProfilingScope transit_scope("Transit swapchain for present", cmd_buffer, gpu_profiler);
                 cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
                                               Rhi::TextureStateEnum::ColorAttachment,
                                               Rhi::TextureStateEnum::Present);

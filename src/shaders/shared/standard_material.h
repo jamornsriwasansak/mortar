@@ -46,45 +46,22 @@ struct StandardMaterial
         return result;
     }
 
-#ifdef __hlsl
-    float3
-    get_diffuse_refl(const float2 texcoord)
+    bool
+    has_diffuse_texture()
     {
-        if ((m_diffuse_tex_id & (1 << 24)) == 0)
-        {
-            return u_textures[m_diffuse_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb;
-        }
-        else
-        {
-            return decode_rgb(m_diffuse_tex_id);
-        }
+        return (m_diffuse_tex_id & (1 << 24)) == 0;
     }
 
-    float3
-    get_specular_refl(const float2 texcoord)
+    bool
+    has_specular_texture()
     {
-        if ((m_specular_tex_id & (1 << 24)) == 0)
-        {
-            return u_textures[m_specular_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb;
-        }
-        else
-        {
-            return decode_rgb(m_specular_tex_id);
-        }
+        return (m_specular_tex_id & (1 << 24)) == 0;
     }
 
-    float
-    get_roughness(const float2 texcoord)
+    bool
+    has_roughness_texture()
     {
-        if ((m_roughness_tex_id & (1 << 24)) == 0)
-        {
-            return u_textures[m_roughness_tex_id].SampleLevel(u_sampler, texcoord, 0).r;
-        }
-        else
-        {
-            return decode_r(m_roughness_tex_id);
-        }
+        return (m_roughness_tex_id & (1 << 24)) == 0;
     }
-#endif
 };
 #endif

@@ -19,8 +19,8 @@ namespace VKA_NAME
 {
 struct DescriptorSet
 {
+    const Device &     m_device;
     vk::DescriptorSet  m_vk_descriptor_set;
-    const Device *     m_device;
     vk::PipelineLayout m_vk_pipeline_layout;
 
     // TODO:: avoid std::list
@@ -30,35 +30,33 @@ struct DescriptorSet
 
     std::vector<vk::WriteDescriptorSet> m_write_descriptor_set;
 
-    DescriptorSet() {}
-
-    DescriptorSet(const Device *         device,
+    DescriptorSet(const Device &         device,
                   const RasterPipeline & pipeline,
-                  DescriptorPool *       descriptor_pool,
+                  DescriptorPool &       descriptor_pool,
                   const size_t           i_set,
                   const std::string &    name = "")
     : DescriptorSet(device,
                     pipeline.m_vk_pipeline_layout.get(),
                     pipeline.m_vk_descriptor_set_layouts[i_set].get(),
-                    descriptor_pool->m_vk_descriptor_pool.get(),
+                    descriptor_pool.m_vk_descriptor_pool.get(),
                     name)
     {
     }
 
-    DescriptorSet(const Device *             device,
+    DescriptorSet(const Device &             device,
                   const RayTracingPipeline & pipeline,
-                  DescriptorPool *           descriptor_pool,
+                  DescriptorPool &           descriptor_pool,
                   const size_t               i_set,
                   const std::string &        name = "")
     : DescriptorSet(device,
                     pipeline.m_vk_pipeline_layout.get(),
                     pipeline.m_vk_descriptor_set_layouts[i_set].get(),
-                    descriptor_pool->m_vk_descriptor_pool.get(),
+                    descriptor_pool.m_vk_descriptor_pool.get(),
                     name)
     {
     }
 
-    DescriptorSet(const Device *                device,
+    DescriptorSet(const Device &                device,
                   const vk::PipelineLayout      vk_pipeline_layout,
                   const vk::DescriptorSetLayout vk_desc_set,
                   const vk::DescriptorPool      vk_desc_pool,
@@ -69,8 +67,8 @@ struct DescriptorSet
         set_ai.setDescriptorPool(vk_desc_pool);
         set_ai.setDescriptorSetCount(1);
         set_ai.setPSetLayouts(&vk_desc_set);
-        m_vk_descriptor_set = std::move(device->m_vk_ldevice->allocateDescriptorSets(set_ai)[0]);
-        device->name_vkhpp_object(m_vk_descriptor_set, name);
+        m_vk_descriptor_set = std::move(device.m_vk_ldevice->allocateDescriptorSets(set_ai)[0]);
+        device.name_vkhpp_object(m_vk_descriptor_set, name);
     }
 
 
@@ -120,14 +118,21 @@ struct DescriptorSet
     set_t_structured_buffer(const size_t   binding,
                             const Buffer & buffer,
                             const size_t   stride,
-                            const size_t   num_elements,
+                            const size_t   num_elements  = 0,
                             const size_t   i_element     = 0,
                             const size_t   first_element = 0)
     {
         vk::DescriptorBufferInfo buf_info = {};
         buf_info.setBuffer(static_cast<vk::Buffer>(buffer.m_vma_buffer_bundle->m_vk_buffer));
         buf_info.setOffset(stride * first_element);
-        buf_info.setRange(stride * num_elements);
+        if (num_elements == 0)
+        {
+            buf_info.setRange(VK_WHOLE_SIZE);
+        }
+        else
+        {
+            buf_info.setRange(stride * num_elements);
+        }
         m_descriptor_buffer_infos.push_back(buf_info);
 
         vk::WriteDescriptorSet write_descriptor = {};
@@ -254,7 +259,7 @@ struct DescriptorSet
     void
     update()
     {
-        m_device->m_vk_ldevice->updateDescriptorSets(m_write_descriptor_set, nullptr);
+        m_device.m_vk_ldevice->updateDescriptorSets(m_write_descriptor_set, nullptr);
 
         m_descriptor_buffer_infos.clear();
         m_descriptor_image_infos.clear();
