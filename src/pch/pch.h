@@ -2,16 +2,27 @@
 
 #if !defined(RHI_VKA) && !defined(RHI_DXA)
     #define RHI_VKA
-    // #define RHI_DXA
+    #define RHI_DXA
 #endif
 
 #pragma warning(push, 0)
 #ifndef CODE_ANALYSIS
-    #if defined(RHI_VKA)
-        #define VKA_NAME Rhi
+    #ifdef RHI_VKA
+        #ifdef HAS_RHI
+            #define VKA_NAME RhiVka
+        #else
+            #define VKA_NAME Rhi
+            #define HAS_RHI
+        #endif
         #define USE_VKA
-    #elif defined(RHI_DXA)
-        #define DXA_NAME Rhi
+    #endif
+    #ifdef RHI_DXA
+        #ifdef HAS_RHI
+            #define DXA_NAME RhiDxa
+        #else
+            #define DXA_NAME Rhi
+            #define HAS_RHI
+        #endif
         #define USE_DXA
     #endif
 
