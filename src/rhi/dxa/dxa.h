@@ -4,7 +4,7 @@
 #include "dxa_command_buffer.h"
 #include "dxa_command_pool.h"
 #include "dxa_descriptor.h"
-#include "dxa_descriptorpool.h"
+#include "dxa_descriptor_pool.h"
 #include "dxa_device.h"
 #include "dxa_entry.h"
 #include "dxa_fence.h"
