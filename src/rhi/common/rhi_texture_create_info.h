@@ -28,6 +28,7 @@ struct TTextureCreateInfo
     TCreateInfo
     get_create_info() const
     {
+#ifdef USE_VKA
         if constexpr (std::is_same<TCreateInfo, vk::ImageCreateInfo>::value)
         {
             // Assign create info
@@ -46,7 +47,10 @@ struct TTextureCreateInfo
             image_ci.setSharingMode(vk::SharingMode::eExclusive);
             return image_ci;
         }
-        else if constexpr (std::is_same<TCreateInfo, D3D12_RESOURCE_DESC>::value)
+        else
+#endif
+#ifdef USE_DXA
+            if constexpr (std::is_same<TCreateInfo, D3D12_RESOURCE_DESC>::value)
         {
             D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
 
@@ -86,6 +90,7 @@ struct TTextureCreateInfo
             return resource_desc;
         }
         else
+#endif
         {
             static_assert(false, "unknown return create info type");
             return 0;

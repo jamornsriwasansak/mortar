@@ -9,7 +9,7 @@
 #include "dxa_entry.h"
 #include "dxa_fence.h"
 #include "dxa_framebufferbinding.h"
-#include "dxa_imguirenderpass.h"
+#include "dxa_imgui_render_pass.h"
 #include "dxa_query_pool.h"
 #include "dxa_rasterpipeline.h"
 #include "dxa_raytracingaccel.h"
