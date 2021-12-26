@@ -3,8 +3,7 @@
 #include "core/vmath.h"
 #include "gpu_profiler.h"
 #include "passes/final_composite.h"
-#include "passes/ray_trace_path_tracer.h"
-#include "passes/ray_trace_visualize.h"
+#include "passes/gbuffer_generation.h"
 #include "render_context.h"
 #include "rhi/rhi.h"
 #include "scene_resource.h"
@@ -64,12 +63,11 @@ struct Renderer
         PrimitivePathTracing
     };
 
-    GuiEventCoordinator &     m_gui_event_coordinator;
-    RayTraceMode              m_ray_trace_mode = RayTraceMode::VisualizeDebug;
-    RayTraceVisualizeUiParams m_pass_ray_trace_visualize_params;
-    RayTraceVisualizePass     m_pass_ray_trace_visualize;
-    RayTracePathTracer        m_pass_ray_trace_primitive_pathtrace;
-    RenderToFramebufferPass   m_pass_render_to_framebuffer;
+    GuiEventCoordinator &       m_gui_event_coordinator;
+    RayTraceMode                m_ray_trace_mode = RayTraceMode::VisualizeDebug;
+    RayTraceVisualizeUiParams   m_pass_ray_trace_visualize_params;
+    RayTraceGbufferGeneratePass m_pass_ray_trace_gbuffer_generate;
+    RenderToFramebufferPass     m_pass_render_to_framebuffer;
 
     std::unique_ptr<RendererDebugResource> m_debug_resource;
 
@@ -80,8 +78,7 @@ struct Renderer
              const int2                                  resolution,
              const size_t                                num_flights)
     : m_raster_fbindings(construct_framebuffer_bindings(device, swapchain_attachment)),
-      m_pass_ray_trace_visualize(device, shader_binary_manager),
-      m_pass_ray_trace_primitive_pathtrace(device, shader_binary_manager),
+      m_pass_ray_trace_gbuffer_generate(device, shader_binary_manager),
       m_pass_render_to_framebuffer(device, shader_binary_manager, m_raster_fbindings[0]),
       m_per_flight_resources(construct_per_flight_resource(device, resolution, num_flights)),
       m_gui_event_coordinator(gui_event_coordinator),
@@ -164,40 +161,14 @@ struct Renderer
         {
             GpuProfilingScope rendering("Rendering", cmd_buffer, gpu_profiler);
 
-            // Raytrace mode
-            bool p_open = true;
-            if (m_gui_event_coordinator.m_display_main_pipeline_mode)
+            // Generate gbuffer
             {
-                // Draw selection menu
-                if (ImGui::Begin("Renderer Raytrace Mode", &m_gui_event_coordinator.m_display_main_pipeline_mode))
-                {
-                    ImGui::RadioButton("VisualizeDebug",
-                                       reinterpret_cast<int *>(&m_ray_trace_mode),
-                                       static_cast<int>(RayTraceMode::VisualizeDebug));
-                    ImGui::RadioButton("PrimitivePathTracing",
-                                       reinterpret_cast<int *>(&m_ray_trace_mode),
-                                       static_cast<int>(RayTraceMode::PrimitivePathTracing));
-                }
-                ImGui::End();
-
-                // Raytracing!
-                if (m_ray_trace_mode == Renderer::RayTraceMode::VisualizeDebug)
-                {
-                    GpuProfilingScope visualize_scope("Raytrace visualize debug", cmd_buffer, gpu_profiler);
-                    m_pass_ray_trace_visualize.render(cmd_buffer,
-                                                      ctx,
-                                                      per_flight_render_resource.m_rt_result,
-                                                      m_pass_ray_trace_visualize_params,
-                                                      ctx.m_resolution);
-                }
-                else if (m_ray_trace_mode == Renderer::RayTraceMode::PrimitivePathTracing)
-                {
-                    GpuProfilingScope primitive_path_tracing("Raytrace primitive path tracing", cmd_buffer, gpu_profiler);
-                    m_pass_ray_trace_primitive_pathtrace.render(cmd_buffer,
-                                                                ctx,
-                                                                per_flight_render_resource.m_rt_result,
-                                                                ctx.m_resolution);
-                }
+                GpuProfilingScope gbuffer_scope("Generate gbuffer", cmd_buffer, gpu_profiler);
+                m_pass_ray_trace_gbuffer_generate.render(cmd_buffer,
+                                                         ctx,
+                                                         per_flight_render_resource.m_rt_result,
+                                                         m_pass_ray_trace_visualize_params,
+                                                         ctx.m_resolution);
             }
 
             // Transition

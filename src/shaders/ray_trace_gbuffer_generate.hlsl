@@ -1,6 +1,6 @@
 #include "common/color_conversion.h"
 #include "cpp_compatible.h"
-#include "ray_trace_visualize_params.h"
+#include "ray_trace_gbuffer_generate_params.h"
 #include "shared/types.h"
 
 
@@ -29,7 +29,7 @@ RayGen()
     const float3 lookat = mul(u_cbparams.m_camera_inv_proj, float4(ndc.x, ndc.y, 1.0f, 1.0f)).xyz;
     const float3 direction = mul(u_cbparams.m_camera_inv_view, float4(normalize(lookat), 0.0f)).xyz;
 
-    Payload payload; 
+    Payload payload;
     payload.m_miss  = true;
     payload.m_color = float3(0.0f, 0.0f, 0.0f);
 
@@ -44,13 +44,6 @@ RayGen()
     TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
 
     u_output[pixel] = float4(payload.m_color.r, payload.m_color.g, payload.m_color.b, 1.0f);
-
-#ifdef DEBUG_RayTraceVisualizePrintClickedInfo
-    if (any(u_debug_cbparams.m_selected_thread_id.xy == DispatchRaysIndex().xy))
-    {
-        u_output[pixel] = float4(0.5f, 0.5f, 0.5f, 0.0f);
-    }
-#endif
 }
 
 CLOSEST_HIT_SHADER void

@@ -91,7 +91,7 @@ struct ShaderBinaryManager
         // get shader blob
         const std::filesystem::path cached_file_path = get_shader_cache_path(shader_src);
         std::ifstream               ifs(cached_file_path, std::ios::binary);
-        if (ifs.is_open())
+        if (ifs.is_open() && false)
         {
             // read header and body
             const ShaderCacheFileHeader header = read_header(ifs);

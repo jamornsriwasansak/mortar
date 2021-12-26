@@ -3,7 +3,7 @@
 #include "core/gui_event_coordinator.h"
 #include "rhi/rhi.h"
 #include "shaders/cpp_compatible.h"
-#include "shaders/ray_trace_visualize_params.h"
+#include "shaders/ray_trace_gbuffer_generate_params.h"
 
 struct RayTraceVisualizeUiParams
 {
@@ -59,28 +59,28 @@ struct RayTraceVisualizeUiParams
     }
 };
 
-struct RayTraceVisualizePass
+struct RayTraceGbufferGeneratePass
 {
     Rhi::RayTracingPipeline    m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
     Rhi::Buffer                m_cb_params;
     Rhi::Sampler               m_common_sampler;
 
-    RayTraceVisualizePass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager)
+    RayTraceGbufferGeneratePass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager)
     : m_rt_pipeline("ray_trace_visualize_pipeline",
                     device,
                     get_ray_trace_visualize_pipeline_config(),
                     shader_binary_manager,
                     16,
                     64,
-                    1)
-    , m_rt_sbt("ray_trace_visualize_sbt", device, m_rt_pipeline)
-    , m_common_sampler("ray_trace_visualize_sampler", device)
-    , m_cb_params("ray_trace_visualize_cbparams",
-                    device,
-                    Rhi::BufferUsageEnum::ConstantBuffer,
-                    Rhi::MemoryUsageEnum::CpuToGpu,
-                    sizeof(RaytraceVisualizeCbParams))
+                    1),
+      m_rt_sbt("ray_trace_visualize_sbt", device, m_rt_pipeline),
+      m_common_sampler("ray_trace_visualize_sampler", device),
+      m_cb_params("ray_trace_visualize_cbparams",
+                  device,
+                  Rhi::BufferUsageEnum::ConstantBuffer,
+                  Rhi::MemoryUsageEnum::CpuToGpu,
+                  sizeof(RaytraceVisualizeCbParams))
     {
     }
 
@@ -92,19 +92,19 @@ struct RayTraceVisualizePass
 
         // raygen
         const Rhi::ShaderSrc          raygen_shader(Rhi::ShaderStageEnum::RayGen,
-                                           BASE_SHADER_DIR "ray_trace_visualize.hlsl",
+                                           BASE_SHADER_DIR "ray_trace_gbuffer_generate.hlsl",
                                            "RayGen");
         [[maybe_unused]] const size_t raygen_id = rt_config.add_shader(raygen_shader);
 
         // miss
         const Rhi::ShaderSrc          miss_shader(Rhi::ShaderStageEnum::Miss,
-                                         BASE_SHADER_DIR "ray_trace_visualize.hlsl",
+                                         BASE_SHADER_DIR "ray_trace_gbuffer_generate.hlsl",
                                          "Miss");
         [[maybe_unused]] const size_t miss_id = rt_config.add_shader(miss_shader);
 
         // hitgroup
         const Rhi::ShaderSrc    hit_shader(Rhi::ShaderStageEnum::ClosestHit,
-                                        BASE_SHADER_DIR "ray_trace_visualize.hlsl",
+                                        BASE_SHADER_DIR "ray_trace_gbuffer_generate.hlsl",
                                         "ClosestHit");
         Rhi::RayTracingHitGroup hit_group;
         hit_group.m_closest_hit_id = rt_config.add_shader(hit_shader);
@@ -116,7 +116,11 @@ struct RayTraceVisualizePass
     }
 
     void
-    render(Rhi::CommandBuffer & cmd_buffer, const RenderContext & ctx, const Rhi::Texture & target_texture_buffer, const RayTraceVisualizeUiParams & params, const uint2 target_resolution)
+    render(Rhi::CommandBuffer &              cmd_buffer,
+           const RenderContext &             ctx,
+           const Rhi::Texture &              target_texture_buffer,
+           const RayTraceVisualizeUiParams & params,
+           const uint2                       target_resolution)
     {
         RaytraceVisualizeCbParams cb_params;
         CameraProperties          cam_props = ctx.m_fps_camera.get_camera_props();
