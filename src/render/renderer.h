@@ -8,35 +8,13 @@
 #include "rhi/rhi.h"
 #include "scene_resource.h"
 
-struct RendererDebugResource
-{
-    GpuProfilerGui            m_gpu_profiler_gui;
-    std::vector<GpuProfiler>  m_gpu_profilers;
-    static constexpr uint32_t NumMaxProfilerMarkers = 500;
-
-    RendererDebugResource(Rhi::Device & device, const size_t num_flights)
-    : m_gpu_profilers(construct_per_flight_gpu_profilers(device, num_flights)), m_gpu_profiler_gui(num_flights)
-    {
-    }
-
-    static std::vector<GpuProfiler>
-    construct_per_flight_gpu_profilers(Rhi::Device & device, const size_t num_flights)
-    {
-        std::vector<GpuProfiler> result;
-        result.reserve(num_flights);
-        for (size_t i = 0; i < num_flights; i++)
-        {
-            result.emplace_back("gpu_profiler_" + std::to_string(i), device, NumMaxProfilerMarkers);
-        }
-        return result;
-    }
-};
-
 struct Renderer
 {
     struct PerFlightRenderResource
     {
-        Rhi::Texture m_rt_result;
+        GpuProfiler               m_gpu_profiler;
+        Rhi::Texture              m_rt_result;
+        static constexpr uint32_t NumMaxProfilerMarkers = 500;
 
         PerFlightRenderResource(const std::string & name, Rhi::Device & device, const int2 resolution)
         : m_rt_result(name + "_rt_result",
@@ -48,7 +26,8 @@ struct Renderer
                       resolution,
                       nullptr,
                       nullptr,
-                      float4(0.0f, 0.0f, 0.0f, 0.0f))
+                      float4(0.0f, 0.0f, 0.0f, 0.0f)),
+          m_gpu_profiler(name + "_gpu_profiler", device, NumMaxProfilerMarkers)
         {
         }
     };
@@ -64,12 +43,11 @@ struct Renderer
     };
 
     GuiEventCoordinator &       m_gui_event_coordinator;
+    GpuProfilerGui              m_gpu_profiler_gui;
     RayTraceMode                m_ray_trace_mode = RayTraceMode::VisualizeDebug;
     RayTraceVisualizeUiParams   m_pass_ray_trace_visualize_params;
     RayTraceGbufferGeneratePass m_pass_ray_trace_gbuffer_generate;
     RenderToFramebufferPass     m_pass_render_to_framebuffer;
-
-    std::unique_ptr<RendererDebugResource> m_debug_resource;
 
     Renderer(Rhi::Device &                               device,
              ShaderBinaryManager &                       shader_binary_manager,
@@ -82,9 +60,7 @@ struct Renderer
       m_pass_render_to_framebuffer(device, shader_binary_manager, m_raster_fbindings[0]),
       m_per_flight_resources(construct_per_flight_resource(device, resolution, num_flights)),
       m_gui_event_coordinator(gui_event_coordinator),
-#ifndef PRODUCT
-      m_debug_resource(std::make_unique<RendererDebugResource>(device, num_flights))
-#endif
+      m_gpu_profiler_gui(num_flights)
     {
     }
 
@@ -131,23 +107,19 @@ struct Renderer
     {
         // Display the gui for params and human readable data
         m_pass_ray_trace_visualize_params.draw_gui(m_gui_event_coordinator);
-        if (m_debug_resource)
-        {
-            m_debug_resource->m_gpu_profiler_gui.draw_gui(m_gui_event_coordinator);
-        }
+        m_gpu_profiler_gui.draw_gui(m_gui_event_coordinator);
 
         PerFlightRenderResource & per_flight_render_resource = m_per_flight_resources[ctx.m_flight_index];
 
         GpuProfiler * gpu_profiler = nullptr;
-        if (m_debug_resource && !m_debug_resource->m_gpu_profiler_gui.m_pause)
+        if (!m_gpu_profiler_gui.m_pause)
         {
             // Summarize the information recorded in the gpu profiler
-            gpu_profiler = &m_debug_resource->m_gpu_profilers[ctx.m_flight_index];
+            gpu_profiler = &per_flight_render_resource.m_gpu_profiler;
             gpu_profiler->summarize();
 
             // Show the result of gpu profiler in a human readable format
-            m_debug_resource->m_gpu_profiler_gui.update(gpu_profiler->m_profiling_intervals,
-                                                        gpu_profiler->m_ns_from_timestamp);
+            m_gpu_profiler_gui.update(gpu_profiler->m_profiling_intervals, gpu_profiler->m_ns_from_timestamp);
 
             // Reset gpu profiler
             gpu_profiler->reset();
