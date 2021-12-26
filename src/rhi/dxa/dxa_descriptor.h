@@ -6,7 +6,7 @@
 
     #include "dxa_buffer.h"
     #include "dxa_common.h"
-    #include "dxa_descriptorpool.h"
+    #include "dxa_descriptor_pool.h"
     #include "dxa_rasterpipeline.h"
     #include "dxa_raytracingaccel.h"
     #include "dxa_raytracingpipeline.h"
