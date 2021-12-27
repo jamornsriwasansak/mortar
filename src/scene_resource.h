@@ -360,8 +360,7 @@ struct SceneResource
                              format_enum,
                              resolution,
                              image_bytes,
-                             &staging_buffer_manager,
-                             float4());
+                             &staging_buffer_manager);
         staging_buffer_manager.submit_all_pending_upload();
         stbi_image_free(image);
 
