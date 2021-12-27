@@ -38,16 +38,10 @@ struct Texture
     vk::ImageLayout       m_vk_image_layout;
     vk::Format            m_vk_format;
     VkMemoryPropertyFlags m_vk_mem_flag;
-    float4                m_clear_value;
 
     UniqueVarHandle<VmaImageBundle, VmaImageBundleDeleter> m_vma_image_bundle;
 
-    Texture(const std::string & name,
-            const Device &      device,
-            const Swapchain &   swapchain,
-            const size_t        i_image,
-            const float4        clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f))
-    : m_clear_value(clear_value)
+    Texture(const std::string & name, const Device & device, const Swapchain & swapchain, const size_t i_image)
     {
         m_vk_image = device.m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain)[i_image];
         m_vk_image_view = create_image_view(device.m_vk_ldevice.get(), m_vk_image, swapchain.m_vk_format);
@@ -102,9 +96,7 @@ struct Texture
             const FormatEnum       format,
             const int2             resolution,
             const std::byte *      initial_data        = nullptr,
-            StagingBufferManager * initial_data_loader = nullptr,
-            const float4           clear_value         = float4(0.0f, 0.0f, 0.0f, 0.0f))
-    : m_clear_value(clear_value)
+            StagingBufferManager * initial_data_loader = nullptr)
     {
         assert(resolution.x > 0 && resolution.y > 0);
 

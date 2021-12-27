@@ -20,12 +20,8 @@ struct Texture
 
     Texture() {}
 
-    Texture(const std::string & name,
-            Device &            device,
-            const Swapchain &   swapchain,
-            const size_t        i_image,
-            const float4        clear_value = float4(0.0f, 0.0f, 0.0f, 0.0f))
-    : m_resolution(swapchain.m_resolution), m_dx_format(swapchain.m_dx_format), m_clear_value(clear_value)
+    Texture(const std::string & name, Device & device, const Swapchain & swapchain, const size_t i_image)
+    : m_resolution(swapchain.m_resolution), m_dx_format(swapchain.m_dx_format)
     {
         m_dx_resource = swapchain.m_dx_swapchain_resource_pointers[i_image].Get();
         m_dx_format   = swapchain.m_dx_format;
@@ -40,26 +36,13 @@ struct Texture
             const FormatEnum       format,
             const int2             resolution,
             const std::byte *      initial_data        = nullptr,
-            StagingBufferManager * initial_data_loader = nullptr,
-            const float4           clear_value         = float4(0.0f, 0.0f, 0.0f, 0.0f))
-    : m_resolution(resolution), m_dx_format(static_cast<DXGI_FORMAT>(format)), m_clear_value(clear_value)
+            StagingBufferManager * initial_data_loader = nullptr)
+    : m_resolution(resolution), m_dx_format(static_cast<DXGI_FORMAT>(format))
     {
         bool is_color_render_target = false;
         bool is_depth_render_target = false;
 
         D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
-
-        // by default clear value is not used
-        // and p_clear_value is set iff depth attachment | color attachment is requested
-        D3D12_CLEAR_VALUE dx_clear_value    = {};
-        dx_clear_value.Format               = m_dx_format;
-        dx_clear_value.Color[0]             = clear_value[0];
-        dx_clear_value.Color[1]             = clear_value[1];
-        dx_clear_value.Color[2]             = clear_value[2];
-        dx_clear_value.Color[3]             = clear_value[3];
-        dx_clear_value.DepthStencil.Depth   = clear_value[0];
-        dx_clear_value.DepthStencil.Stencil = UINT8(0);
-        D3D12_CLEAR_VALUE * p_clear_value   = nullptr;
 
         // is UAV aka storage image
         if (HasFlag(texture_usage, TextureUsageEnum::StorageImage))
@@ -72,7 +55,6 @@ struct Texture
         {
             is_depth_render_target = true;
             flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-            p_clear_value = &dx_clear_value;
         }
 
         // is color attachment
@@ -80,7 +62,6 @@ struct Texture
         {
             is_color_render_target = true;
             flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-            p_clear_value = &dx_clear_value;
             assert(is_depth_render_target == false);
         }
 
@@ -113,7 +94,7 @@ struct Texture
         device.m_d3d12ma->CreateResource(&alloc_desc,
                                          &resource_desc,
                                          temp_initial_usage,
-                                         p_clear_value,
+                                         nullptr,
                                          &allocation,
                                          IID_PPV_ARGS(&resource));
 

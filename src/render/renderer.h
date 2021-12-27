@@ -25,8 +25,7 @@ struct Renderer
                       Rhi::FormatEnum::R32G32B32A32_SFloat,
                       resolution,
                       nullptr,
-                      nullptr,
-                      float4(0.0f, 0.0f, 0.0f, 0.0f)),
+                      nullptr),
           m_gpu_profiler(name + "_gpu_profiler", device, NumMaxProfilerMarkers)
         {
         }
