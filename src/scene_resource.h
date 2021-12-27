@@ -355,7 +355,7 @@ struct SceneResource
             desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
         Rhi::Texture texture(filepath_str,
                              staging_buffer_manager.m_device,
-                             Rhi::TextureUsageEnum::Sampled,
+                             Rhi::TextureUsageEnum::None,
                              Rhi::TextureStateEnum::FragmentShaderVisible,
                              format_enum,
                              resolution,

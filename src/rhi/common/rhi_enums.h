@@ -191,7 +191,6 @@ namespace DXA_NAME
 enum class TextureUsageEnum : uint32_t
 {
     None            = D3D12_RESOURCE_FLAG_NONE,
-    Sampled         = 0,
     ColorAttachment = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
     DepthAttachment = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
     StorageImage    = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
@@ -207,8 +206,7 @@ namespace VKA_NAME
 {
 enum class TextureUsageEnum : uint32_t
 {
-    None            = VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM,
-    Sampled         = VK_IMAGE_USAGE_SAMPLED_BIT,
+    None            = 0,
     ColorAttachment = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     DepthAttachment = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     StorageImage    = VK_IMAGE_USAGE_STORAGE_BIT,

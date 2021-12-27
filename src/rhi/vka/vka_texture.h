@@ -100,12 +100,14 @@ struct Texture
     {
         assert(resolution.x > 0 && resolution.y > 0);
 
-        vk::ImageUsageFlags usage          = static_cast<vk::ImageUsageFlagBits>(usage_);
-        vk::ImageLayout     initial_layout = static_cast<vk::ImageLayout>(initial_state_);
+        vk::ImageUsageFlags usage = static_cast<vk::ImageUsageFlagBits>(usage_);
+        usage |= vk::ImageUsageFlagBits::eSampled;
         if (initial_data != nullptr)
         {
             usage |= vk::ImageUsageFlagBits::eTransferDst;
         }
+
+        vk::ImageLayout initial_layout = static_cast<vk::ImageLayout>(initial_state_);
 
         vk::ImageCreateInfo image_ci_tmp;
         {

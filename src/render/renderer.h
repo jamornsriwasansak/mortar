@@ -19,8 +19,7 @@ struct Renderer
         PerFlightRenderResource(const std::string & name, Rhi::Device & device, const int2 resolution)
         : m_rt_result(name + "_rt_result",
                       device,
-                      Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment |
-                          Rhi::TextureUsageEnum::Sampled,
+                      Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment,
                       Rhi::TextureStateEnum::NonFragmentShaderVisible,
                       Rhi::FormatEnum::R32G32B32A32_SFloat,
                       resolution,
