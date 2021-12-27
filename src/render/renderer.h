@@ -33,16 +33,8 @@ struct Renderer
     std::vector<Rhi::FramebufferBindings> m_raster_fbindings;
     std::vector<PerFlightRenderResource>  m_per_flight_resources;
 
-    // All raytrace mode (rays start from the camera)
-    enum class RayTraceMode : int
-    {
-        VisualizeDebug,
-        PrimitivePathTracing
-    };
-
     GuiEventCoordinator &       m_gui_event_coordinator;
     GpuProfilerGui              m_gpu_profiler_gui;
-    RayTraceMode                m_ray_trace_mode = RayTraceMode::VisualizeDebug;
     RayTraceVisualizeUiParams   m_pass_ray_trace_visualize_params;
     RayTraceGbufferGeneratePass m_pass_ray_trace_gbuffer_generate;
     RenderToFramebufferPass     m_pass_render_to_framebuffer;
