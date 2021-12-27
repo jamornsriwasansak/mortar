@@ -226,15 +226,14 @@ namespace DXA_NAME
 {
 enum class TextureStateEnum : uint32_t
 {
-    None                     = 0,
-    ColorAttachment          = D3D12_RESOURCE_STATE_RENDER_TARGET,
-    DepthAttachment          = D3D12_RESOURCE_STATE_DEPTH_WRITE,
-    FragmentShaderVisible    = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-    NonFragmentShaderVisible = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-    AllShaderVisible         = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-    Present                  = D3D12_RESOURCE_STATE_PRESENT,
-    TransferSrc              = D3D12_RESOURCE_STATE_COPY_SOURCE,
-    TransferDst              = D3D12_RESOURCE_STATE_COPY_DEST
+    None            = 0,
+    ColorAttachment = D3D12_RESOURCE_STATE_RENDER_TARGET,
+    DepthAttachment = D3D12_RESOURCE_STATE_DEPTH_WRITE,
+    ReadOnly        = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
+    ReadWrite       = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
+    Present         = D3D12_RESOURCE_STATE_PRESENT,
+    TransferSrc     = D3D12_RESOURCE_STATE_COPY_SOURCE,
+    TransferDst     = D3D12_RESOURCE_STATE_COPY_DEST
 };
 } // namespace DXA_NAME
 #endif
@@ -244,15 +243,14 @@ namespace VKA_NAME
 {
 enum class TextureStateEnum : uint32_t
 {
-    None                     = VK_IMAGE_LAYOUT_UNDEFINED,
-    ColorAttachment          = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    DepthAttachment          = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-    FragmentShaderVisible    = VK_IMAGE_LAYOUT_GENERAL, // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    NonFragmentShaderVisible = VK_IMAGE_LAYOUT_GENERAL,
-    AllShaderVisible         = VK_IMAGE_LAYOUT_GENERAL,
-    Present                  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    TransferSrc              = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    TransferDst              = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    None            = VK_IMAGE_LAYOUT_UNDEFINED,
+    ColorAttachment = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    DepthAttachment = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+    ReadOnly        = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    ReadWrite       = VK_IMAGE_LAYOUT_GENERAL,
+    Present         = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    TransferSrc     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    TransferDst     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 };
 } // namespace VKA_NAME
 #endif

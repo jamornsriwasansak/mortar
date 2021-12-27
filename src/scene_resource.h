@@ -356,7 +356,7 @@ struct SceneResource
         Rhi::Texture texture(filepath_str,
                              staging_buffer_manager.m_device,
                              Rhi::TextureUsageEnum::None,
-                             Rhi::TextureStateEnum::FragmentShaderVisible,
+                             Rhi::TextureStateEnum::ReadOnly,
                              format_enum,
                              resolution,
                              image_bytes,

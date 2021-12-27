@@ -20,7 +20,7 @@ struct Renderer
         : m_rt_result(name + "_rt_result",
                       device,
                       Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment,
-                      Rhi::TextureStateEnum::NonFragmentShaderVisible,
+                      Rhi::TextureStateEnum::ReadWrite,
                       Rhi::FormatEnum::R32G32B32A32_SFloat,
                       resolution,
                       nullptr,
@@ -144,9 +144,6 @@ struct Renderer
             // Transition
             {
                 GpuProfilingScope transit_scope("Transit present to color attachment", cmd_buffer, gpu_profiler);
-                cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
-                                              Rhi::TextureStateEnum::NonFragmentShaderVisible,
-                                              Rhi::TextureStateEnum::FragmentShaderVisible);
                 cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
                                               Rhi::TextureStateEnum::Present,
                                               Rhi::TextureStateEnum::ColorAttachment);
@@ -174,9 +171,6 @@ struct Renderer
                 cmd_buffer.transition_texture(ctx.m_per_swap_resource.m_swapchain_texture,
                                               Rhi::TextureStateEnum::ColorAttachment,
                                               Rhi::TextureStateEnum::Present);
-                cmd_buffer.transition_texture(per_flight_render_resource.m_rt_result,
-                                              Rhi::TextureStateEnum::FragmentShaderVisible,
-                                              Rhi::TextureStateEnum::NonFragmentShaderVisible);
             }
         }
 
