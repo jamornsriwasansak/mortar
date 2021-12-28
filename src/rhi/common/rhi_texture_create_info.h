@@ -42,7 +42,7 @@ struct TTextureCreateInfo
             image_ci.setFormat(static_cast<vk::Format>(m_format));
             image_ci.setTiling(vk::ImageTiling::eOptimal);
             image_ci.setInitialLayout(vk::ImageLayout::eUndefined);
-            image_ci.setUsage(static_cast<vk::ImageUsageFlagBits>(m_texture_usage));
+            image_ci.setUsage(static_cast<vk::ImageUsageFlagBits>(m_texture_usage) | vk::ImageUsageFlagBits::eSampled);
             image_ci.setSamples(vk::SampleCountFlagBits::e1);
             image_ci.setSharingMode(vk::SharingMode::eExclusive);
             return image_ci;

@@ -349,7 +349,7 @@ struct SceneResource
         // Prepare texture
         Rhi::Texture texture(filepath_str,
                              m_device,
-                             Rhi::TextureCreateInfo(resolution.x, resolution.y, 1, 1, format_enum, Rhi::TextureUsageEnum::None),
+                             Rhi::TextureCreateInfo(resolution.x, resolution.y, 1, 1, format_enum, Rhi::TextureUsageEnum::TransferDst),
                              Rhi::TextureStateEnum::TransferDst);
 
         // Calculate necessary sizes

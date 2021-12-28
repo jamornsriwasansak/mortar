@@ -175,7 +175,7 @@ struct DescriptorSet
     set_t_texture(const size_t binding, const Texture & texture, const size_t i_texture = 0)
     {
         vk::DescriptorImageInfo image_info = {};
-        image_info.setImageLayout(texture.m_vk_image_layout);
+        image_info.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
         image_info.setImageView(texture.m_vk_image_view.get());
         m_descriptor_image_infos.push_back(image_info);
 
@@ -195,7 +195,7 @@ struct DescriptorSet
     set_u_rw_texture(const size_t binding, const Texture & texture, const size_t i_element = 0)
     {
         vk::DescriptorImageInfo image_info = {};
-        image_info.setImageLayout(texture.m_vk_image_layout);
+        image_info.setImageLayout(vk::ImageLayout::eGeneral);
         image_info.setImageView(texture.m_vk_image_view.get());
         m_descriptor_image_infos.push_back(image_info);
 
