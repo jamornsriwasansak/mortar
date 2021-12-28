@@ -7,9 +7,9 @@
     #include "dxa_buffer.h"
     #include "dxa_common.h"
     #include "dxa_descriptor_pool.h"
-    #include "dxa_rasterpipeline.h"
-    #include "dxa_raytracingaccel.h"
-    #include "dxa_raytracingpipeline.h"
+    #include "dxa_raster_pipeline.h"
+    #include "dxa_raytracing_accel.h"
+    #include "dxa_raytracing_pipeline.h"
     #include "dxa_sampler.h"
     #include "dxa_texture.h"
     #include "dxil_reflection.h"
@@ -78,6 +78,20 @@ struct DescriptorSet
       m_descriptor_pool(descriptor_pool),
       m_descriptor_info(&pipeline.m_descriptor_set_info)
     {
+    }
+
+    static DXGI_FORMAT
+    GetColorFormat(const DXGI_FORMAT format)
+    {
+        if (format == DXGI_FORMAT_D32_FLOAT)
+        {
+            return DXGI_FORMAT_R32_FLOAT;
+        }
+        else if (format == DXGI_FORMAT_D16_UNORM)
+        {
+            return DXGI_FORMAT_R16_UNORM;
+        }
+        return format;
     }
 
     template <typename THeap>
@@ -242,7 +256,7 @@ struct DescriptorSet
         // alloc srv in heap
         D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
         srv_desc.Shader4ComponentMapping         = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srv_desc.Format                          = texture.get_view_format();
+        srv_desc.Format                          = GetColorFormat(texture.m_dx_format);
         srv_desc.ViewDimension                   = D3D12_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels             = 1;
         std::optional<DescriptorHandle> handle =
@@ -304,7 +318,7 @@ struct DescriptorSet
     {
         // alloc uav in heap
         D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-        uav_desc.Format                           = texture.get_view_format();
+        uav_desc.Format                           = GetColorFormat(texture.m_dx_format);
         uav_desc.ViewDimension                    = D3D12_UAV_DIMENSION_TEXTURE2D;
         std::optional<DescriptorHandle> handle =
             request_handle(D3D_SIT_UAV_RWTYPED, m_descriptor_pool.m_cbv_srv_uav_heap, binding, i_texture);

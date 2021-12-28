@@ -19,12 +19,13 @@ struct Renderer
         PerFlightRenderResource(const std::string & name, Rhi::Device & device, const int2 resolution)
         : m_rt_result(name + "_rt_result",
                       device,
-                      Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment,
-                      Rhi::TextureStateEnum::ReadWrite,
-                      Rhi::FormatEnum::R32G32B32A32_SFloat,
-                      resolution,
-                      nullptr,
-                      nullptr),
+                      Rhi::TextureCreateInfo(resolution.x,
+                                             resolution.y,
+                                             1,
+                                             1,
+                                             Rhi::FormatEnum::R32G32B32A32_SFloat,
+                                             Rhi::TextureUsageEnum::StorageImage | Rhi::TextureUsageEnum::ColorAttachment),
+                      Rhi::TextureStateEnum::ReadWrite),
           m_gpu_profiler(name + "_gpu_profiler", device, NumMaxProfilerMarkers)
         {
         }

@@ -75,17 +75,28 @@ struct TTextureCreateInfo
 
             // Assign description
             D3D12_RESOURCE_DESC resource_desc = {};
-            resource_desc.Dimension           = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-            resource_desc.Alignment           = 0;
-            resource_desc.Width               = m_width;
-            resource_desc.Height              = m_height;
-            resource_desc.DepthOrArraySize    = m_depth;
-            resource_desc.MipLevels           = m_mip_levels;
-            resource_desc.Format              = static_cast<DXGI_FORMAT>(m_format);
-            resource_desc.SampleDesc.Count    = 1;
-            resource_desc.SampleDesc.Quality  = 0;
-            resource_desc.Layout              = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-            resource_desc.Flags               = flags;
+            if (m_depth > 1)
+            {
+                resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+            }
+            else if (m_height > 1)
+            {
+                resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+            }
+            else
+            {
+                resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+            }
+            resource_desc.Alignment          = 0;
+            resource_desc.Width              = m_width;
+            resource_desc.Height             = m_height;
+            resource_desc.DepthOrArraySize   = m_depth;
+            resource_desc.MipLevels          = m_mip_levels;
+            resource_desc.Format             = static_cast<DXGI_FORMAT>(m_format);
+            resource_desc.SampleDesc.Count   = 1;
+            resource_desc.SampleDesc.Quality = 0;
+            resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+            resource_desc.Flags              = flags;
 
             return resource_desc;
         }

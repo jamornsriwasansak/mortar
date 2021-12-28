@@ -34,10 +34,8 @@ struct Texture
     int3                  m_resolution;
     vk::Image             m_vk_image = {};
     vk::UniqueImageView   m_vk_image_view;
-    vk::UniqueFramebuffer m_vk_framebuffer;
     vk::ImageLayout       m_vk_image_layout;
     vk::Format            m_vk_format;
-    VkMemoryPropertyFlags m_vk_mem_flag;
 
     UniqueVarHandle<VmaImageBundle, VmaImageBundleDeleter> m_vma_image_bundle;
 

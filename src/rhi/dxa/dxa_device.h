@@ -119,7 +119,7 @@ struct Device
     }
 
     std::pair<uint64_t, uint64_t>
-    get_sync_calibrate_cpu_gpu_time(QueueType queue_type)
+    get_sync_calibrate_cpu_gpu_time(QueueType queue_type) const
     {
         ComPtr<ID3D12CommandQueue> queue = nullptr;
         switch (queue_type)
@@ -142,6 +142,12 @@ struct Device
         uint64_t gpu_time;
         queue->GetClockCalibration(&gpu_time, &cpu_time);
         return std::make_pair(cpu_time, gpu_time);
+    }
+
+    uint32_t
+    get_data_pitch_alignment() const
+    {
+        return D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
     }
 
     inline bool

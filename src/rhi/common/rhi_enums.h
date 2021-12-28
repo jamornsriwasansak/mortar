@@ -272,8 +272,9 @@ enum class FormatEnum : uint32_t
     R10G10B10A2_UNorm   = DXGI_FORMAT_R10G10B10A2_UNORM,
     R8_UNorm            = DXGI_FORMAT_R8_UNORM,
     R8G8B8A8_UNorm      = DXGI_FORMAT_R8G8B8A8_UNORM,
+    R8G8B8A8_UNorm_Srgb = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
     R32G32B32_SFloat    = DXGI_FORMAT_R32G32B32_FLOAT,
-    R32G32B32A32_SFloat = DXGI_FORMAT_R32G32B32A32_FLOAT
+    R32G32B32A32_SFloat = DXGI_FORMAT_R32G32B32A32_FLOAT,
 };
 } // namespace DXA_NAME
 #endif
@@ -290,6 +291,7 @@ enum class FormatEnum : uint32_t
     R10G10B10A2_UNorm   = VK_FORMAT_A2R10G10B10_UNORM_PACK32,
     R8_UNorm            = VK_FORMAT_R8_UNORM,
     R8G8B8A8_UNorm      = VK_FORMAT_R8G8B8A8_UNORM,
+    R8G8B8A8_UNorm_Srgb = VK_FORMAT_R8G8B8A8_SRGB,
     R32G32B32_SFloat    = VK_FORMAT_R32G32B32_SFLOAT,
     R32G32B32A32_SFloat = VK_FORMAT_R32G32B32A32_SFLOAT
 };
@@ -490,6 +492,7 @@ struct EnumHelper
         case FormatEnum::R8_UNorm:
             return sizeof(uint8_t);
         case FormatEnum::R8G8B8A8_UNorm:
+        case FormatEnum::R8G8B8A8_UNorm_Srgb:
             return 4 * sizeof(uint8_t);
         default:
             Logger::Critical<true>(__FUNCTION__ " found unhandled texture type " + static_cast<int>(texture_type));

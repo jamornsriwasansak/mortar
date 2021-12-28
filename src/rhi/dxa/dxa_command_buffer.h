@@ -9,11 +9,11 @@
     #include "dxa_descriptor.h"
     #include "dxa_entry.h"
     #include "dxa_fence.h"
-    #include "dxa_framebufferbinding.h"
+    #include "dxa_framebuffer_binding.h"
     #include "dxa_imgui_render_pass.h"
     #include "dxa_query_pool.h"
-    #include "dxa_rasterpipeline.h"
-    #include "dxa_raytracingpipeline.h"
+    #include "dxa_raster_pipeline.h"
+    #include "dxa_raytracing_pipeline.h"
     #include "dxa_semaphore.h"
     #include "dxa_swapchain.h"
     #include "dxa_texture.h"
@@ -227,17 +227,43 @@ struct CommandBuffer
     }
 
     void
-    copy_buffer_region(const Buffer & dst_buffer,
-                       const size_t   dst_offset_in_bytes,
-                       const Buffer & src_buffer,
-                       const size_t   src_offset_in_bytes,
-                       const size_t   size_in_bytes)
+    copy_buffer_to_buffer(const Buffer & dst_buffer,
+                          const size_t   dst_offset_in_bytes,
+                          const Buffer & src_buffer,
+                          const size_t   src_offset_in_bytes,
+                          const size_t   size_in_bytes)
     {
         m_dx_command_list->CopyBufferRegion(dst_buffer.m_allocation->GetResource(),
                                             dst_offset_in_bytes,
                                             src_buffer.m_allocation->GetResource(),
                                             src_offset_in_bytes,
                                             size_in_bytes);
+    }
+
+    void
+    copy_buffer_to_texture(const Texture & dst_texture,
+                           const uint3     dst_size,
+                           const uint3     dst_offset,
+                           const Buffer &  src_buffer,
+                           const size_t    src_offset_in_bytes,
+                           const size_t    row_pitch_in_bytes,
+                           const size_t    size_in_bytes)
+    {
+        D3D12_SUBRESOURCE_FOOTPRINT pitched_desc{};
+        pitched_desc.Format   = dst_texture.m_dx_format;
+        pitched_desc.Width    = dst_size.x;
+        pitched_desc.Height   = dst_size.y;
+        pitched_desc.Depth    = dst_size.z;
+        pitched_desc.RowPitch = row_pitch_in_bytes;
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT placed_texture{};
+        placed_texture.Offset    = src_offset_in_bytes;
+        placed_texture.Footprint = pitched_desc;
+
+        CD3DX12_TEXTURE_COPY_LOCATION dst(dst_texture.m_dx_resource, 0);
+        CD3DX12_TEXTURE_COPY_LOCATION src(src_buffer.m_allocation->GetResource(), placed_texture);
+
+        m_dx_command_list->CopyTextureRegion(&dst, dst_offset.x, dst_offset.y, dst_offset.z, &src, nullptr);
     }
 
     void
@@ -252,22 +278,22 @@ struct CommandBuffer
     }
 
     void
-    clear_color_render_target(const Texture & render_target)
+    clear_color_render_target(const Texture & render_target, const float4 & clear_color)
     {
-        FLOAT clear_color[4];
-        clear_color[0] = render_target.m_clear_value[0];
-        clear_color[1] = render_target.m_clear_value[1];
-        clear_color[2] = render_target.m_clear_value[2];
-        clear_color[3] = render_target.m_clear_value[3];
-        m_dx_command_list->ClearRenderTargetView(render_target.m_dx_dsv_rtv_cpu_handle, clear_color, 0, nullptr);
+        FLOAT dx_clear_color[4];
+        dx_clear_color[0] = clear_color[0];
+        dx_clear_color[1] = clear_color[1];
+        dx_clear_color[2] = clear_color[2];
+        dx_clear_color[3] = clear_color[3];
+        m_dx_command_list->ClearRenderTargetView(render_target.m_dx_dsv_rtv_cpu_handle, dx_clear_color, 0, nullptr);
     }
 
     void
-    clear_depth_render_target(const Texture & render_target)
+    clear_depth_render_target(const Texture & render_target, const float clear_value)
     {
         m_dx_command_list->ClearDepthStencilView(render_target.m_dx_dsv_rtv_cpu_handle,
                                                  D3D12_CLEAR_FLAG_DEPTH,
-                                                 render_target.m_clear_value[0],
+                                                 clear_value,
                                                  0,
                                                  0,
                                                  nullptr);
@@ -369,7 +395,7 @@ struct CommandBuffer
     void
     transition_buffer(const Buffer & buffer, const BufferUsageEnum pre_enum, const BufferUsageEnum post_enum)
     {
-        D3D12_RESOURCE_BARRIER barrier = {};
+        D3D12_RESOURCE_BARRIER barrier{};
         barrier.Transition.pResource   = buffer.m_allocation->GetResource();
         barrier.Transition.StateBefore = static_cast<D3D12_RESOURCE_STATES>(pre_enum);
         barrier.Transition.StateAfter  = static_cast<D3D12_RESOURCE_STATES>(post_enum);
@@ -380,7 +406,7 @@ struct CommandBuffer
     void
     transition_texture(const Texture & texture, const TextureStateEnum pre_enum, const TextureStateEnum post_enum)
     {
-        D3D12_RESOURCE_BARRIER barrier = {};
+        D3D12_RESOURCE_BARRIER barrier{};
         barrier.Transition.pResource   = texture.m_dx_resource;
         barrier.Transition.StateBefore = static_cast<D3D12_RESOURCE_STATES>(pre_enum);
         barrier.Transition.StateAfter  = static_cast<D3D12_RESOURCE_STATES>(post_enum);

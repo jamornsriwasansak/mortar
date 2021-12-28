@@ -133,7 +133,8 @@ struct MainLoop
             return;
         }
 
-        const std::pair<uint64_t, uint64_t> cpu_gpu_time = m_device.get_sync_calibrate_cpu_gpu_time(Rhi::QueueType::Graphics);
+        const std::pair<uint64_t, uint64_t> cpu_gpu_time =
+            m_device.get_sync_calibrate_cpu_gpu_time(Rhi::QueueType::Graphics);
 
         // wait for resource in this flight to be ready
         // after per_flight_resource finished waiting, then reset all resource
@@ -238,7 +239,7 @@ struct MainLoop
         size_t i_flight = 0;
 
         const urange32_t sponza_geometries =
-            m_scene_resource.add_geometries("scenes/sponza/sponza.obj", m_staging_buffer_manager);
+            m_scene_resource.add_geometries("scenes/sponza/sponza.obj");
         // m_scene_resource.add_geometries("tmp/Exterior/Exterior.obj", m_staging_buffer_manager);
         std::array<urange32_t, 1> ranges             = { sponza_geometries };
         size_t                    sponza_instance_id = m_scene_resource.add_base_instance(ranges);
