@@ -4,6 +4,7 @@
 
 #ifdef USE_VKA
 
+    #include "vka_aliasable_memory.h"
     #include "vka_common.h"
     #include "vka_device.h"
     #include "vka_stagingbuffermanager.h"
@@ -15,10 +16,10 @@ struct Texture
 {
     struct VmaImageBundle
     {
-        VmaAllocator      m_vma_allocator;
-        VmaAllocation     m_vma_allocation;
+        VmaAllocator      m_vma_allocator  = nullptr;
+        VmaAllocation     m_vma_allocation = nullptr;
         VmaAllocationInfo m_vma_alloc_info;
-        VkImage           m_vk_image;
+        vk::Image         m_vk_image;
     };
 
     struct VmaImageBundleDeleter
@@ -27,23 +28,35 @@ struct Texture
         void
         operator()(VmaImageBundle bundle)
         {
-            vmaDestroyImage(bundle.m_vma_allocator, bundle.m_vk_image, bundle.m_vma_allocation);
+            if (bundle.m_vma_allocator)
+            {
+                // Destroy using vma allocator
+                // vk image and its memory is allocated altogether in the constructor
+                vmaDestroyImage(bundle.m_vma_allocator,
+                                static_cast<VkImage>(bundle.m_vk_image),
+                                bundle.m_vma_allocation);
+            }
         }
     };
 
-    int3                m_resolution;
-    vk::Image           m_vk_image = {};
-    vk::UniqueImageView m_vk_image_view;
-    vk::Format          m_vk_format;
+    using UniqueVmaBundle = UniqueVarHandle<VmaImageBundle, VmaImageBundleDeleter>;
 
-    UniqueVarHandle<VmaImageBundle, VmaImageBundleDeleter> m_vma_image_bundle;
+    int3           m_resolution;
+    const Device & m_device;
+    // Stores three different type of data depends on how we construct it
+    std::variant<UniqueVmaBundle, vk::Image, vk::UniqueImage> m_image_variant;
+    vk::UniqueImageView                                       m_vk_image_view;
+    vk::Format                                                m_vk_format;
 
     Texture(const std::string & name, const Device & device, const Swapchain & swapchain, const size_t i_image)
+    : m_device(device)
     {
-        m_vk_image = device.m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain)[i_image];
-        m_vk_image_view = create_image_view(device.m_vk_ldevice.get(), m_vk_image, swapchain.m_vk_format);
-        m_vk_format  = swapchain.m_vk_format;
-        m_resolution = int3(swapchain.m_resolution, 1);
+        m_image_variant = device.m_vk_ldevice->getSwapchainImagesKHR(*swapchain.m_vk_swapchain)[i_image];
+        m_vk_image_view = create_image_view(device.m_vk_ldevice.get(),
+                                            std::get<vk::Image>(m_image_variant),
+                                            swapchain.m_vk_format);
+        m_vk_format     = swapchain.m_vk_format;
+        m_resolution    = int3(swapchain.m_resolution, 1);
 
         // convert the layout into present khr
         device.one_time_command_submit(
@@ -63,7 +76,7 @@ struct Texture
                 img_mem_barrier.setNewLayout(new_vk_image_layout);
                 img_mem_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
                 img_mem_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-                img_mem_barrier.setImage(m_vk_image);
+                img_mem_barrier.setImage(std::get<vk::Image>(m_image_variant));
                 img_mem_barrier.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
                 img_mem_barrier.subresourceRange.setBaseMipLevel(0);
                 img_mem_barrier.subresourceRange.setLevelCount(1);
@@ -81,7 +94,7 @@ struct Texture
             });
         if (!name.empty())
         {
-            device.name_vkhpp_object(m_vk_image, name);
+            device.name_vkhpp_object(std::get<vk::Image>(m_image_variant), name);
             device.name_vkhpp_object(*m_vk_image_view, name + "_image_view");
         }
     }
@@ -90,6 +103,7 @@ struct Texture
             const Device &                 device,
             const Rhi::TextureCreateInfo & create_info,
             const Rhi::TextureStateEnum &  stage_enum)
+    : m_device(device)
     {
         // Setup image create info
         VkImageCreateInfo image_ci = create_info.get_create_info();
@@ -100,27 +114,28 @@ struct Texture
 
         // Create image using VMA
         VmaImageBundle vma_bundle;
+        VkImage        _vk_image;
         vma_bundle.m_vma_allocator = device.m_vma_allocator.get();
         VKCK(vmaCreateImage(vma_bundle.m_vma_allocator,
                             &image_ci,
                             &vma_alloc_ci,
-                            &vma_bundle.m_vk_image,
+                            &_vk_image,
                             &vma_bundle.m_vma_allocation,
                             &vma_bundle.m_vma_alloc_info));
+        vma_bundle.m_vk_image = _vk_image;
 
         // Set values
-        m_vma_image_bundle = vma_bundle;
-        m_vk_image         = vk::Image(vma_bundle.m_vk_image);
-        m_vk_format        = vk::Format(create_info.m_format);
-        m_vk_image_view    = create_image_view(device.m_vk_ldevice.get(), m_vk_image, m_vk_format);
-        m_resolution       = int3(create_info.m_width, create_info.m_height, create_info.m_depth);
+        m_image_variant = vma_bundle;
+        m_vk_format     = vk::Format(create_info.m_format);
+        m_vk_image_view = create_image_view(device.m_vk_ldevice.get(), _vk_image, m_vk_format);
+        m_resolution    = int3(create_info.m_width, create_info.m_height, create_info.m_depth);
 
         // Transition to target image layout
         device.one_time_command_submit(
             [&](vk::CommandBuffer cmd_buf)
             {
                 transition_image_layout(cmd_buf,
-                                        m_vk_image,
+                                        _vk_image,
                                         vk::ImageLayout::eUndefined,
                                         static_cast<vk::ImageLayout>(stage_enum));
             });
@@ -128,17 +143,76 @@ struct Texture
         // Set names
         if (!name.empty())
         {
-            device.name_vkhpp_object(m_vk_image, name);
+            device.name_vkhpp_object(vk::Image(_vk_image), name);
             device.name_vkhpp_object(*m_vk_image_view, name + "_image_view");
+        }
+    }
+
+    Texture(const std::string &            name,
+            const Device &                 device,
+            const Rhi::TextureCreateInfo & create_info,
+            const Rhi::TextureStateEnum &  stage_enum,
+            const Rhi::AliasableMemory &   memory,
+            const size_t                   offset_into_memory_in_bytes)
+    : m_device(device)
+    {
+        // Setup image create info
+        VkImageCreateInfo image_ci = create_info.get_create_info();
+
+        // Create image
+        m_image_variant = device.m_vk_ldevice->createImage(image_ci);
+
+        // Bind memory
+        vmaBindImageMemory2(memory.m_vma_memory_bundle->m_vma_allocator,
+                            memory.m_vma_memory_bundle->m_vma_allocation,
+                            offset_into_memory_in_bytes,
+                            std::get<vk::UniqueImage>(m_image_variant).get());
+
+        // Set values
+        m_vk_format     = vk::Format(create_info.m_format);
+        m_vk_image_view = create_image_view(device.m_vk_ldevice.get(),
+                                            std::get<vk::UniqueImage>(m_image_variant).get(),
+                                            m_vk_format);
+        m_resolution    = int3(create_info.m_width, create_info.m_height, create_info.m_depth);
+
+        // Transition to target image layout
+        device.one_time_command_submit(
+            [&](vk::CommandBuffer cmd_buf)
+            {
+                transition_image_layout(cmd_buf,
+                                        std::get<vk::UniqueImage>(m_image_variant).get(),
+                                        vk::ImageLayout::eUndefined,
+                                        static_cast<vk::ImageLayout>(stage_enum));
+            });
+
+        // Set names
+        if (!name.empty())
+        {
+            device.name_vkhpp_object(std::get<vk::UniqueImage>(m_image_variant).get(), name);
+            device.name_vkhpp_object(*m_vk_image_view, name + "_image_view");
+        }
+    }
+
+    vk::Image
+    get_vk_image() const
+    {
+        if (m_image_variant.index() == 0)
+        {
+            return std::get<0>(m_image_variant)->m_vk_image;
+        }
+        else if (m_image_variant.index() == 1)
+        {
+            return std::get<1>(m_image_variant);
+        }
+        else // if (m_image_variant.index() == 2)
+        {
+            return std::get<2>(m_image_variant).get();
         }
     }
 
     vk::ImageLayout
     get_attachment_image_layout(const bool readonly = false) const
     {
-        // swapchain?
-        if (!m_vma_image_bundle.empty()) return vk::ImageLayout::ePresentSrcKHR;
-
         // depth only
         if (m_vk_format == vk::Format::eD16Unorm || m_vk_format == vk::Format::eD32Sfloat)
             return readonly ? vk::ImageLayout::eDepthReadOnlyOptimal : vk::ImageLayout::eDepthAttachmentOptimal;

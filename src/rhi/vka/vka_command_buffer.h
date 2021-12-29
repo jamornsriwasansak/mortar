@@ -179,7 +179,7 @@ struct CommandBuffer
         copy_region.imageSubresource.setLayerCount(1);
         copy_region.imageSubresource.setMipLevel(0);
         m_vk_command_buffer.copyBufferToImage(src_buffer.get_vk_buffer(),
-                                              dst_texture.m_vk_image,
+                                              dst_texture.get_vk_image(),
                                               vk::ImageLayout::eTransferDstOptimal,
                                               { copy_region });
     }
@@ -318,7 +318,7 @@ struct CommandBuffer
         img_mem_barrier.setNewLayout(new_vk_image_layout);
         img_mem_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
         img_mem_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-        img_mem_barrier.setImage(texture.m_vk_image);
+        img_mem_barrier.setImage(texture.get_vk_image());
         img_mem_barrier.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
         img_mem_barrier.subresourceRange.setBaseMipLevel(0);
         img_mem_barrier.subresourceRange.setLevelCount(1);
