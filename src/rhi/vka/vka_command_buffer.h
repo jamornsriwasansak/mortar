@@ -144,17 +144,44 @@ struct CommandBuffer
     }
 
     void
-    copy_buffer_region(const Buffer & dst_buffer,
-                       const size_t   dst_offset_in_bytes,
-                       const Buffer & src_buffer,
-                       const size_t   src_offset_in_bytes,
-                       const size_t   size_in_bytes)
+    copy_buffer_to_buffer(const Buffer & dst_buffer,
+                          const size_t   dst_offset_in_bytes,
+                          const Buffer & src_buffer,
+                          const size_t   src_offset_in_bytes,
+                          const size_t   size_in_bytes)
     {
         vk::BufferCopy copy_region = {};
         copy_region.setSize(size_in_bytes);
         copy_region.setSrcOffset(src_offset_in_bytes);
         copy_region.setDstOffset(dst_offset_in_bytes);
         m_vk_command_buffer.copyBuffer(src_buffer.get_vk_buffer(), dst_buffer.get_vk_buffer(), { copy_region });
+    }
+
+
+    void
+    copy_buffer_to_texture(const Texture & dst_texture,
+                           const uint3     dst_size,
+                           const uint3     dst_offset,
+                           const Buffer &  src_buffer,
+                           const size_t    src_offset_in_bytes,
+                           const size_t    row_pitch_in_bytes,
+                           const size_t    size_in_bytes)
+    {
+        // copy
+        vk::BufferImageCopy copy_region = {};
+        copy_region.setBufferOffset(src_offset_in_bytes);
+        copy_region.setBufferImageHeight(dst_size.y);
+        copy_region.setBufferRowLength(dst_size.x);
+        copy_region.setImageExtent(vk::Extent3D(dst_size.x, dst_size.y, dst_size.z));
+        copy_region.setImageOffset(vk::Offset3D(dst_offset.x, dst_offset.y, dst_offset.z));
+        copy_region.imageSubresource.setAspectMask(vk::ImageAspectFlagBits::eColor);
+        copy_region.imageSubresource.setBaseArrayLayer(0);
+        copy_region.imageSubresource.setLayerCount(1);
+        copy_region.imageSubresource.setMipLevel(0);
+        m_vk_command_buffer.copyBufferToImage(src_buffer.get_vk_buffer(),
+                                              dst_texture.get_vk_image(),
+                                              vk::ImageLayout::eTransferDstOptimal,
+                                              { copy_region });
     }
 
     void
@@ -291,7 +318,7 @@ struct CommandBuffer
         img_mem_barrier.setNewLayout(new_vk_image_layout);
         img_mem_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
         img_mem_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-        img_mem_barrier.setImage(texture.m_vk_image);
+        img_mem_barrier.setImage(texture.get_vk_image());
         img_mem_barrier.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
         img_mem_barrier.subresourceRange.setBaseMipLevel(0);
         img_mem_barrier.subresourceRange.setLevelCount(1);

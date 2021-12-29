@@ -4,7 +4,6 @@
 #include "core/ste/stevector.h"
 #include "engine_setting.h"
 #include "importer/ai_mesh_importer.h"
-#include "importer/img_importer.h"
 #include "rhi/rhi.h"
 #include "shaders/shared/bindless_table.h"
 #include "shaders/shared/compact_vertex.h"
@@ -134,7 +133,7 @@ struct SceneResource
     }
 
     urange32_t
-    add_geometries(const std::filesystem::path & path, Rhi::StagingBufferManager & staging_buffer_manager)
+    add_geometries(const std::filesystem::path & path)
     {
         std::optional<AiScene>      ai_scene = AiScene::ReadScene(path);
         std::vector<AiGeometryInfo> geometry_infos =
@@ -144,8 +143,7 @@ struct SceneResource
         const unsigned int material_offset = m_h_materials.size();
         for (size_t i_mat = 0; i_mat < ai_scene->m_ai_scene->mNumMaterials; i_mat++)
         {
-            StandardMaterial mat =
-                add_standard_material(path, *ai_scene->m_ai_scene->mMaterials[i_mat], staging_buffer_manager);
+            StandardMaterial mat = add_standard_material(path, *ai_scene->m_ai_scene->mMaterials[i_mat]);
             m_h_materials.push_back(mat);
         }
 
@@ -226,24 +224,24 @@ struct SceneResource
         static_assert(Rhi::GetSizeInBytes(m_ibuf_index_type) == sizeof(ib1[0]));
 
         cmd_buffer.begin();
-        cmd_buffer.copy_buffer_region(m_d_vbuf_position,
-                                      m_num_vertices * Rhi::GetSizeInBytes(m_vbuf_position_type),
-                                      staging_buffer,
-                                      0,
-                                      vb_positions1.size() * sizeof(vb_positions1[0]));
-        cmd_buffer.copy_buffer_region(m_d_ibuf,
-                                      m_num_indices * Rhi::GetSizeInBytes(m_ibuf_index_type),
-                                      staging_buffer2,
-                                      0,
-                                      ib1.size() * sizeof(ib1[0]));
-        cmd_buffer.copy_buffer_region(m_d_vbuf_packed,
-                                      m_num_vertices * sizeof(CompactVertex),
-                                      staging_buffer3,
-                                      0,
-                                      vb_packed1.size() * sizeof(vb_packed1[0]));
+        cmd_buffer.copy_buffer_to_buffer(m_d_vbuf_position,
+                                         m_num_vertices * Rhi::GetSizeInBytes(m_vbuf_position_type),
+                                         staging_buffer,
+                                         0,
+                                         vb_positions1.size() * sizeof(vb_positions1[0]));
+        cmd_buffer.copy_buffer_to_buffer(m_d_ibuf,
+                                         m_num_indices * Rhi::GetSizeInBytes(m_ibuf_index_type),
+                                         staging_buffer2,
+                                         0,
+                                         ib1.size() * sizeof(ib1[0]));
+        cmd_buffer.copy_buffer_to_buffer(m_d_vbuf_packed,
+                                         m_num_vertices * sizeof(CompactVertex),
+                                         staging_buffer3,
+                                         0,
+                                         vb_packed1.size() * sizeof(vb_packed1[0]));
         cmd_buffer.end();
 
-        Rhi::Fence tmp_fence("fence upload " + path.string(), staging_buffer_manager.m_device);
+        Rhi::Fence tmp_fence("fence upload " + path.string(), m_device);
         tmp_fence.reset();
         cmd_buffer.submit(&tmp_fence);
         tmp_fence.wait();
@@ -265,9 +263,7 @@ struct SceneResource
     }
 
     StandardMaterial
-    add_standard_material(const std::filesystem::path & path,
-                          const aiMaterial &            ai_material,
-                          Rhi::StagingBufferManager &   staging_buffer_manager)
+    add_standard_material(const std::filesystem::path & path, const aiMaterial & ai_material)
     {
         StandardMaterial standard_material;
         set_material(&standard_material.m_diffuse_tex_id,
@@ -276,24 +272,21 @@ struct SceneResource
                      ai_material,
                      aiTextureType::aiTextureType_DIFFUSE,
                      AI_MATKEY_COLOR_DIFFUSE,
-                     4,
-                     staging_buffer_manager);
+                     4);
         set_material(&standard_material.m_specular_tex_id,
                      &standard_material,
                      path,
                      ai_material,
                      aiTextureType::aiTextureType_SPECULAR,
                      AI_MATKEY_COLOR_SPECULAR,
-                     4,
-                     staging_buffer_manager);
+                     4);
         set_material(&standard_material.m_roughness_tex_id,
                      &standard_material,
                      path,
                      ai_material,
                      aiTextureType::aiTextureType_SHININESS,
                      AI_MATKEY_SHININESS,
-                     1,
-                     staging_buffer_manager);
+                     1);
         return standard_material;
     }
 
@@ -306,15 +299,14 @@ struct SceneResource
                  const char *                  ai_mat_key_0,
                  int                           ai_mat_key_1,
                  int                           ai_mat_key_2,
-                 const int                     num_desired_channels,
-                 Rhi::StagingBufferManager &   staging_buffer_manager)
+                 const int                     num_desired_channels)
     {
         aiString  tex_name;
         aiColor4D color;
         if (ai_material.GetTexture(ai_tex_type, 0, &tex_name) == aiReturn_SUCCESS)
         {
             const std::filesystem::path tex_path = path.parent_path() / std::string(tex_name.C_Str());
-            *blob = add_texture(tex_path, num_desired_channels, staging_buffer_manager);
+            *blob                                = add_texture(tex_path, num_desired_channels);
             assert((*blob & (1 << 24)) == 0);
         }
         else if (aiGetMaterialColor(&ai_material, ai_mat_key_0, ai_mat_key_1, ai_mat_key_2, &color) == aiReturn_SUCCESS)
@@ -332,7 +324,7 @@ struct SceneResource
     }
 
     size_t
-    add_texture(const std::filesystem::path & path, const size_t desired_channel, Rhi::StagingBufferManager & staging_buffer_manager)
+    add_texture(const std::filesystem::path & path, const size_t desired_channel)
     {
         auto q = m_texture_id_from_path.find(path);
 
@@ -343,7 +335,7 @@ struct SceneResource
 
         const std::string filepath_str = path.string();
 
-        // load using stbi
+        // Load Raw image
         int2 resolution;
         stbi_set_flip_vertically_on_load(true);
         void * image =
@@ -352,18 +344,60 @@ struct SceneResource
         std::byte * image_bytes = reinterpret_cast<std::byte *>(image);
         assert(desired_channel == 4 || desired_channel == 1);
         Rhi::FormatEnum format_enum =
-            desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm : Rhi::FormatEnum::R8_UNorm;
+            desired_channel == 4 ? Rhi::FormatEnum::R8G8B8A8_UNorm_Srgb : Rhi::FormatEnum::R8_UNorm;
+
+        // Prepare texture
         Rhi::Texture texture(filepath_str,
-                             staging_buffer_manager.m_device,
-                             Rhi::TextureUsageEnum::Sampled,
-                             Rhi::TextureStateEnum::FragmentShaderVisible,
-                             format_enum,
-                             resolution,
-                             image_bytes,
-                             &staging_buffer_manager,
-                             float4());
-        staging_buffer_manager.submit_all_pending_upload();
+                             m_device,
+                             Rhi::TextureCreateInfo(resolution.x, resolution.y, 1, 1, format_enum, Rhi::TextureUsageEnum::TransferDst),
+                             Rhi::TextureStateEnum::TransferDst);
+
+        // Calculate necessary sizes
+        const size_t size_in_bytes_per_row = resolution.x * EnumHelper::GetSizeInBytesPerPixel(format_enum);
+        const size_t size_in_bytes         = resolution.y * size_in_bytes_per_row;
+        const size_t aligned_size_in_bytes_per_row =
+            round_up(size_in_bytes_per_row, m_device.get_data_pitch_alignment());
+        const size_t aligned_size_in_bytes = resolution.y * aligned_size_in_bytes_per_row;
+
+        Rhi::CommandBuffer cmd_buffer = m_transfer_cmd_pool.get_command_buffer();
+        cmd_buffer.begin();
+
+        // Get staging buffer
+        Rhi::Buffer staging_buffer("scene_staging_buffer_material",
+                                   m_device,
+                                   Rhi::BufferUsageEnum::TransferSrc,
+                                   Rhi::MemoryUsageEnum::CpuOnly,
+                                   aligned_size_in_bytes);
+
+        // Copy from image_bytes to staging buffer
+        void *      mapped_result = staging_buffer.map();
+        std::byte * mapped_byte   = reinterpret_cast<std::byte *>(mapped_result);
+        for (int y = 0; y < resolution.y; y++)
+        {
+            std::memcpy(&mapped_byte[y * aligned_size_in_bytes_per_row],
+                        &image_bytes[y * size_in_bytes_per_row],
+                        size_in_bytes_per_row);
+        }
+        staging_buffer.unmap();
+
+        // Free raw image
         stbi_image_free(image);
+
+        // Issue command buffer to copy to texture
+        cmd_buffer.copy_buffer_to_texture(texture,
+                                          texture.m_resolution,
+                                          uint3(0, 0, 0),
+                                          staging_buffer,
+                                          0,
+                                          aligned_size_in_bytes_per_row,
+                                          aligned_size_in_bytes);
+
+        // submit and wait
+        Rhi::Fence fence("texture_upload_fence", m_device);
+        fence.reset();
+        cmd_buffer.end();
+        cmd_buffer.submit(&fence);
+        fence.wait();
 
         // emplace back
         m_d_textures.emplace_back(std::move(texture));
@@ -458,11 +492,11 @@ struct SceneResource
                         m_h_materials.data(),
                         m_h_materials.size() * sizeof(m_h_materials[0]));
             staging_buffer.unmap();
-            cmd_buffer.copy_buffer_region(m_d_materials,
-                                          0,
-                                          staging_buffer,
-                                          0,
-                                          m_h_materials.size() * sizeof(m_h_materials[0]));
+            cmd_buffer.copy_buffer_to_buffer(m_d_materials,
+                                             0,
+                                             staging_buffer,
+                                             0,
+                                             m_h_materials.size() * sizeof(m_h_materials[0]));
         }
 
         // build mesh table
@@ -509,16 +543,16 @@ struct SceneResource
                         base_instance_table.size() * sizeof(base_instance_table[0]));
             staging_buffer2.unmap();
             staging_buffer3.unmap();
-            cmd_buffer.copy_buffer_region(m_d_geometry_table,
-                                          0,
-                                          staging_buffer2,
-                                          0,
-                                          sizeof(GeometryTableEntry) * geometry_table.size());
-            cmd_buffer.copy_buffer_region(m_d_base_instance_table,
-                                          0,
-                                          staging_buffer3,
-                                          0,
-                                          sizeof(BaseInstanceTableEntry) * base_instance_table.size());
+            cmd_buffer.copy_buffer_to_buffer(m_d_geometry_table,
+                                             0,
+                                             staging_buffer2,
+                                             0,
+                                             sizeof(GeometryTableEntry) * geometry_table.size());
+            cmd_buffer.copy_buffer_to_buffer(m_d_base_instance_table,
+                                             0,
+                                             staging_buffer3,
+                                             0,
+                                             sizeof(BaseInstanceTableEntry) * base_instance_table.size());
             m_num_base_instance_table_entries = base_instance_table.size();
             m_num_geometry_table_entries      = geometry_table.size();
         }

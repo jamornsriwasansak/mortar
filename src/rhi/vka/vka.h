@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vka_aliasable_memory.h"
 #include "vka_buffer.h"
 #include "vka_command_buffer.h"
 #include "vka_command_pool.h"

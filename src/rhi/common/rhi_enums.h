@@ -191,7 +191,6 @@ namespace DXA_NAME
 enum class TextureUsageEnum : uint32_t
 {
     None            = D3D12_RESOURCE_FLAG_NONE,
-    Sampled         = 0,
     ColorAttachment = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
     DepthAttachment = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
     StorageImage    = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
@@ -207,8 +206,7 @@ namespace VKA_NAME
 {
 enum class TextureUsageEnum : uint32_t
 {
-    None            = VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM,
-    Sampled         = VK_IMAGE_USAGE_SAMPLED_BIT,
+    None            = 0,
     ColorAttachment = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     DepthAttachment = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     StorageImage    = VK_IMAGE_USAGE_STORAGE_BIT,
@@ -228,15 +226,14 @@ namespace DXA_NAME
 {
 enum class TextureStateEnum : uint32_t
 {
-    None                     = 0,
-    ColorAttachment          = D3D12_RESOURCE_STATE_RENDER_TARGET,
-    DepthAttachment          = D3D12_RESOURCE_STATE_DEPTH_WRITE,
-    FragmentShaderVisible    = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-    NonFragmentShaderVisible = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-    AllShaderVisible         = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-    Present                  = D3D12_RESOURCE_STATE_PRESENT,
-    TransferSrc              = D3D12_RESOURCE_STATE_COPY_SOURCE,
-    TransferDst              = D3D12_RESOURCE_STATE_COPY_DEST
+    None            = 0,
+    ColorAttachment = D3D12_RESOURCE_STATE_RENDER_TARGET,
+    DepthAttachment = D3D12_RESOURCE_STATE_DEPTH_WRITE,
+    ReadOnly        = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
+    ReadWrite       = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+    Present         = D3D12_RESOURCE_STATE_PRESENT,
+    TransferSrc     = D3D12_RESOURCE_STATE_COPY_SOURCE,
+    TransferDst     = D3D12_RESOURCE_STATE_COPY_DEST
 };
 } // namespace DXA_NAME
 #endif
@@ -246,15 +243,14 @@ namespace VKA_NAME
 {
 enum class TextureStateEnum : uint32_t
 {
-    None                     = VK_IMAGE_LAYOUT_UNDEFINED,
-    ColorAttachment          = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    DepthAttachment          = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-    FragmentShaderVisible    = VK_IMAGE_LAYOUT_GENERAL, // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    NonFragmentShaderVisible = VK_IMAGE_LAYOUT_GENERAL,
-    AllShaderVisible         = VK_IMAGE_LAYOUT_GENERAL,
-    Present                  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    TransferSrc              = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    TransferDst              = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    None            = VK_IMAGE_LAYOUT_UNDEFINED,
+    ColorAttachment = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    DepthAttachment = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+    ReadOnly        = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    ReadWrite       = VK_IMAGE_LAYOUT_GENERAL,
+    Present         = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    TransferSrc     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    TransferDst     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 };
 } // namespace VKA_NAME
 #endif
@@ -276,8 +272,9 @@ enum class FormatEnum : uint32_t
     R10G10B10A2_UNorm   = DXGI_FORMAT_R10G10B10A2_UNORM,
     R8_UNorm            = DXGI_FORMAT_R8_UNORM,
     R8G8B8A8_UNorm      = DXGI_FORMAT_R8G8B8A8_UNORM,
+    R8G8B8A8_UNorm_Srgb = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
     R32G32B32_SFloat    = DXGI_FORMAT_R32G32B32_FLOAT,
-    R32G32B32A32_SFloat = DXGI_FORMAT_R32G32B32A32_FLOAT
+    R32G32B32A32_SFloat = DXGI_FORMAT_R32G32B32A32_FLOAT,
 };
 } // namespace DXA_NAME
 #endif
@@ -294,6 +291,7 @@ enum class FormatEnum : uint32_t
     R10G10B10A2_UNorm   = VK_FORMAT_A2R10G10B10_UNORM_PACK32,
     R8_UNorm            = VK_FORMAT_R8_UNORM,
     R8G8B8A8_UNorm      = VK_FORMAT_R8G8B8A8_UNORM,
+    R8G8B8A8_UNorm_Srgb = VK_FORMAT_R8G8B8A8_SRGB,
     R32G32B32_SFloat    = VK_FORMAT_R32G32B32_SFLOAT,
     R32G32B32A32_SFloat = VK_FORMAT_R32G32B32A32_SFLOAT
 };
@@ -494,6 +492,7 @@ struct EnumHelper
         case FormatEnum::R8_UNorm:
             return sizeof(uint8_t);
         case FormatEnum::R8G8B8A8_UNorm:
+        case FormatEnum::R8G8B8A8_UNorm_Srgb:
             return 4 * sizeof(uint8_t);
         default:
             Logger::Critical<true>(__FUNCTION__ " found unhandled texture type " + static_cast<int>(texture_type));

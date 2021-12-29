@@ -6,6 +6,7 @@
 
     #include "rhi/common/rhi_enums.h"
     #include "rhi/common/rhi_shader_src.h"
+    #include "rhi/common/rhi_texture_create_info.h"
     //
     #include "core/glfwhandler.h"
     #include "core/logger.h"
@@ -26,6 +27,9 @@
 namespace DXA_NAME
 {
 using ShaderSrc = Rhi::TShaderSrc<DXA_NAME::ShaderStageEnum>;
+
+using TextureCreateInfo =
+    RhiCommon::TTextureCreateInfo<DXA_NAME::FormatEnum, DXA_NAME::TextureUsageEnum, D3D12_RESOURCE_DESC>;
 
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;

@@ -6,7 +6,7 @@
     #include "../shadercompiler/hlsldxccompiler.h"
     #include "../shadercompiler/shader_binary_manager.h"
     #include "core/logger.h"
-    #include "dxa_framebufferbinding.h"
+    #include "dxa_framebuffer_binding.h"
     #include "dxil_reflection.h"
 
 

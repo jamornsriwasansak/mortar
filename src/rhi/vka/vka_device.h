@@ -325,6 +325,12 @@ struct Device
         return m_vk_pdevice.getProperties().limits.timestampPeriod;
     }
 
+    size_t
+    get_data_pitch_alignment() const
+    {
+        return 1;
+    }
+
 private:
     bool m_debug = false;
 
