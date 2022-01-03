@@ -1,31 +1,30 @@
 #pragma once
 
+#include "render/shader_path.h"
 #include "rhi/rhi.h"
 #include "shaders/cpp_compatible.h"
-#include "shaders/gbuffer_generate_ray_trace_params.h"
+#include "shaders/path_tracing_params.h"
 
-struct GBufferGenerateRayTracePass
+struct PathTracingPass
 {
     Rhi::RayTracingPipeline    m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
     Rhi::Buffer                m_cb_params;
-    Rhi::Sampler               m_common_sampler;
 
-    GBufferGenerateRayTracePass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager)
-    : m_rt_pipeline("ray_trace_gbuffer_generate_pass_pipeline",
+    PathTracingPass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager)
+    : m_rt_pipeline("path_tracing_pipeline",
                     device,
                     ConstructGetRayTracePipelineConfig(),
                     shader_binary_manager,
-                    sizeof(GbufferGenerationRayTraceAttributes),
-                    sizeof(GbufferGenerationRayTracePayload),
+                    sizeof(PathTracingAttributes),
+                    sizeof(PathTracingPayload),
                     1),
-      m_rt_sbt("ray_trace_gbuffer_generate_sbt", device, m_rt_pipeline),
-      m_common_sampler("ray_trace_gbuffer_generate_sampler", device),
-      m_cb_params("ray_trace_gbuffer_generate_cbparams",
+      m_rt_sbt("path_tracing_sbt", device, m_rt_pipeline),
+      m_cb_params("path_tracing_cb_params",
                   device,
                   Rhi::BufferUsageEnum::ConstantBuffer,
                   Rhi::MemoryUsageEnum::CpuToGpu,
-                  sizeof(GbufferGenerationRayTraceCbParams))
+                  sizeof(PathTracingCbParams))
     {
     }
 
@@ -37,17 +36,17 @@ struct GBufferGenerateRayTracePass
 
         // raygen
         const Rhi::ShaderSrc raygen_shader(Rhi::ShaderStageEnum::RayGen,
-                                           BASE_SHADER_DIR "gbuffer_generate_ray_trace.hlsl.h",
+                                           BASE_SHADER_DIR "path_tracing.hlsl.h",
                                            "RayGen");
 
         // miss
         const Rhi::ShaderSrc miss_shader(Rhi::ShaderStageEnum::Miss,
-                                         BASE_SHADER_DIR "gbuffer_generate_ray_trace.hlsl.h",
+                                         BASE_SHADER_DIR "path_tracing.hlsl.h",
                                          "Miss");
 
         // hitgroup
         const Rhi::ShaderSrc hit_shader(Rhi::ShaderStageEnum::ClosestHit,
-                                        BASE_SHADER_DIR "gbuffer_generate_ray_trace.hlsl.h",
+                                        BASE_SHADER_DIR "path_tracing.hlsl.h",
                                         "ClosestHit");
 
         Rhi::RayTracingHitGroup       hit_group;
@@ -64,18 +63,18 @@ struct GBufferGenerateRayTracePass
     void
     render(Rhi::CommandBuffer &  cmd_buffer,
            const RenderContext & ctx,
+           const Rhi::Texture &  diffuse_direct_light_result,
            const Rhi::Texture &  depth_texture,
            const Rhi::Texture &  shading_normal_texture,
-           const Rhi::Texture &  diffuse_reflectance_texture,
-           const Rhi::Texture &  specular_reflectance_texture,
            const Rhi::Texture &  specular_roughness_texture,
            const uint2           target_resolution) const
     {
-        GbufferGenerationRayTraceCbParams cb_params;
-        CameraProperties                  cam_props = ctx.m_fps_camera.get_camera_props();
-        cb_params.m_camera_inv_proj                 = inverse(cam_props.m_proj);
-        cb_params.m_camera_inv_view                 = inverse(cam_props.m_view);
-        std::memcpy(m_cb_params.map(), &cb_params, sizeof(GbufferGenerationRayTraceCbParams));
+        // Setup params for Path Tracing pass
+        PathTracingCbParams cb_params;
+        CameraProperties    cam_props = ctx.m_fps_camera.get_camera_props();
+        cb_params.m_camera_inv_proj   = inverse(cam_props.m_proj);
+        cb_params.m_camera_inv_view   = inverse(cam_props.m_view);
+        std::memcpy(m_cb_params.map(), &cb_params, sizeof(PathTracingCbParams));
         m_cb_params.unmap();
 
         // setup descriptor spaces and bindings
@@ -84,25 +83,12 @@ struct GBufferGenerateRayTracePass
             Rhi::DescriptorSet(ctx.m_device, m_rt_pipeline, ctx.m_per_flight_resource.m_descriptor_pool, 1)
         };
 
-        GbufferGenerationRayTraceRegisters registers(descriptor_sets);
+        PathTracingRegisters registers(descriptor_sets);
+        registers.u_params.set(m_cb_params);
+        registers.u_diffuse_direct_light_result.set(diffuse_direct_light_result);
         registers.u_gbuffer_depth.set(depth_texture);
         registers.u_gbuffer_shading_normal.set(shading_normal_texture);
-        registers.u_gbuffer_diffuse_reflectance.set(diffuse_reflectance_texture);
-        registers.u_gbuffer_specular_reflectance.set(specular_reflectance_texture);
-        registers.u_gbuffer_roughness.set(specular_roughness_texture);
-
-        registers.u_cbparams.set(m_cb_params);
-        registers.u_sampler.set(m_common_sampler);
         registers.u_scene_bvh.set(ctx.m_scene_resource.m_rt_tlas);
-        registers.u_base_instance_table.set(ctx.m_scene_resource.m_d_base_instance_table);
-        registers.u_geometry_table.set(ctx.m_scene_resource.m_d_geometry_table);
-        registers.u_indices.set(ctx.m_scene_resource.m_d_ibuf);
-        registers.u_compact_vertices.set(ctx.m_scene_resource.m_d_vbuf_packed);
-        registers.u_materials.set(ctx.m_scene_resource.m_d_materials);
-        for (size_t i = 0; i < ctx.m_scene_resource.m_d_textures.size(); i++)
-        {
-            registers.u_textures.set(ctx.m_scene_resource.m_d_textures[i], i);
-        }
 
         descriptor_sets[0].update();
         descriptor_sets[1].update();

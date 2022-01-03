@@ -1,7 +1,7 @@
 #ifndef PCG_H
 #define PCG_H
 
-#include "../common/shared.h"
+#include "../cpp_compatible.h"
 
 #define PCG_UINT32_MAX 4294967295u
 
@@ -55,8 +55,7 @@ struct pcg32_random_t
 // pcg32_random_r(rng)
 //     Generate a uniformly distributed 32-bit random number
 
-uint
-pcg32_random_r(INOUT(pcg32_random_t) rng)
+uint pcg32_random_r(INOUT(pcg32_random_t) rng)
 {
     uint64_t oldstate = rng.state;
     rng.state         = oldstate * 6364136223846793005ul + rng.inc;
@@ -87,6 +86,7 @@ pcg32_srandom_r(INOUT(pcg32_random_t) rng, uint64_t initstate, uint64_t initseq)
 struct PcgRng
 {
     uint64_t m_state;
+    uint64_t m_rng_inc;
 
     // A single iteration of Bob Jenkins' One-At-A-Time hashing algorithm.
     uint
@@ -103,18 +103,18 @@ struct PcgRng
     void
     init(const uint seed, const uint seq)
     {
-        m_state = 0U;
-        uint64_t rng_inc = get_inc(seq);
-        random_r(rng_inc);
+        m_state   = 0U;
+        m_rng_inc = get_inc(seq);
+        random_r(m_rng_inc);
         m_state += seed;
-        random_r(rng_inc);
+        random_r(m_rng_inc);
     }
 
     uint
     random_r(const uint64_t inc)
     {
         uint64_t oldstate = m_state;
-        m_state         = oldstate * 6364136223846793005ul + inc;
+        m_state           = oldstate * 6364136223846793005ul + inc;
         uint xorshifted   = uint(((oldstate >> 18u) ^ oldstate) >> 27u);
         uint rot          = uint(oldstate >> 59u);
         return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
@@ -127,17 +127,17 @@ struct PcgRng
     }
 
     float
-    next_float(const uint64_t inc)
+    next_float()
     {
-        uint rnd = random_r(inc);
+        uint rnd = random_r(m_rng_inc);
         return float(rnd) / float(PCG_UINT32_MAX);
     }
 
     float2
-    next_float2(const uint64_t inc)
+    next_float2()
     {
-        uint rnd0 = random_r(inc);
-        uint rnd1 = random_r(inc);
+        uint rnd0 = random_r(m_rng_inc);
+        uint rnd1 = random_r(m_rng_inc);
         return float2(rnd0, rnd1) / float(PCG_UINT32_MAX);
     }
 };

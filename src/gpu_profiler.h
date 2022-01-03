@@ -144,7 +144,7 @@ struct GpuProfilerGui
             // 60 fps = 16.66 ms = 16.66 * 10^6 ns
             constexpr float  ms_from_ns                = 1e-6f;
             constexpr float  expected_frame_time_in_ns = 16.66f * 1e6f;
-            constexpr float  graph_scale               = 5000.0f;
+            constexpr float  graph_scale               = 1000.0f;
             constexpr float2 padding                   = float2(5.0f, 25.0f);
 
             const float width_from_timestamp =

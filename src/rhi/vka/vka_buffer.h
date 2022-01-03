@@ -85,7 +85,7 @@ struct Buffer
     }
 
     void *
-    map()
+    map() const
     {
         void * mapped_data       = m_vma_buffer_bundle->m_vma_alloc_info.pMappedData;
         bool   directly_mappable = mapped_data != nullptr;
@@ -103,7 +103,7 @@ struct Buffer
     }
 
     void
-    unmap()
+    unmap() const
     {
         if (m_vma_buffer_bundle->m_vma_alloc_info.pMappedData == nullptr)
         {

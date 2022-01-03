@@ -166,7 +166,8 @@ struct Texture
         vmaBindImageMemory2(memory.m_vma_memory_bundle->m_vma_allocator,
                             memory.m_vma_memory_bundle->m_vma_allocation,
                             offset_into_memory_in_bytes,
-                            std::get<vk::UniqueImage>(m_image_variant).get());
+                            std::get<vk::UniqueImage>(m_image_variant).get(),
+                            nullptr);
 
         // Set values
         m_vk_format     = vk::Format(create_info.m_format);

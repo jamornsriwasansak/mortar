@@ -1,6 +1,7 @@
 #ifndef MAPPING_H
 #define MAPPING_H
 
+#include "../cpp_compatible.h"
 #include "constant.h"
 
 float2

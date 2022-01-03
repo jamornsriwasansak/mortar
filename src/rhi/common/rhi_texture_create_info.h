@@ -17,6 +17,14 @@ struct TTextureCreateInfo
 
     TTextureCreateInfo(const uint32_t         width,
                        const uint32_t         height,
+                       const FormatEnum       format,
+                       const TextureUsageEnum texture_usage)
+    : m_width(width), m_height(height), m_depth(1), m_mip_levels(1), m_format(format), m_texture_usage(texture_usage)
+    {
+    }
+
+    TTextureCreateInfo(const uint32_t         width,
+                       const uint32_t         height,
                        const uint16_t         depth,
                        const size_t           mip_levels,
                        const FormatEnum       format,

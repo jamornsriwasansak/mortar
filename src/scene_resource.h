@@ -391,6 +391,7 @@ struct SceneResource
                                           0,
                                           aligned_size_in_bytes_per_row,
                                           aligned_size_in_bytes);
+        //cmd_buffer.transition_texture(texture, Rhi::TextureStateEnum::TransferDst, Rhi::TextureStateEnum::ReadOnly);
 
         // submit and wait
         Rhi::Fence fence("texture_upload_fence", m_device);
