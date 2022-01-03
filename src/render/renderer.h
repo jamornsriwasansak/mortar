@@ -97,8 +97,8 @@ struct Renderer
              const int2                                  resolution,
              const size_t                                num_flights)
     : m_raster_fbindings(ConstructFramebufferBinding(device, swapchain_attachment)),
-      m_pass_ray_trace_gbuffer_generate(device, shader_binary_manager),
-      m_pass_path_tracing(device, shader_binary_manager),
+      m_pass_ray_trace_gbuffer_generate(device, shader_binary_manager, num_flights),
+      m_pass_path_tracing(device, shader_binary_manager, num_flights),
       m_pass_render_to_framebuffer(device, shader_binary_manager, m_raster_fbindings[0]),
       m_per_flight_resources(ConstructPerFlightResource(device, resolution, num_flights)),
       m_gui_event_coordinator(gui_event_coordinator),

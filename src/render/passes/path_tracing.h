@@ -9,9 +9,9 @@ struct PathTracingPass
 {
     Rhi::RayTracingPipeline    m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
-    Rhi::Buffer                m_cb_params;
+    std::vector<Rhi::Buffer>   m_params_constant_buffers;
 
-    PathTracingPass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager)
+    PathTracingPass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager, const size_t num_flights)
     : m_rt_pipeline("path_tracing_pipeline",
                     device,
                     ConstructGetRayTracePipelineConfig(),
@@ -20,11 +20,7 @@ struct PathTracingPass
                     sizeof(PathTracingPayload),
                     1),
       m_rt_sbt("path_tracing_sbt", device, m_rt_pipeline),
-      m_cb_params("path_tracing_cb_params",
-                  device,
-                  Rhi::BufferUsageEnum::ConstantBuffer,
-                  Rhi::MemoryUsageEnum::CpuToGpu,
-                  sizeof(PathTracingCbParams))
+      m_params_constant_buffers(ConstructParamsConstantBuffers(device, num_flights))
     {
     }
 
@@ -60,6 +56,24 @@ struct PathTracingPass
         return rt_config;
     }
 
+    static std::vector<Rhi::Buffer>
+    ConstructParamsConstantBuffers(const Rhi::Device & device, const size_t num_flights)
+    {
+        std::vector<Rhi::Buffer> result;
+        result.reserve(num_flights);
+
+        for (size_t i_flight = 0; i_flight < num_flights; i_flight++)
+        {
+            result.emplace_back("path_tracing_params_constant_buffer_" + std::to_string(i_flight),
+                                device,
+                                Rhi::BufferUsageEnum::ConstantBuffer,
+                                Rhi::MemoryUsageEnum::CpuToGpu,
+                                sizeof(PathTracingCbParams));
+        }
+
+        return result;
+    }
+
     void
     render(Rhi::CommandBuffer &  cmd_buffer,
            const RenderContext & ctx,
@@ -71,11 +85,12 @@ struct PathTracingPass
     {
         // Setup params for Path Tracing pass
         PathTracingCbParams cb_params;
-        CameraProperties    cam_props = ctx.m_fps_camera.get_camera_props();
-        cb_params.m_camera_inv_proj   = inverse(cam_props.m_proj);
-        cb_params.m_camera_inv_view   = inverse(cam_props.m_view);
-        std::memcpy(m_cb_params.map(), &cb_params, sizeof(PathTracingCbParams));
-        m_cb_params.unmap();
+        CameraProperties    cam_props              = ctx.m_fps_camera.get_camera_props();
+        cb_params.m_camera_inv_proj                = inverse(cam_props.m_proj);
+        cb_params.m_camera_inv_view                = inverse(cam_props.m_view);
+        const Rhi::Buffer & params_constant_buffer = m_params_constant_buffers[ctx.m_flight_index];
+        std::memcpy(params_constant_buffer.map(), &cb_params, sizeof(PathTracingCbParams));
+        params_constant_buffer.unmap();
 
         // setup descriptor spaces and bindings
         std::array<Rhi::DescriptorSet, 2> descriptor_sets = {
@@ -84,7 +99,7 @@ struct PathTracingPass
         };
 
         PathTracingRegisters registers(descriptor_sets);
-        registers.u_params.set(m_cb_params);
+        registers.u_params.set(params_constant_buffer);
         registers.u_diffuse_direct_light_result.set(diffuse_direct_light_result);
         registers.u_gbuffer_depth.set(depth_texture);
         registers.u_gbuffer_shading_normal.set(shading_normal_texture);
