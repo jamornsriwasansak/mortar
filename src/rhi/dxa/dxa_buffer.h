@@ -124,7 +124,7 @@ struct Buffer
     }
 
     void *
-    map()
+    map() const
     {
         assert(m_memory_usage == MemoryUsageEnum::CpuOnly || m_memory_usage == MemoryUsageEnum::CpuToGpu ||
                m_memory_usage == MemoryUsageEnum::GpuToCpu);
@@ -140,7 +140,7 @@ struct Buffer
     }
 
     void
-    unmap()
+    unmap() const
     {
         m_allocation->GetResource()->Unmap(0, nullptr);
     }
