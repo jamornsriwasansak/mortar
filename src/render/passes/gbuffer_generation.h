@@ -8,10 +8,12 @@ struct GBufferGenerateRayTracePass
 {
     Rhi::RayTracingPipeline    m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
-    Rhi::Buffer                m_cb_params;
     Rhi::Sampler               m_common_sampler;
+    std::vector<Rhi::Buffer>   m_params_constant_buffers;
 
-    GBufferGenerateRayTracePass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager)
+    GBufferGenerateRayTracePass(const Rhi::Device &         device,
+                                const ShaderBinaryManager & shader_binary_manager,
+                                const size_t                num_flights)
     : m_rt_pipeline("ray_trace_gbuffer_generate_pass_pipeline",
                     device,
                     ConstructGetRayTracePipelineConfig(),
@@ -21,11 +23,7 @@ struct GBufferGenerateRayTracePass
                     1),
       m_rt_sbt("ray_trace_gbuffer_generate_sbt", device, m_rt_pipeline),
       m_common_sampler("ray_trace_gbuffer_generate_sampler", device),
-      m_cb_params("ray_trace_gbuffer_generate_cbparams",
-                  device,
-                  Rhi::BufferUsageEnum::ConstantBuffer,
-                  Rhi::MemoryUsageEnum::CpuToGpu,
-                  sizeof(GbufferGenerationRayTraceCbParams))
+      m_params_constant_buffers(ConstructParamsConstantBuffers(device, num_flights))
     {
     }
 
@@ -61,6 +59,22 @@ struct GBufferGenerateRayTracePass
         return rt_config;
     }
 
+    static std::vector<Rhi::Buffer>
+    ConstructParamsConstantBuffers(const Rhi::Device & device, const size_t num_flights)
+    {
+        std::vector<Rhi::Buffer> result;
+        result.reserve(num_flights);
+        for (size_t i_flight = 0; i_flight < num_flights; i_flight++)
+        {
+            result.emplace_back("gbuffer_generate_params_cb_" + std::to_string(i_flight),
+                                device,
+                                Rhi::BufferUsageEnum::ConstantBuffer,
+                                Rhi::MemoryUsageEnum::CpuToGpu,
+                                sizeof(GbufferGenerationRayTraceCbParams));
+        }
+        return result;
+    }
+
     void
     render(Rhi::CommandBuffer &  cmd_buffer,
            const RenderContext & ctx,
@@ -75,8 +89,9 @@ struct GBufferGenerateRayTracePass
         CameraProperties                  cam_props = ctx.m_fps_camera.get_camera_props();
         cb_params.m_camera_inv_proj                 = inverse(cam_props.m_proj);
         cb_params.m_camera_inv_view                 = inverse(cam_props.m_view);
-        std::memcpy(m_cb_params.map(), &cb_params, sizeof(GbufferGenerationRayTraceCbParams));
-        m_cb_params.unmap();
+        const Rhi::Buffer & params_constant_buffer  = m_params_constant_buffers[ctx.m_flight_index];
+        std::memcpy(params_constant_buffer.map(), &cb_params, sizeof(GbufferGenerationRayTraceCbParams));
+        params_constant_buffer.unmap();
 
         // setup descriptor spaces and bindings
         std::array<Rhi::DescriptorSet, 2> descriptor_sets = {
@@ -91,7 +106,7 @@ struct GBufferGenerateRayTracePass
         registers.u_gbuffer_specular_reflectance.set(specular_reflectance_texture);
         registers.u_gbuffer_roughness.set(specular_roughness_texture);
 
-        registers.u_cbparams.set(m_cb_params);
+        registers.u_cbparams.set(params_constant_buffer);
         registers.u_sampler.set(m_common_sampler);
         registers.u_scene_bvh.set(ctx.m_scene_resource.m_rt_tlas);
         registers.u_base_instance_table.set(ctx.m_scene_resource.m_d_base_instance_table);
