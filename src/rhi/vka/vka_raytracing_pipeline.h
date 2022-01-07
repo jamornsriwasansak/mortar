@@ -75,7 +75,7 @@ struct RayTracingPipeline
                        const ShaderBinaryManager &      shader_binary_manager,
                        [[maybe_unused]] const size_t    attribute_size,
                        [[maybe_unused]] const size_t    payload_size,
-                       const size_t                     recursion_depth = 1)
+                       const size_t                     recursion_depth)
     : m_num_raygens(rt_lib.get_num_shaders(ShaderStageEnum::RayGen)),
       m_num_misses(rt_lib.get_num_shaders(ShaderStageEnum::Miss)),
       m_num_hit_groups(rt_lib.m_hit_groups.size()),
