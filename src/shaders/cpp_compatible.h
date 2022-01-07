@@ -4,8 +4,7 @@
     #define RAY_GEN_SHADER [shader("raygeneration")]
     #define CLOSEST_HIT_SHADER [shader("closesthit")]
     #define MISS_SHADER [shader("miss")]
-    #define RAY_PAYLOAD [raypayload]
-
+    #define RAY_PAYLOAD
     #define INOUT(NAME) inout NAME
 
     #define REGISTER(SPACE, VARIABLE_NAME, TYPE, BINDING) \
