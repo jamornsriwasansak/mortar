@@ -15,67 +15,143 @@ RayGen()
     const float2 center_uv        = (float2(pixel_pos) + 0.5f.xx) / float2(resolution);
     const float2 center_ndc_snorm = center_uv * 2.0f - 1.0f;
 
-    const float depth = u_gbuffer_depth[pixel_pos];
-    if (depth == 0.0f)
-    {
-        u_diffuse_direct_light_result[pixel_pos] = 0.0f.xxx;
-        return;
-    }
-
     // Camera parameters
     const float3 origin = mul(u_params.m_camera_inv_view, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
     const float3 lookat = mul(u_params.m_camera_inv_proj, float4(center_ndc_snorm, 1.0f, 1.0f)).xyz;
-
-    // Recover hit position, hit normal, and hit direction
-    float3 dir_to_hit_pos = normalize(mul(u_params.m_camera_inv_view, float4(lookat, 0.0f)).xyz);
-    float3 hit_pos        = dir_to_hit_pos * depth + origin;
-
-    // Shading Normal
-    float3 shading_normal = u_gbuffer_shading_normal[pixel_pos];
-    shading_normal        = faceforward(shading_normal, dir_to_hit_pos, shading_normal);
-
-    // Construct Orthonormal basis
-    Onb snormal_onb = Onb_create(shading_normal);
+    const float3 next_dir = normalize(mul(u_params.m_camera_inv_view, float4(lookat, 0.0f)).xyz);
 
     // Random number generator
     PcgRng rng;
     rng.init(0, pixel_index);
 
-    float4 result = 0.f.xxxx;
-    for (int i = 0; i < 10; i++)
+    // Setup ray
+    RayDesc ray;
+    ray.Origin    = origin;
+    ray.Direction = next_dir;
+    ray.TMin      = 0.1f;
+    ray.TMax      = 100000.0f;
+
+    // Setup payload
+    PathTracingPayload payload;
+    payload.m_is_first_bounce = true;
+    payload.m_is_last_bounce  = false;
+    payload.m_rnd2            = rng.next_float2();
+    payload.m_miss            = false;
+
+    // Trace Ray
+    TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE, 0xff, 0, 0, 0, ray, payload);
+
+    // Return if payload miss
+    if (payload.m_miss) return;
+
+    PathTracingShadowRayPayload shadow_payload;
+    shadow_payload.m_hit = true;
+
+    RayDesc shadow_ray;
+    shadow_ray.Origin    = payload.m_t * next_dir + origin;
+    shadow_ray.Direction = payload.m_next_dir;
+    shadow_ray.TMin      = 0.1f;
+    shadow_ray.TMax      = 100000.0f;
+
+    // Trace Ray
+    TraceRay(u_scene_bvh,
+             RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
+             0xff,
+             0,
+             0,
+             1,
+             shadow_ray,
+             shadow_payload);
+
+    if (shadow_payload.m_hit)
     {
-        // sampling next direction
-        const float3 local_sampled_dir = cosine_hemisphere_from_square(rng.next_float2());
-        const float3 sampled_dir       = snormal_onb.to_global(local_sampled_dir);
-
-        // Light Importance Sampling
-        {}
-
-        // BSDF Importance Sampling & Find indirect hit pos
-        {
-        }
-
-        // Ray Desc
-        RayDesc ray;
-        ray.Origin    = hit_pos;
-        ray.Direction = sampled_dir;
-        ray.TMin      = 0.001f;
-        ray.TMax      = 10000.0f;
-
-        PathTracingPayload payload;
-        payload.m_hit = 0.0f.xxxx;
-        TraceRay(u_scene_bvh, RAY_FLAG_FORCE_OPAQUE, 0xFF, 0, 0, 0, ray, payload);
-        result += payload.m_hit;
+        u_demodulated_diffuse_gi[pixel_pos] = 0.0f;
     }
-
-    u_diffuse_direct_light_result[pixel_pos] = result.xyz + (hit_pos + shading_normal + depth) * 0.0000000001f;
+    else
+    {
+        u_demodulated_diffuse_gi[pixel_pos] = payload.m_next_dir;
+    }
 }
 
 CLOSEST_HIT_SHADER
 void
 ClosestHit(INOUT(PathTracingPayload) payload, const PathTracingAttributes attributes)
 {
+    const float2 barycentric = attributes.uv;
+
+    uint geometry_table_index_base = 0;
+    if (InstanceID() != 0)
+    {
+        geometry_table_index_base = u_base_instance_table[InstanceID()].m_geometry_table_index_base;
+    }
+    const uint               geometry_offset = geometry_table_index_base + GeometryIndex();
+    const GeometryTableEntry geometry_entry  = u_geometry_table[geometry_offset];
+
+    // Index into subbuffer
+    const uint index0 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx];
+    const uint index1 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx + 1];
+    const uint index2 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx + 2];
+
+    // Shading Normal & Texcoord
+    const CompactVertex cv0 = u_compact_vertices[index0 + geometry_entry.m_vertex_base_idx];
+    const CompactVertex cv1 = u_compact_vertices[index1 + geometry_entry.m_vertex_base_idx];
+    const CompactVertex cv2 = u_compact_vertices[index2 + geometry_entry.m_vertex_base_idx];
+
+    // Interpolate Shading Normal
+    const float3 snormal0 = cv0.get_snormal();
+    const float3 snormal1 = cv1.get_snormal();
+    const float3 snormal2 = cv2.get_snormal();
+    float3       snormal  = normalize(snormal0 * (1.0f - barycentric.x - barycentric.y) +
+                               snormal1 * barycentric.x + snormal2 * barycentric.y);
+
+    // Interpolate Texcoord
+    const float2 texcoord0 = cv0.m_texcoord;
+    const float2 texcoord1 = cv1.m_texcoord;
+    const float2 texcoord2 = cv2.m_texcoord;
+    const float2 texcoord  = texcoord0 * (1.0f - barycentric.x - barycentric.y) +
+                            texcoord1 * barycentric.x + texcoord2 * barycentric.y;
+
+    // TODO:: Add material graph evaluation here
+
+    // Standard Material
+    const StandardMaterial mat = u_materials[geometry_entry.m_material_idx];
+
+    // Material Reflectance / Roughness
+    const float3 diffuse_reflectance =
+        mat.has_diffuse_texture()
+            ? u_textures[mat.m_diffuse_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb
+            : mat.decode_rgb(mat.m_diffuse_tex_id);
+    const float3 specular_reflectance =
+        mat.has_specular_texture()
+            ? u_textures[mat.m_specular_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb
+            : mat.decode_rgb(mat.m_specular_tex_id);
+    const float roughness =
+        mat.has_roughness_texture()
+            ? u_textures[mat.m_roughness_tex_id].SampleLevel(u_sampler, texcoord, 0).r
+            : mat.decode_rgb(mat.m_roughness_tex_id).r;
+
+    if (payload.m_is_first_bounce)
+    {
+        const uint2 pixel_pos                     = DispatchRaysIndex().xy;
+        u_gbuffer_depth[pixel_pos]                = RayTCurrent();
+        u_gbuffer_shading_normal[pixel_pos]       = snormal;
+        u_gbuffer_diffuse_reflectance[pixel_pos]  = diffuse_reflectance;
+        u_gbuffer_specular_reflectance[pixel_pos] = specular_reflectance;
+        u_gbuffer_roughness[pixel_pos]            = roughness;
+    }
+
+    // Construct Orthonormal basis
+    const float3 dir_to_hit_pos = WorldRayDirection();
+    snormal                     = faceforward(snormal, dir_to_hit_pos, snormal);
+    Onb snormal_onb             = Onb_create(snormal);
+
+    // Sample the next direction
+    payload.m_next_dir = snormal_onb.to_global(cosine_hemisphere_from_square(payload.m_rnd2));
+    payload.m_t        = RayTCurrent();
 }
 
 MISS_SHADER
-void Miss(INOUT(PathTracingPayload) payload) { payload.m_hit = 1.0f.xxxx; }
+void Miss(INOUT(PathTracingPayload) payload) { payload.m_miss = true; }
+
+MISS_SHADER
+void ShadowMiss(INOUT(PathTracingShadowRayPayload) payload) { payload.m_hit = false; }

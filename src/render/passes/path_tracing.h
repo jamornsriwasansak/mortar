@@ -10,6 +10,9 @@ struct PathTracingPass
     Rhi::RayTracingPipeline    m_rt_pipeline;
     Rhi::RayTracingShaderTable m_rt_sbt;
     std::vector<Rhi::Buffer>   m_params_constant_buffers;
+    Rhi::Sampler               m_common_sampler;
+    size_t                     m_radiance_miss_shader_index;
+    size_t                     m_shadow_miss_shader_index;
 
     PathTracingPass(const Rhi::Device & device, const ShaderBinaryManager & shader_binary_manager, const size_t num_flights)
     : m_rt_pipeline("path_tracing_pipeline",
@@ -17,10 +20,11 @@ struct PathTracingPass
                     ConstructGetRayTracePipelineConfig(),
                     shader_binary_manager,
                     sizeof(PathTracingAttributes),
-                    sizeof(PathTracingPayload),
+                    std::max(sizeof(PathTracingPayload), sizeof(PathTracingShadowRayPayload)),
                     1),
       m_rt_sbt("path_tracing_sbt", device, m_rt_pipeline),
-      m_params_constant_buffers(ConstructParamsConstantBuffers(device, num_flights))
+      m_params_constant_buffers(ConstructParamsConstantBuffers(device, num_flights)),
+      m_common_sampler("path_tracing_sampler", device)
     {
     }
 
@@ -45,10 +49,16 @@ struct PathTracingPass
                                         BASE_SHADER_DIR "path_tracing.hlsl.h",
                                         "ClosestHit");
 
+        // shadow miss
+        const Rhi::ShaderSrc shadow_miss_shader(Rhi::ShaderStageEnum::Miss,
+                                                BASE_SHADER_DIR "path_tracing.hlsl.h",
+                                                "ShadowMiss");
+
         Rhi::RayTracingHitGroup       hit_group;
-        [[maybe_unused]] const size_t raygen_id = rt_config.add_shader(raygen_shader);
-        [[maybe_unused]] const size_t miss_id   = rt_config.add_shader(miss_shader);
-        hit_group.m_closest_hit_id              = rt_config.add_shader(hit_shader);
+        [[maybe_unused]] const size_t raygen_id      = rt_config.add_shader(raygen_shader);
+        [[maybe_unused]] const size_t miss_id        = rt_config.add_shader(miss_shader);
+        [[maybe_unused]] const size_t shadow_miss_id = rt_config.add_shader(shadow_miss_shader);
+        hit_group.m_closest_hit_id                   = rt_config.add_shader(hit_shader);
 
         // all raygen and all hit groups
         [[maybe_unused]] const size_t hitgroup_id = rt_config.add_hit_group(hit_group);
@@ -77,9 +87,11 @@ struct PathTracingPass
     void
     render(Rhi::CommandBuffer &  cmd_buffer,
            const RenderContext & ctx,
-           const Rhi::Texture &  diffuse_direct_light_result,
-           const Rhi::Texture &  depth_texture,
-           const Rhi::Texture &  shading_normal_texture,
+           const Rhi::Texture &  demodulated_diffuse_gi,
+           const Rhi::Texture &  gbuffer_depth,
+           const Rhi::Texture &  gbuffer_shading_normal,
+           const Rhi::Texture &  diffuse_reflectance_texture,
+           const Rhi::Texture &  specular_reflectance_texture,
            const Rhi::Texture &  specular_roughness_texture,
            const uint2           target_resolution) const
     {
@@ -100,10 +112,24 @@ struct PathTracingPass
 
         PathTracingRegisters registers(descriptor_sets);
         registers.u_params.set(params_constant_buffer);
-        registers.u_diffuse_direct_light_result.set(diffuse_direct_light_result);
-        registers.u_gbuffer_depth.set(depth_texture);
-        registers.u_gbuffer_shading_normal.set(shading_normal_texture);
+        registers.u_demodulated_diffuse_gi.set(demodulated_diffuse_gi);
+        registers.u_gbuffer_depth.set(gbuffer_depth);
+        registers.u_gbuffer_shading_normal.set(gbuffer_shading_normal);
+        registers.u_gbuffer_diffuse_reflectance.set(diffuse_reflectance_texture);
+        registers.u_gbuffer_specular_reflectance.set(specular_reflectance_texture);
+        registers.u_gbuffer_roughness.set(specular_roughness_texture);
+
         registers.u_scene_bvh.set(ctx.m_scene_resource.m_rt_tlas);
+        registers.u_sampler.set(m_common_sampler);
+        registers.u_base_instance_table.set(ctx.m_scene_resource.m_d_base_instance_table);
+        registers.u_geometry_table.set(ctx.m_scene_resource.m_d_geometry_table);
+        registers.u_indices.set(ctx.m_scene_resource.m_d_ibuf);
+        registers.u_compact_vertices.set(ctx.m_scene_resource.m_d_vbuf_packed);
+        registers.u_materials.set(ctx.m_scene_resource.m_d_materials);
+        for (size_t i = 0; i < ctx.m_scene_resource.m_d_textures.size(); i++)
+        {
+            registers.u_textures.set(ctx.m_scene_resource.m_d_textures[i], i);
+        }
 
         descriptor_sets[0].update();
         descriptor_sets[1].update();

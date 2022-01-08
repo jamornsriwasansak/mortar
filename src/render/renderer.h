@@ -180,6 +180,8 @@ struct Renderer
                                            per_flight_render_resource.m_diffuse_direct_result_texture,
                                            per_flight_render_resource.m_depth_texture,
                                            per_flight_render_resource.m_shading_normal_texture,
+                                           per_flight_render_resource.m_diffuse_reflectance_texture,
+                                           per_flight_render_resource.m_specular_reflectance_texture,
                                            per_flight_render_resource.m_specular_roughness_texture,
                                            ctx.m_resolution);
             }
