@@ -26,9 +26,6 @@
 
 namespace DXA_NAME
 {
-using TextureCreateInfo =
-    RhiCommon::TTextureCreateInfo<DXA_NAME::FormatEnum>;
-
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
 

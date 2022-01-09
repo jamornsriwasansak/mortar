@@ -23,9 +23,6 @@
 
 namespace VKA_NAME
 {
-using TextureCreateInfo =
-    RhiCommon::TTextureCreateInfo<VKA_NAME::FormatEnum>;
-
 using DeviceSizeT = vk::DeviceSize;
 } // namespace VKA_NAME
 #endif
