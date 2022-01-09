@@ -4,8 +4,9 @@
 
 #ifdef USE_VKA
 
-#include "vka_common.h"
-#include "vka_device.h"
+    #include "vka_common.h"
+    #include "vka_constants.h"
+    #include "vka_device.h"
 
 namespace VKA_NAME
 {
@@ -37,20 +38,17 @@ struct Buffer
 
     Buffer(const std::string &   name,
            const Device &        device,
-           const BufferUsageEnum buffer_usage_,
+           const BufferUsageEnum buffer_usage,
            const MemoryUsageEnum memory_usage,
            const DeviceSizeT     buffer_size_in_bytes)
     : m_size_in_bytes(buffer_size_in_bytes)
     {
-        BufferUsageEnum buffer_usage = buffer_usage_;
-
         vk::BufferCreateInfo buffer_ci_tmp;
         buffer_ci_tmp.setSize(buffer_size_in_bytes == 0 ? 32 : buffer_size_in_bytes);
-        buffer_ci_tmp.setUsage(static_cast<vk::BufferUsageFlagBits>(buffer_usage) |
-                               vk::BufferUsageFlagBits::eShaderDeviceAddress);
+        buffer_ci_tmp.setUsage(GetVkBufferUsageFlags(buffer_usage) | vk::BufferUsageFlagBits::eShaderDeviceAddress);
         VkBufferCreateInfo      buffer_ci    = buffer_ci_tmp;
         VmaAllocationCreateInfo vma_alloc_ci = {};
-        vma_alloc_ci.usage                   = static_cast<VmaMemoryUsage>(memory_usage);
+        vma_alloc_ci.usage                   = GetVmaMemoryUsage(memory_usage);
 
         VkBuffer          vma_vk_buffer;
         VmaAllocation     vma_allocation;

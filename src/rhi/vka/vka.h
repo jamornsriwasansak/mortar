@@ -5,6 +5,7 @@
 #include "vka_command_buffer.h"
 #include "vka_command_pool.h"
 #include "vka_common.h"
+#include "vka_constants.h"
 #include "vka_descriptor.h"
 #include "vka_descriptor_pool.h"
 #include "vka_device.h"

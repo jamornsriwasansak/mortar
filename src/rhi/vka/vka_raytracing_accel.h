@@ -6,6 +6,7 @@
 
     #include "vka_buffer.h"
     #include "vka_common.h"
+    #include "vka_constants.h"
     #include "vka_device.h"
 
 namespace VKA_NAME
@@ -27,7 +28,7 @@ struct RayTracingGeometryDesc
     {
         assert(num_vertices > 0);
         m_geometry_trimesh_desc.setVertexData(buffer.m_device_address + offset_in_bytes);
-        m_geometry_trimesh_desc.setVertexFormat(vk::Format(vk_format));
+        m_geometry_trimesh_desc.setVertexFormat(GetVkFormat(vk_format));
         m_geometry_trimesh_desc.setMaxVertex(static_cast<uint32_t>(num_vertices));
         m_geometry_trimesh_desc.setVertexStride(static_cast<uint32_t>(stride_in_bytes));
         return *this;
@@ -37,7 +38,7 @@ struct RayTracingGeometryDesc
     set_index_buffer(const Buffer & buffer, const size_t offset_in_bytes, const IndexType index_type, const size_t num_indices)
     {
         m_geometry_trimesh_desc.setIndexData(buffer.m_device_address + offset_in_bytes);
-        m_geometry_trimesh_desc.setIndexType(vk::IndexType(index_type));
+        m_geometry_trimesh_desc.setIndexType(GetVkIndexType(index_type));
         m_build_range.setFirstVertex(0);
         m_build_range.setPrimitiveOffset(0);
         m_build_range.setPrimitiveCount(static_cast<uint32_t>(num_indices / 3));

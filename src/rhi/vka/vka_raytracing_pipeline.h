@@ -8,6 +8,7 @@
     #include "rhi/common/rhi_shader_src.h"
     #include "spirv_reflection.h"
     #include "vka_common.h"
+    #include "vka_constants.h"
     #include "vka_device.h"
 
 namespace VKA_NAME
@@ -133,7 +134,7 @@ struct RayTracingPipeline
         {
             vk::PipelineShaderStageCreateInfo & shader_stage_ci = shader_stage_cis[i];
             shader_stage_ci.setModule(shader_module[i].get());
-            shader_stage_ci.setStage(static_cast<vk::ShaderStageFlagBits>(rt_lib.m_shader_srcs[i].m_shader_stage));
+            shader_stage_ci.setStage(GetVkShaderStageFlagBits(rt_lib.m_shader_srcs[i].m_shader_stage));
             shader_stage_ci.setPName(rt_lib.m_shader_srcs[i].m_entry.c_str());
         }
 

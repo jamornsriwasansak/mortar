@@ -4,6 +4,7 @@
 #ifdef USE_DXA
 
     #include "dxa_buffer.h"
+    #include "dxa_constants.h"
     #include "dxa_stagingbuffermanager.h"
 
 namespace DXA_NAME
@@ -25,7 +26,7 @@ struct RayTracingGeometryDesc
             buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + offset_in_bytes;
         m_geometry_desc.Triangles.VertexBuffer.StrideInBytes = static_cast<UINT>(stride_in_bytes);
         m_geometry_desc.Triangles.VertexCount                = static_cast<UINT>(num_vertices);
-        m_geometry_desc.Triangles.VertexFormat = static_cast<DXGI_FORMAT>(dxgi_format);
+        m_geometry_desc.Triangles.VertexFormat               = GetDXGI_FORMAT(dxgi_format);
         return *this;
     }
 
@@ -35,7 +36,7 @@ struct RayTracingGeometryDesc
         m_geometry_desc.Triangles.IndexBuffer =
             buffer.m_allocation->GetResource()->GetGPUVirtualAddress() + offset_in_bytes;
         m_geometry_desc.Triangles.IndexCount  = static_cast<UINT>(num_indices);
-        m_geometry_desc.Triangles.IndexFormat = static_cast<DXGI_FORMAT>(dxgi_format);
+        m_geometry_desc.Triangles.IndexFormat = GetDXGI_FORMAT(dxgi_format);
         return *this;
     }
 
@@ -152,7 +153,7 @@ struct RayTracingTlas
         const std::string instance_buffer_name = name.empty() ? "" : name + "_instance_buffer";
         m_instance_desc_buffer                 = Buffer(instance_buffer_name,
                                         device,
-                                        BufferUsageEnum::None,
+                                        BufferUsageEnum::Common,
                                         MemoryUsageEnum::CpuOnly,
                                         sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instances.size());
         std::byte * instance_dst = reinterpret_cast<std::byte *>(m_instance_desc_buffer.map());

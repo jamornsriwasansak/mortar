@@ -26,10 +26,8 @@
 
 namespace DXA_NAME
 {
-using ShaderSrc = Rhi::TShaderSrc<DXA_NAME::ShaderStageEnum>;
-
 using TextureCreateInfo =
-    RhiCommon::TTextureCreateInfo<DXA_NAME::FormatEnum, DXA_NAME::TextureUsageEnum, D3D12_RESOURCE_DESC>;
+    RhiCommon::TTextureCreateInfo<DXA_NAME::FormatEnum>;
 
 template <typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;

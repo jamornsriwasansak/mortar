@@ -50,6 +50,13 @@
         }
 #endif
 
+/*
+ * Shader Stage Enum
+ */
+
+namespace Rhi
+{
+
 template <typename EnumType>
 bool
 HasFlag(const EnumType & value, const EnumType & must_have_flag)
@@ -64,251 +71,91 @@ HasOnlyFlag(const EnumType & value, const EnumType & flag)
     return value == flag;
 }
 
-/*
- * Shader Stage Enum
- */
-
-#ifdef USE_DXA
-namespace DXA_NAME
-{
-enum class ShaderStageEnum : uint32_t
-{
-    None         = 0,
-    Vertex       = 1 << 0,
-    Fragment     = 1 << 2,
-    Geometry     = 1 << 3,
-    Compute      = 1 << 4,
-    RayGen       = 1 << 5,
-    ClosestHit   = 1 << 6,
-    AnyHit       = 1 << 7,
-    Intersection = 1 << 8,
-    Miss         = 1 << 9
-};
-DEFINE_ENUM_FLAG_OPERATORS(ShaderStageEnum);
-} // namespace DXA_NAME
-#endif
-
-#ifdef USE_VKA
-namespace VKA_NAME
-{
-enum class ShaderStageEnum : uint32_t
-{
-    None         = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM,
-    Vertex       = VK_SHADER_STAGE_VERTEX_BIT,
-    Fragment     = VK_SHADER_STAGE_FRAGMENT_BIT,
-    Geometry     = VK_SHADER_STAGE_GEOMETRY_BIT,
-    Compute      = VK_SHADER_STAGE_COMPUTE_BIT,
-    RayGen       = VK_SHADER_STAGE_RAYGEN_BIT_KHR,
-    ClosestHit   = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR,
-    AnyHit       = VK_SHADER_STAGE_ANY_HIT_BIT_KHR,
-    Intersection = VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
-    Miss         = VK_SHADER_STAGE_MISS_BIT_KHR
-};
-DEFINE_ENUM_FLAG_OPERATORS(ShaderStageEnum);
-} // namespace VKA_NAME
-#endif
-
-/*
- * Memory Usage
- */
-
-#ifdef USE_DXA
-namespace DXA_NAME
-{
-enum class MemoryUsageEnum : uint32_t
+enum class ShaderStageEnum
 {
     None,
+    Vertex,
+    Fragment,
+    Geometry,
+    Compute,
+    RayGen,
+    ClosestHit,
+    AnyHit,
+    Intersection,
+    Miss
+};
+
+enum class MemoryUsageEnum
+{
     CpuOnly,
     GpuOnly,
     GpuToCpu,
     CpuToGpu
 };
-}
-#endif
 
-#ifdef USE_VKA
-namespace VKA_NAME
+enum class BufferUsageEnum
 {
-enum class MemoryUsageEnum : uint32_t
-{
-    None     = VMA_MEMORY_USAGE_MAX_ENUM,
-    CpuOnly  = VMA_MEMORY_USAGE_CPU_ONLY,
-    GpuOnly  = VMA_MEMORY_USAGE_GPU_ONLY,
-    GpuToCpu = VMA_MEMORY_USAGE_GPU_TO_CPU,
-    CpuToGpu = VMA_MEMORY_USAGE_CPU_TO_GPU
-};
-}
-#endif
-
-/*
- * Buffer Usage
- */
-#ifdef USE_DXA
-namespace DXA_NAME
-{
-enum class BufferUsageEnum : uint32_t
-{
-    None                             = 0,
-    VertexBuffer                     = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-    IndexBuffer                      = D3D12_RESOURCE_STATE_INDEX_BUFFER,
-    RayTracingAccelStructBufferInput = 0,
-    ConstantBuffer                   = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-    StorageBuffer                    = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-    TransferSrc                      = D3D12_RESOURCE_STATE_COPY_SOURCE,
-    TransferDst                      = D3D12_RESOURCE_STATE_COPY_DEST,
-    RayTracingAccelStructBuffer      = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE
+    Common                           = 1 << 0,
+    VertexBuffer                     = 1 << 1,
+    IndexBuffer                      = 1 << 2,
+    RayTracingAccelStructBufferInput = 1 << 3,
+    ConstantBuffer                   = 1 << 4,
+    StorageBuffer                    = 1 << 5,
+    TransferSrc                      = 1 << 6,
+    TransferDst                      = 1 << 7,
+    RayTracingAccelStructBuffer      = 1 << 8
 };
 DEFINE_ENUM_FLAG_OPERATORS(BufferUsageEnum);
-} // namespace DXA_NAME
-#endif
 
-#ifdef USE_VKA
-namespace VKA_NAME
+enum class TextureUsageEnum
 {
-enum class BufferUsageEnum : uint32_t
-{
-    None                             = VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM,
-    VertexBuffer                     = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-    IndexBuffer                      = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-    RayTracingAccelStructBufferInput = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
-    ConstantBuffer                   = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    StorageBuffer                    = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-    TransferSrc                      = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    TransferDst                      = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-    RayTracingAccelStructBuffer = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-};
-DEFINE_ENUM_FLAG_OPERATORS(BufferUsageEnum);
-} // namespace VKA_NAME
-#endif
-
-/*
- * Texture Usage
- */
-
-#ifdef USE_DXA
-namespace DXA_NAME
-{
-enum class TextureUsageEnum : uint32_t
-{
-    None            = D3D12_RESOURCE_FLAG_NONE,
-    ColorAttachment = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
-    DepthAttachment = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
-    StorageImage    = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-    TransferSrc     = 0,
-    TransferDst     = 0
+    Common          = 1 << 0,
+    ColorAttachment = 1 << 1,
+    DepthAttachment = 1 << 2,
+    StorageImage    = 1 << 3,
+    TransferSrc     = 1 << 4,
+    TransferDst     = 1 << 5
 };
 DEFINE_ENUM_FLAG_OPERATORS(TextureUsageEnum);
-} // namespace DXA_NAME
-#endif
 
-#ifdef USE_VKA
-namespace VKA_NAME
+enum class TextureStateEnum
 {
-enum class TextureUsageEnum : uint32_t
-{
-    None            = 0,
-    ColorAttachment = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    DepthAttachment = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-    StorageImage    = VK_IMAGE_USAGE_STORAGE_BIT,
-    TransferSrc     = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-    TransferDst     = VK_IMAGE_USAGE_TRANSFER_DST_BIT
+    ColorAttachment,
+    DepthAttachment,
+    ReadOnly,
+    ReadWrite,
+    Present,
+    TransferSrc,
+    TransferDst
 };
-DEFINE_ENUM_FLAG_OPERATORS(TextureUsageEnum);
-} // namespace VKA_NAME
-#endif
 
-/*
- * Texture Layout
- */
-
-#ifdef USE_DXA
-namespace DXA_NAME
+enum class FormatEnum
 {
-enum class TextureStateEnum : uint32_t
-{
-    None            = 0,
-    ColorAttachment = D3D12_RESOURCE_STATE_RENDER_TARGET,
-    DepthAttachment = D3D12_RESOURCE_STATE_DEPTH_WRITE,
-    ReadOnly        = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-    ReadWrite       = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-    Present         = D3D12_RESOURCE_STATE_PRESENT,
-    TransferSrc     = D3D12_RESOURCE_STATE_COPY_SOURCE,
-    TransferDst     = D3D12_RESOURCE_STATE_COPY_DEST
+    Depth32_SFloat,
+    R10G10B10A2_UNorm,
+    R11G11B10_UFloat,
+    R16G16B16A16_SNorm,
+    R16G16_SNorm,
+    R16_SFloat,
+    R16_UInt,
+    R16_UNorm,
+    R32G32B32A32_SFloat,
+    R32G32B32_SFloat,
+    R32_SFloat,
+    R32_UInt,
+    R8G8B8A8_UNorm_Srgb,
+    R8G8B8A8_UNorm,
+    R8_UNorm
 };
-} // namespace DXA_NAME
-#endif
 
-#ifdef USE_VKA
-namespace VKA_NAME
+enum class IndexType
 {
-enum class TextureStateEnum : uint32_t
-{
-    None            = VK_IMAGE_LAYOUT_UNDEFINED,
-    ColorAttachment = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    DepthAttachment = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-    ReadOnly        = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    ReadWrite       = VK_IMAGE_LAYOUT_GENERAL,
-    Present         = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    TransferSrc     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    TransferDst     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    Uint8,
+    Uint16,
+    Uint32
 };
-} // namespace VKA_NAME
-#endif
 
-
-/*
- * Texture Format
- */
-
-#ifdef USE_DXA
-namespace DXA_NAME
-{
-enum class FormatEnum : uint32_t
-{
-    None                = DXGI_FORMAT_UNKNOWN,
-    Depth32_SFloat      = DXGI_FORMAT_D32_FLOAT,
-    R10G10B10A2_UNorm   = DXGI_FORMAT_R10G10B10A2_UNORM,
-    R11G11B10_UFloat    = DXGI_FORMAT_R11G11B10_FLOAT,
-    R16G16B16A16_SNorm  = DXGI_FORMAT_R16G16B16A16_SNORM,
-    R16_UNorm           = DXGI_FORMAT_R16_UNORM,
-    R32_SFloat          = DXGI_FORMAT_R32_FLOAT,
-    R32_UInt            = DXGI_FORMAT_R32_UINT,
-    R8_UNorm            = DXGI_FORMAT_R8_UNORM,
-    R8G8B8A8_UNorm      = DXGI_FORMAT_R8G8B8A8_UNORM,
-    R8G8B8A8_UNorm_Srgb = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-    R32G32B32_SFloat    = DXGI_FORMAT_R32G32B32_FLOAT,
-    R32G32B32A32_SFloat = DXGI_FORMAT_R32G32B32A32_FLOAT,
-};
-} // namespace DXA_NAME
-#endif
-
-#ifdef USE_VKA
-namespace VKA_NAME
-{
-enum class FormatEnum : uint32_t
-{
-    None                = VK_FORMAT_UNDEFINED,
-    Depth32_SFloat      = VK_FORMAT_D32_SFLOAT,
-    R8_UNorm            = VK_FORMAT_R8_UNORM,
-    R8G8B8_UNorm        = VK_FORMAT_R8G8B8_UNORM,
-    R8G8B8_UNorm_Srgb   = VK_FORMAT_R8G8B8_SRGB,
-    R8G8B8A8_UNorm      = VK_FORMAT_R8G8B8A8_UNORM,
-    R8G8B8A8_UNorm_Srgb = VK_FORMAT_R8G8B8A8_SRGB,
-    R10G10B10A2_UNorm   = VK_FORMAT_A2R10G10B10_UNORM_PACK32,
-    R11G11B10_UFloat    = VK_FORMAT_B10G11R11_UFLOAT_PACK32,
-    R16_SFloat          = VK_FORMAT_R16_SFLOAT,
-    R16_UInt            = VK_FORMAT_R16_UINT,
-    R16_UNorm           = VK_FORMAT_R16_UNORM,
-    R16G16_SNorm        = VK_FORMAT_R16G16_SNORM,
-    R16G16B16_UNorm     = VK_FORMAT_R16G16B16_UNORM,
-    R16G16B16A16_SNorm  = VK_FORMAT_R16G16B16A16_SNORM,
-    R32_SFloat          = VK_FORMAT_R32_SFLOAT,
-    R32_UInt            = VK_FORMAT_R32_UINT,
-    R32G32B32_SFloat    = VK_FORMAT_R32G32B32_SFLOAT,
-    R32G32B32A32_SFloat = VK_FORMAT_R32G32B32A32_SFLOAT,
-};
-} // namespace VKA_NAME
-#endif
+} // namespace Rhi
 
 namespace Rhi
 {
@@ -348,32 +195,6 @@ enum class RayTracingGeometryFlag : uint32_t
     Opaque = VK_GEOMETRY_OPAQUE_BIT_KHR
 };
 }
-#endif
-
-#ifdef USE_DXA
-namespace DXA_NAME
-{
-enum class IndexType : uint32_t
-{
-    None   = DXGI_FORMAT_UNKNOWN,
-    Uint8  = DXGI_FORMAT_R8_UINT,
-    Uint16 = DXGI_FORMAT_R16_UINT,
-    Uint32 = DXGI_FORMAT_R32_UINT
-};
-} // namespace DXA_NAME
-#endif
-
-#ifdef USE_VKA
-namespace VKA_NAME
-{
-enum class IndexType : uint32_t
-{
-    None   = VK_INDEX_TYPE_NONE_KHR,
-    Uint8  = VK_INDEX_TYPE_UINT8_EXT,
-    Uint16 = VK_INDEX_TYPE_UINT16,
-    Uint32 = VK_INDEX_TYPE_UINT32
-};
-} // namespace VKA_NAME
 #endif
 
 namespace Rhi
@@ -499,8 +320,6 @@ struct EnumHelper
     {
         switch (texture_type)
         {
-        case FormatEnum::None:
-            return 0;
         case FormatEnum::R8_UNorm:
             return sizeof(uint8_t);
         case FormatEnum::R8G8B8A8_UNorm:

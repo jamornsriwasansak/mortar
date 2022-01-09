@@ -33,9 +33,7 @@ struct SimpleDxcBlob : public IDxcBlob
 
 struct ShaderBinaryHandle
 {
-    using ShaderSrc = Rhi::TShaderSrc<Rhi::ShaderStageEnum>;
-
-    ShaderSrc              m_shader_src;
+    Rhi::ShaderSrc              m_shader_src;
     std::vector<std::byte> m_raw_binary;
 };
 
@@ -45,7 +43,6 @@ struct ShaderBinaryManager
 {
     template <typename T>
     using ComPtr    = Microsoft::WRL::ComPtr<T>;
-    using ShaderSrc = Rhi::TShaderSrc<Rhi::ShaderStageEnum>;
 
     HlslDxcCompiler m_hlsl_compiler;
 
@@ -75,7 +72,7 @@ struct ShaderBinaryManager
 
     // ShaderBlob
     std::vector<std::byte>
-    get_cached_shader(const ShaderSrc & shader_src) const
+    get_cached_shader(const Rhi::ShaderSrc & shader_src) const
     {
         // no filepath, compile directly from shader src
         if (shader_src.m_file_path.empty())
@@ -116,7 +113,7 @@ struct ShaderBinaryManager
 
 private:
     std::filesystem::path
-    get_shader_cache_path(const ShaderSrc & shader_src) const
+    get_shader_cache_path(const Rhi::ShaderSrc & shader_src) const
     {
         std::string val = shader_src.m_file_path.string();
         if (!HlslDxcCompiler::GetTargetProfile(shader_src.m_shader_stage).m_is_lib)
