@@ -1,5 +1,8 @@
 #pragma once
 
+// Probably the worst part of my code.
+// TODO:: Have to rewrite this.
+
 #include "core/camera.h"
 #include "core/ste/stevector.h"
 #include "engine_setting.h"
@@ -7,6 +10,7 @@
 #include "rhi/rhi.h"
 #include "shaders/shared/bindless_table.h"
 #include "shaders/shared/compact_vertex.h"
+#include "shaders/shared/standard_emission.h"
 #include "shaders/shared/standard_material.h"
 #include "shaders/shared/types.h"
 //
@@ -18,11 +22,12 @@
 
 struct SceneGeometry
 {
-    BufferSizeT m_vbuf_base_idx = 0;
-    BufferSizeT m_ibuf_base_idx = 0;
+    BufferSizeT m_vbuf_base_index = 0;
+    BufferSizeT m_ibuf_base_index = 0;
     BufferSizeT m_num_vertices  = 0;
     BufferSizeT m_num_indices   = 0;
-    BufferSizeT m_material_idx  = 0;
+    BufferSizeT m_material_index  = 0;
+    BufferSizeT m_emission_index  = 0;
     bool        m_is_updatable  = false;
 };
 
@@ -34,6 +39,7 @@ struct SceneBaseInstance
 struct SceneInstance
 {
     uint32_t m_base_instance_id = 0;
+    uint32_t m_hit_group_id     = 0;
     float4x4 m_transform        = glm::identity<float4x4>();
 };
 
@@ -60,9 +66,16 @@ struct SceneResource
     size_t      m_num_indices     = 0;
 
     // device & host textures and materials
-    std::vector<Rhi::Texture>               m_d_textures;
-    Rhi::Buffer                             m_d_materials = {};
-    std::vector<StandardMaterial>           m_h_materials;
+    std::vector<Rhi::Texture> m_d_textures;
+
+    // Materials
+    Rhi::Buffer                   m_d_materials = {};
+    std::vector<StandardMaterial> m_h_materials;
+
+    // Emissions
+    Rhi::Buffer                   m_d_emissions = {};
+    std::vector<StandardEmission> m_h_emissions;
+
     std::map<std::filesystem::path, size_t> m_texture_id_from_path;
 
     // device & host lookup table for geometry & instance
@@ -117,6 +130,13 @@ struct SceneResource
                                     Rhi::MemoryUsageEnum::GpuOnly,
                                     sizeof(StandardMaterial) * EngineSetting::MaxNumStandardMaterials);
 
+        // emissions
+        m_d_emissions = Rhi::Buffer("scene_m_d_emissions",
+                                    m_device,
+                                    Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
+                                    Rhi::MemoryUsageEnum::GpuOnly,
+                                    sizeof(StandardEmission) * EngineSetting::MaxNumStandardEmissions);
+
         // geometry table and geometry offset table
         m_d_base_instance_table =
             Rhi::Buffer("scene_m_d_base_instance_table",
@@ -130,6 +150,8 @@ struct SceneResource
                         Rhi::BufferUsageEnum::TransferDst | Rhi::BufferUsageEnum::StorageBuffer,
                         Rhi::MemoryUsageEnum::GpuOnly,
                         sizeof(GeometryTableEntry) * EngineSetting::MaxNumGeometryTableEntry);
+
+        m_h_materials.push_back(get_standard_black_material());
     }
 
     urange32_t
@@ -140,22 +162,27 @@ struct SceneResource
             ai_scene->get_geometry_infos(std::numeric_limits<VertexIndexT>::max());
 
         // load all materials (and necessary textures)
-        const unsigned int material_offset = m_h_materials.size();
+        const size_t material_offset = m_h_materials.size();
+        const size_t emission_offset = m_h_emissions.size();
         for (size_t i_mat = 0; i_mat < ai_scene->m_ai_scene->mNumMaterials; i_mat++)
         {
-            StandardMaterial mat = add_standard_material(path, *ai_scene->m_ai_scene->mMaterials[i_mat]);
+            const StandardMaterial mat =
+                add_standard_material(path, *ai_scene->m_ai_scene->mMaterials[i_mat]);
+            const StandardEmission emission =
+                add_standard_emission(path, *ai_scene->m_ai_scene->mMaterials[i_mat]);
             m_h_materials.push_back(mat);
+            m_h_emissions.push_back(emission);
         }
 
         // prepare information host vertex buffers allocation and index buffer
-        size_t              num_total_vertices = 0;
-        size_t              num_total_indices  = 0;
-        std::vector<size_t> vertices_base_idxs(geometry_infos.size());
-        std::vector<size_t> indices_base_idxs(geometry_infos.size());
+        size_t                num_total_vertices = 0;
+        size_t                num_total_indices  = 0;
+        std::vector<uint32_t> vertices_base_indexs(geometry_infos.size());
+        std::vector<uint32_t> indices_base_indexs(geometry_infos.size());
         for (size_t i_geometry_info = 0; i_geometry_info < geometry_infos.size(); i_geometry_info++)
         {
-            vertices_base_idxs[i_geometry_info] = num_total_vertices;
-            indices_base_idxs[i_geometry_info]  = num_total_indices;
+            vertices_base_indexs[i_geometry_info] = static_cast<uint32_t>(num_total_vertices);
+            indices_base_indexs[i_geometry_info]  = static_cast<uint32_t>(num_total_indices);
             num_total_vertices +=
                 round_up(geometry_infos[i_geometry_info].m_dst_num_vertices, static_cast<size_t>(32));
             num_total_indices +=
@@ -168,31 +195,61 @@ struct SceneResource
         std::vector<VertexIndexT>  ib1(num_total_indices);
 
         // prepare the result
-        const urange32_t geometries_range(m_geometries.size(), m_geometries.size() + geometry_infos.size());
+        const urange32_t geometries_range(static_cast<uint32_t>(m_geometries.size()),
+                                          static_cast<uint32_t>(m_geometries.size() + geometry_infos.size()));
         m_geometries.resize(geometries_range.m_end);
 
         for (size_t i_geometry_info = 0; i_geometry_info < geometry_infos.size(); i_geometry_info++)
         {
             const AiGeometryInfo &   geometry_info     = geometry_infos[i_geometry_info];
-            const uint32_t           vertices_base_idx = vertices_base_idxs[i_geometry_info];
-            const uint32_t           indices_base_idx  = indices_base_idxs[i_geometry_info];
-            std::span<float3>        span_vb_positions(vb_positions1.begin() + vertices_base_idx,
+            const uint32_t           vertices_base_index = vertices_base_indexs[i_geometry_info];
+            const uint32_t           indices_base_index  = indices_base_indexs[i_geometry_info];
+            std::span<float3>        span_vb_positions(vb_positions1.begin() + vertices_base_index,
                                                 geometry_info.m_dst_num_vertices);
-            std::span<CompactVertex> span_vb_packed(vb_packed1.begin() + vertices_base_idx,
+            std::span<CompactVertex> span_vb_packed(vb_packed1.begin() + vertices_base_index,
                                                     geometry_info.m_dst_num_vertices);
-            std::span<VertexIndexT> span_ib(ib1.begin() + indices_base_idx, geometry_info.m_dst_num_indices);
+            std::span<VertexIndexT> span_ib(ib1.begin() + indices_base_index, geometry_info.m_dst_num_indices);
 
             ai_scene->write_geometry_info(&span_vb_positions, &span_vb_packed, &span_ib, geometry_info);
 
             SceneGeometry & model = m_geometries[i_geometry_info + geometries_range.m_begin];
 
-            // TODO:: have to be offset if pushed more than one mesh
-            model.m_vbuf_base_idx = vertices_base_idx;
-            model.m_ibuf_base_idx = indices_base_idx;
-            model.m_num_indices   = geometry_info.m_dst_num_indices;
-            model.m_num_vertices  = geometry_info.m_dst_num_vertices;
+            model.m_vbuf_base_index = vertices_base_index;
+            model.m_ibuf_base_index = indices_base_index;
+            model.m_num_indices   = static_cast<BufferSizeT>(geometry_info.m_dst_num_indices);
+            model.m_num_vertices  = static_cast<BufferSizeT>(geometry_info.m_dst_num_vertices);
             model.m_is_updatable  = true;
-            model.m_material_idx  = material_offset + geometry_info.m_src_material_index;
+            model.m_material_index =
+                static_cast<BufferSizeT>(material_offset + geometry_info.m_src_material_index);
+
+            // check if emission have any intensity
+            const StandardEmission & emission =
+                m_h_emissions[emission_offset + geometry_info.m_src_material_index];
+            bool is_emitting_non_zero_intensity = false;
+            if (emission.is_emission_texture())
+            {
+                is_emitting_non_zero_intensity = true;
+            }
+            else
+            {
+                float3 emission_val            = emission.decode_rgb(emission.m_emission_tex_id);
+                is_emitting_non_zero_intensity = (length(emission_val) > 0.0f);
+            }
+
+            if (is_emitting_non_zero_intensity)
+            {
+                model.m_emission_index =
+                    static_cast<BufferSizeT>(emission_offset + geometry_info.m_src_material_index);
+            }
+            else
+            {
+                model.m_emission_index = 0;
+            }
+
+            assert(geometry_info.m_dst_num_indices < std::numeric_limits<BufferSizeT>::max());
+            assert(geometry_info.m_dst_num_vertices < std::numeric_limits<BufferSizeT>::max());
+            assert(material_offset + geometry_info.m_src_material_index <
+                   std::numeric_limits<BufferSizeT>::max());
         }
 
         Rhi::CommandBuffer cmd_buffer = m_transfer_cmd_pool.get_command_buffer();
@@ -263,6 +320,16 @@ struct SceneResource
     }
 
     StandardMaterial
+    get_standard_black_material()
+    {
+        StandardMaterial standard_material;
+        standard_material.m_diffuse_tex_id = standard_material.encode_rgb(float3(0.0f, 0.0f, 0.0f));
+        standard_material.m_specular_tex_id = standard_material.encode_rgb(float3(0.0f, 0.0f, 0.0f));
+        standard_material.m_roughness_tex_id = standard_material.encode_r(1.0f);
+        return standard_material;
+    }
+
+    StandardMaterial
     add_standard_material(const std::filesystem::path & path, const aiMaterial & ai_material)
     {
         StandardMaterial standard_material;
@@ -299,15 +366,15 @@ struct SceneResource
                  const char *                  ai_mat_key_0,
                  int                           ai_mat_key_1,
                  int                           ai_mat_key_2,
-                 const int                     num_desired_channels)
+                 const size_t                  num_desired_channels)
     {
         aiString  tex_name;
         aiColor4D color;
         if (ai_material.GetTexture(ai_tex_type, 0, &tex_name) == aiReturn_SUCCESS)
         {
             const std::filesystem::path tex_path = path.parent_path() / std::string(tex_name.C_Str());
-            *blob                                = add_texture(tex_path, num_desired_channels);
-            assert((*blob & (1 << 24)) == 0);
+            const size_t                tex_id   = add_texture(tex_path, num_desired_channels);
+            *blob                                = static_cast<uint32_t>(tex_id);
         }
         else if (aiGetMaterialColor(&ai_material, ai_mat_key_0, ai_mat_key_1, ai_mat_key_2, &color) == aiReturn_SUCCESS)
         {
@@ -319,8 +386,38 @@ struct SceneResource
             {
                 *blob = material->encode_rgb(float3(color.r, color.g, color.b));
             }
-            assert((*blob & (1 << 24)) != 0);
         }
+    }
+
+    StandardEmission
+    get_standard_black_emission()
+    {
+        StandardEmission result;
+        result.m_emission_tex_id = result.encode_rgb(float3(0.0f, 0.0f, 0.0f));
+        return result;
+    }
+
+    StandardEmission
+    add_standard_emission(const std::filesystem::path & path, const aiMaterial & ai_material)
+    {
+        StandardEmission result;
+        aiString         tex_name;
+        aiColor4D        color;
+        if (ai_material.GetTexture(aiTextureType::aiTextureType_EMISSIVE, 0, &tex_name) == aiReturn_SUCCESS)
+        {
+            const std::filesystem::path tex_path = path.parent_path() / std::string(tex_name.C_Str());
+            const size_t                tex_id   = add_texture(tex_path, 3);
+            result.m_emission_tex_id             = static_cast<uint32_t>(tex_id);
+        }
+        else if (aiGetMaterialColor(&ai_material, AI_MATKEY_COLOR_EMISSIVE, &color))
+        {
+            result.m_emission_tex_id = result.encode_rgb(float3(color.r, color.g, color.b));
+        }
+        else
+        {
+            result.m_emission_tex_id = result.encode_rgb(float3(0.0f, 0.0f, 0.0f));
+        }
+        return result;
     }
 
     size_t
@@ -354,7 +451,6 @@ struct SceneResource
 
         // Calculate necessary sizes
         const size_t size_in_bytes_per_row = resolution.x * EnumHelper::GetSizeInBytesPerPixel(format_enum);
-        const size_t size_in_bytes         = resolution.y * size_in_bytes_per_row;
         const size_t aligned_size_in_bytes_per_row =
             round_up(size_in_bytes_per_row, m_device.get_data_pitch_alignment());
         const size_t aligned_size_in_bytes = resolution.y * aligned_size_in_bytes_per_row;
@@ -384,13 +480,8 @@ struct SceneResource
         stbi_image_free(image);
 
         // Issue command buffer to copy to texture
-        cmd_buffer.copy_buffer_to_texture(texture,
-                                          texture.m_resolution,
-                                          uint3(0, 0, 0),
-                                          staging_buffer,
-                                          0,
-                                          aligned_size_in_bytes_per_row,
-                                          aligned_size_in_bytes);
+        cmd_buffer.copy_buffer_to_texture(texture, texture.m_resolution, uint3(0, 0, 0), staging_buffer, 0, aligned_size_in_bytes_per_row);
+        // cmd_buffer.transition_texture(texture, Rhi::TextureStateEnum::TransferDst, Rhi::TextureStateEnum::ReadOnly);
 
         // submit and wait
         Rhi::Fence fence("texture_upload_fence", m_device);
@@ -437,11 +528,11 @@ struct SceneResource
                         Rhi::RayTracingGeometryDesc geom_desc;
                         geom_desc.set_flag(Rhi::RayTracingGeometryFlag::Opaque);
                         geom_desc.set_index_buffer(m_d_ibuf,
-                                                   geometry.m_ibuf_base_idx * Rhi::GetSizeInBytes(m_ibuf_index_type),
+                                                   geometry.m_ibuf_base_index * Rhi::GetSizeInBytes(m_ibuf_index_type),
                                                    m_ibuf_index_type,
                                                    geometry.m_num_indices);
                         geom_desc.set_vertex_buffer(m_d_vbuf_position,
-                                                    geometry.m_vbuf_base_idx * Rhi::GetSizeInBytes(m_vbuf_position_type),
+                                                    geometry.m_vbuf_base_index * Rhi::GetSizeInBytes(m_vbuf_position_type),
                                                     m_vbuf_position_type,
                                                     Rhi::GetSizeInBytes(m_vbuf_position_type),
                                                     geometry.m_num_vertices);
@@ -469,8 +560,10 @@ struct SceneResource
             {
                 const size_t base_instance_id = scene_desc.m_instances[i_inst].m_base_instance_id;
                 const Rhi::RayTracingBlas & blas = m_rt_blases[base_instance_id];
-                instances[i_inst] =
-                    Rhi::RayTracingInstance(blas, scene_desc.m_instances[i_inst].m_transform, 0, base_instance_id);
+                instances[i_inst]                = Rhi::RayTracingInstance(blas,
+                                                            scene_desc.m_instances[i_inst].m_transform,
+                                                            scene_desc.m_instances[i_inst].m_hit_group_id,
+                                                            static_cast<uint32_t>(base_instance_id));
             }
 
             // build tlas
@@ -482,21 +575,39 @@ struct SceneResource
         cmd_buffer.begin();
 
         // build material buffer
-        Rhi::Buffer staging_buffer("scene_staging_buffer_material",
-                                   m_device,
-                                   Rhi::BufferUsageEnum::TransferSrc,
-                                   Rhi::MemoryUsageEnum::CpuOnly,
-                                   m_h_materials.size() * sizeof(m_h_materials[0]));
+        Rhi::Buffer material_staging_buffer("scene_material_staging_buffer_material",
+                                            m_device,
+                                            Rhi::BufferUsageEnum::TransferSrc,
+                                            Rhi::MemoryUsageEnum::CpuOnly,
+                                            m_h_materials.size() * sizeof(m_h_materials[0]));
         {
-            std::memcpy(staging_buffer.map(),
+            std::memcpy(material_staging_buffer.map(),
                         m_h_materials.data(),
                         m_h_materials.size() * sizeof(m_h_materials[0]));
-            staging_buffer.unmap();
+            material_staging_buffer.unmap();
             cmd_buffer.copy_buffer_to_buffer(m_d_materials,
                                              0,
-                                             staging_buffer,
+                                             material_staging_buffer,
                                              0,
                                              m_h_materials.size() * sizeof(m_h_materials[0]));
+        }
+
+        // build emission buffer
+        Rhi::Buffer emission_staging_buffer("scene_staging_buffer_emission",
+                                            m_device,
+                                            Rhi::BufferUsageEnum::TransferSrc,
+                                            Rhi::MemoryUsageEnum::CpuOnly,
+                                            m_h_emissions.size() * sizeof(m_h_emissions[0]));
+        {
+            std::memcpy(emission_staging_buffer.map(),
+                        m_h_emissions.data(),
+                        m_h_emissions.size() * sizeof(m_h_emissions[0]));
+            emission_staging_buffer.unmap();
+            cmd_buffer.copy_buffer_to_buffer(m_d_emissions,
+                                             0,
+                                             emission_staging_buffer,
+                                             0,
+                                             m_h_emissions.size() * sizeof(m_h_emissions[0]));
         }
 
         // build mesh table
@@ -508,7 +619,9 @@ struct SceneResource
             for (size_t i = 0; i < m_base_instances.size(); i++)
             {
                 BaseInstanceTableEntry base_instance_entry;
-                base_instance_entry.m_geometry_table_index_base = geometry_table.size();
+                base_instance_entry.m_geometry_table_index_base =
+                    static_cast<uint16_t>(geometry_table.size());
+                assert(geometry_table.size() < std::numeric_limits<uint16_t>::max());
                 base_instance_table.push_back(base_instance_entry);
                 for (size_t k = 0; k < m_base_instances[i].m_geometry_id_ranges.size(); k++)
                 {
@@ -517,9 +630,10 @@ struct SceneResource
                     {
                         const auto &       geometry = m_geometries[j];
                         GeometryTableEntry geometry_entry;
-                        geometry_entry.m_vertex_base_idx = geometry.m_vbuf_base_idx;
-                        geometry_entry.m_index_base_idx  = geometry.m_ibuf_base_idx;
-                        geometry_entry.m_material_idx    = geometry.m_material_idx;
+                        geometry_entry.m_vertex_base_index = geometry.m_vbuf_base_index;
+                        geometry_entry.m_index_base_index  = geometry.m_ibuf_base_index;
+                        geometry_entry.m_material_index    = geometry.m_material_index;
+                        geometry_entry.m_emission_index    = geometry.m_emission_index;
                         geometry_table.push_back(geometry_entry);
                     }
                 }

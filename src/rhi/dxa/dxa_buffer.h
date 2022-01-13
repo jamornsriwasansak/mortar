@@ -5,14 +5,15 @@
 #ifdef USE_DXA
 
     #include "dxa_common.h"
+    #include "dxa_constants.h"
     #include "dxa_device.h"
 
 namespace DXA_NAME
 {
 struct Buffer
 {
-    BufferUsageEnum                    m_buffer_usage  = BufferUsageEnum::None;
-    MemoryUsageEnum                    m_memory_usage  = MemoryUsageEnum::None;
+    BufferUsageEnum                    m_buffer_usage;
+    MemoryUsageEnum                    m_memory_usage;
     D3D12MAHandle<D3D12MA::Allocation> m_allocation    = nullptr;
     size_t                             m_size_in_bytes = 0;
 
@@ -62,8 +63,6 @@ struct Buffer
 
         switch (memory_usage)
         {
-        case MemoryUsageEnum::None:
-            break;
         case MemoryUsageEnum::CpuOnly:
         case MemoryUsageEnum::CpuToGpu:
             alloc_desc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
@@ -80,7 +79,7 @@ struct Buffer
         }
 
         // setup state
-        D3D12_RESOURCE_STATES states = static_cast<D3D12_RESOURCE_STATES>(modified_buffer_usage);
+        D3D12_RESOURCE_STATES states = Rhi::GetD3D12_RESOURCE_STATES(modified_buffer_usage);
         if (!HasOnlyFlag(modified_buffer_usage, BufferUsageEnum::StorageBuffer))
         {
             states = states & ~D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
@@ -124,7 +123,7 @@ struct Buffer
     }
 
     void *
-    map()
+    map() const
     {
         assert(m_memory_usage == MemoryUsageEnum::CpuOnly || m_memory_usage == MemoryUsageEnum::CpuToGpu ||
                m_memory_usage == MemoryUsageEnum::GpuToCpu);
@@ -140,7 +139,7 @@ struct Buffer
     }
 
     void
-    unmap()
+    unmap() const
     {
         m_allocation->GetResource()->Unmap(0, nullptr);
     }

@@ -40,7 +40,7 @@ struct CommandPool
             allocate_info.setCommandPool(m_vk_cmd_pool.get());
             allocate_info.setCommandBufferCount(1);
             vk::CommandBuffer command_buffer;
-            m_device.m_vk_ldevice->allocateCommandBuffers(&allocate_info, &command_buffer);
+            VKCK(m_device.m_vk_ldevice->allocateCommandBuffers(&allocate_info, &command_buffer));
             m_pre_alloc_cmd_buffers.emplace_back(m_vk_queue, command_buffer);
         }
         return m_pre_alloc_cmd_buffers[m_cmd_buffer_index++];

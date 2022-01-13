@@ -570,7 +570,8 @@ struct RayTracingShaderTable
     RayTracingShaderTable(const std::string &        name,
                           const Device &             device,
                           const RayTracingPipeline & pipeline,
-                          // TODO:: these gpu descriptor handle should be set in a different function
+                          // Local root signature is not supported
+                          // TODO:: these gpu descriptor handle for local root signature should be set in a different function
                           const D3D12_GPU_DESCRIPTOR_HANDLE raygen_handle    = { 0 },
                           const D3D12_GPU_DESCRIPTOR_HANDLE miss_handle      = { 0 },
                           const D3D12_GPU_DESCRIPTOR_HANDLE hit_group_handle = { 0 })
@@ -586,7 +587,7 @@ struct RayTracingShaderTable
             round_up(hitgroup_size, static_cast<size_t>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
         const size_t shader_table_size = rounded_raygen_size + rounded_miss_size + rounded_hitgroup_size;
 
-        // allocate resource
+        // Allocate resource
         m_shader_table_buffer = [&]()
         {
             // Create shader table buffer
@@ -607,7 +608,7 @@ struct RayTracingShaderTable
             return D3D12MAHandle<D3D12MA::Allocation>(allocation);
         }();
 
-        // write sbt
+        // Start writing shader table
         uint8_t * start_address = nullptr;
         DXCK(m_shader_table_buffer->GetResource()->Map(0, nullptr, (void **)&start_address));
 
@@ -618,11 +619,14 @@ struct RayTracingShaderTable
             std::memcpy(sbtp,
                         pipeline.m_dx_rt_pso_props->GetShaderIdentifier(symbol.c_str()),
                         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            if (pipeline.m_raygen_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
-            {
-                // TODO:: copy multiple handles to support multiple local root signatures
-                std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &raygen_handle, sizeof(raygen_handle));
-            }
+
+            // Local root signature for raygen is not supported
+            assert(pipeline.m_raygen_record_size <= D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            // if (pipeline.m_raygen_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
+            // {
+            //     // TODO:: copy multiple handles to support multiple local root signatures
+            //     std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &raygen_handle, sizeof(raygen_handle));
+            // }
             sbtp += pipeline.m_raygen_record_size;
         }
 
@@ -632,11 +636,13 @@ struct RayTracingShaderTable
             std::memcpy(sbtp,
                         pipeline.m_dx_rt_pso_props->GetShaderIdentifier(symbol.c_str()),
                         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            if (pipeline.m_miss_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
-            {
-                // TODO:: copy multiple handles to support multiple local root signatures
-                std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &miss_handle, sizeof(miss_handle));
-            }
+            // Local root signature for hitgroup is not supported
+            assert(pipeline.m_miss_record_size <= D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            // if (pipeline.m_miss_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
+            // {
+            //     // TODO:: copy multiple handles to support multiple local root signatures
+            //     std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &miss_handle, sizeof(miss_handle));
+            // }
             sbtp += pipeline.m_miss_record_size;
         }
 
@@ -646,11 +652,13 @@ struct RayTracingShaderTable
             std::memcpy(sbtp,
                         pipeline.m_dx_rt_pso_props->GetShaderIdentifier(symbol.c_str()),
                         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            if (pipeline.m_hit_group_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
-            {
-                // TODO:: copy multiple handles to support multiple local root signatures
-                std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &hit_group_handle, sizeof(hit_group_handle));
-            }
+            // Local root signature for hitgroup is not supported
+            assert(pipeline.m_hit_group_record_size <= D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            // if (pipeline.m_hit_group_record_size > D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES)
+            // {
+            //     // TODO:: copy multiple handles to support multiple local root signatures
+            //     std::memcpy(sbtp + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &hit_group_handle, sizeof(hit_group_handle));
+            // }
             sbtp += pipeline.m_hit_group_record_size;
         }
 

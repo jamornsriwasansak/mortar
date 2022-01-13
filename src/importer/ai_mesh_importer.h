@@ -73,7 +73,7 @@ struct AiScene
         std::vector<AiGeometryInfo> result;
 
         // iterate over all meshes and split them
-        for (unsigned int i_mesh = 0; i_mesh < m_ai_scene->mNumMeshes; i_mesh++)
+        for (aiMeshSizeT i_mesh = 0; i_mesh < m_ai_scene->mNumMeshes; i_mesh++)
         {
             get_geometry_infos(&result, i_mesh, max_dst_num_vertices_per_geometry);
         }
@@ -214,24 +214,23 @@ struct AiScene
                                   std::span<VertexIndexT> *  indices,
                                   const AiGeometryInfo &     geometry_info) const
     {
-        // make into reference, so we can use operator[] easily
-        // (operator[] usually has lower cost than ->at())
         std::span<float3> &        rpositions = *positions;
         std::span<CompactVertex> & rcvertices = *compact_vertices;
         std::span<VertexIndexT> &  rcindices  = *indices;
         const aiMesh &             ai_mesh = *m_ai_scene->mMeshes[geometry_info.m_src_mesh_index];
 
         // map from src vertex index in ai mesh to dst vertex index
-        std::map<unsigned int, uint32_t> ai_vindex_to_dst_vindex;
+        std::map<aiVertexSizeT, size_t> ai_vindex_to_dst_vindex;
 
         // for each face in ai mesh
         const urange32_t face_range      = geometry_info.m_src_faces_range;
         size_t           num_dst_indices = 0;
         for (uint32_t i_src_face = face_range.m_begin; i_src_face < face_range.m_end; i_src_face++)
         {
-            auto get_dst_vindex = [&](const uint ai_vindex) {
+            auto get_dst_vindex = [&](const aiVertexSizeT ai_vindex)
+            {
                 // get dst_vindex
-                uint       dst_vindex;
+                size_t     dst_vindex;
                 const auto map_result = ai_vindex_to_dst_vindex.find(ai_vindex);
 
                 if (map_result == ai_vindex_to_dst_vindex.end())
@@ -273,16 +272,20 @@ struct AiScene
             };
 
             // we convert ai_indices into dst_indices
-            const uint32_t dst_vindex0 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[0]);
-            uint32_t       dst_vindex1 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[1]);
+            const size_t dst_vindex0 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[0]);
+            size_t       dst_vindex1 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[1]);
             for (unsigned int i_index = 2; i_index < ai_mesh.mFaces[i_src_face].mNumIndices; i_index++)
             {
-                const uint32_t dst_vindex2 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[i_index]);
+                const size_t dst_vindex2 = get_dst_vindex(ai_mesh.mFaces[i_src_face].mIndices[i_index]);
 
-                rcindices[num_dst_indices + 0] = dst_vindex0;
-                rcindices[num_dst_indices + 1] = dst_vindex1;
-                rcindices[num_dst_indices + 2] = dst_vindex2;
+                rcindices[num_dst_indices + 0] = static_cast<VertexIndexT>(dst_vindex0);
+                rcindices[num_dst_indices + 1] = static_cast<VertexIndexT>(dst_vindex1);
+                rcindices[num_dst_indices + 2] = static_cast<VertexIndexT>(dst_vindex2);
                 num_dst_indices += 3;
+
+                assert(dst_vindex0 < std::numeric_limits<VertexIndexT>::max());
+                assert(dst_vindex1 < std::numeric_limits<VertexIndexT>::max());
+                assert(dst_vindex2 < std::numeric_limits<VertexIndexT>::max());
 
                 dst_vindex1 = dst_vindex2;
             }
@@ -337,19 +340,23 @@ struct AiScene
         size_t index_buffer_offset = 0;
         for (aiFaceSizeT i_face = 0; i_face < ai_mesh.mNumFaces; i_face++)
         {
-            const uint16_t ai_index0 = ai_mesh.mFaces[i_face].mIndices[0];
+            const unsigned int ai_index0 = ai_mesh.mFaces[i_face].mIndices[0];
 
             // convert triangle fan -> triangles
             for (unsigned int i_fan = 0; i_fan < ai_mesh.mFaces[i_face].mNumIndices - 2; i_fan++)
             {
-                const uint16_t ai_index1 = ai_mesh.mFaces[i_face].mIndices[i_fan + 1];
-                const uint16_t ai_index2 = ai_mesh.mFaces[i_face].mIndices[i_fan + 2];
+                const unsigned int ai_index1 = ai_mesh.mFaces[i_face].mIndices[i_fan + 1];
+                const unsigned int ai_index2 = ai_mesh.mFaces[i_face].mIndices[i_fan + 2];
 
-                rcindices[index_buffer_offset + 0] = ai_index0;
-                rcindices[index_buffer_offset + 1] = ai_index1;
-                rcindices[index_buffer_offset + 2] = ai_index2;
+                rcindices[index_buffer_offset + 0] = static_cast<uint16_t>(ai_index0);
+                rcindices[index_buffer_offset + 1] = static_cast<uint16_t>(ai_index1);
+                rcindices[index_buffer_offset + 2] = static_cast<uint16_t>(ai_index2);
 
                 index_buffer_offset += 3;
+
+                assert(ai_index0 < std::numeric_limits<VertexIndexT>::max());
+                assert(ai_index1 < std::numeric_limits<VertexIndexT>::max());
+                assert(ai_index2 < std::numeric_limits<VertexIndexT>::max());
             }
         }
     }

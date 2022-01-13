@@ -4,6 +4,9 @@
     #define RAY_GEN_SHADER [shader("raygeneration")]
     #define CLOSEST_HIT_SHADER [shader("closesthit")]
     #define MISS_SHADER [shader("miss")]
+    #define RAY_PAYLOAD
+    #define INOUT(NAME) inout NAME
+    #define CONST_FUNC
 
     #define REGISTER(SPACE, VARIABLE_NAME, TYPE, BINDING) \
     VARIABLE_NAME:                                        \
@@ -14,10 +17,26 @@
 
     #define REGISTER_WRAP_BEGIN(NAME)
     #define REGISTER_WRAP_END
+
 #else
+
+    #define RAY_GEN_SHADER
+    #define CLOSEST_HIT_SHADER
+    #define MISS_SHADER
+    #define RAY_PAYLOAD
+    #define INOUT(NAME) NAME &
+    #define CONST_FUNC const
 
     #include "pch/pch.h"
     #include "rhi/rhi.h"
+
+struct RayDesc
+{
+    float3 Origin;
+    float3 Direction;
+    float  TMin;
+    float  TMax;
+};
 
 struct DescriptorsBase
 {

@@ -318,9 +318,8 @@ struct HlslDxcCompiler
         return code_result;
     }
 
-    template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
-    compile_as_dxil(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src) const
+    compile_as_dxil(const Rhi::ShaderSrc & shader_src) const
     {
         Logger::Info(__FUNCTION__ " compiling dxil from path : " + shader_src.m_file_path.string());
         return dxc_compile(shader_src.m_file_path.string(),
@@ -332,9 +331,8 @@ struct HlslDxcCompiler
                            false);
     }
 
-    template <typename ShaderStageEnum>
     ComPtr<IDxcBlob>
-    compile_as_spirv(const Rhi::TShaderSrc<ShaderStageEnum> & shader_src) const
+    compile_as_spirv(const Rhi::ShaderSrc & shader_src) const
     {
         Logger::Info(__FUNCTION__ " compiling spirv from path : " + shader_src.m_file_path.string());
 

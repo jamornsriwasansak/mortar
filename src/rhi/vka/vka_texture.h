@@ -6,6 +6,7 @@
 
     #include "vka_aliasable_memory.h"
     #include "vka_common.h"
+    #include "vka_constants.h"
     #include "vka_device.h"
     #include "vka_stagingbuffermanager.h"
     #include "vka_swapchain.h"
@@ -106,7 +107,7 @@ struct Texture
     : m_device(device)
     {
         // Setup image create info
-        VkImageCreateInfo image_ci = create_info.get_create_info();
+        VkImageCreateInfo image_ci = GetVkImageCreateInfo(create_info);
 
         // Setup alloc info
         VmaAllocationCreateInfo vma_alloc_ci = {};
@@ -126,7 +127,7 @@ struct Texture
 
         // Set values
         m_image_variant = vma_bundle;
-        m_vk_format     = vk::Format(create_info.m_format);
+        m_vk_format     = GetVkFormat(create_info.m_format);
         m_vk_image_view = create_image_view(device.m_vk_ldevice.get(), _vk_image, m_vk_format);
         m_resolution    = int3(create_info.m_width, create_info.m_height, create_info.m_depth);
 
@@ -134,10 +135,7 @@ struct Texture
         device.one_time_command_submit(
             [&](vk::CommandBuffer cmd_buf)
             {
-                transition_image_layout(cmd_buf,
-                                        _vk_image,
-                                        vk::ImageLayout::eUndefined,
-                                        static_cast<vk::ImageLayout>(stage_enum));
+                transition_image_layout(cmd_buf, _vk_image, vk::ImageLayout::eUndefined, GetVkImageLayout(stage_enum));
             });
 
         // Set names
@@ -157,7 +155,7 @@ struct Texture
     : m_device(device)
     {
         // Setup image create info
-        VkImageCreateInfo image_ci = create_info.get_create_info();
+        VkImageCreateInfo image_ci = GetVkImageCreateInfo(create_info);
 
         // Create image
         m_image_variant = device.m_vk_ldevice->createImage(image_ci);
@@ -166,10 +164,11 @@ struct Texture
         vmaBindImageMemory2(memory.m_vma_memory_bundle->m_vma_allocator,
                             memory.m_vma_memory_bundle->m_vma_allocation,
                             offset_into_memory_in_bytes,
-                            std::get<vk::UniqueImage>(m_image_variant).get());
+                            std::get<vk::UniqueImage>(m_image_variant).get(),
+                            nullptr);
 
         // Set values
-        m_vk_format     = vk::Format(create_info.m_format);
+        m_vk_format     = GetVkFormat(create_info.m_format);
         m_vk_image_view = create_image_view(device.m_vk_ldevice.get(),
                                             std::get<vk::UniqueImage>(m_image_variant).get(),
                                             m_vk_format);
@@ -182,7 +181,7 @@ struct Texture
                 transition_image_layout(cmd_buf,
                                         std::get<vk::UniqueImage>(m_image_variant).get(),
                                         vk::ImageLayout::eUndefined,
-                                        static_cast<vk::ImageLayout>(stage_enum));
+                                        GetVkImageLayout(stage_enum));
             });
 
         // Set names
@@ -191,6 +190,26 @@ struct Texture
             device.name_vkhpp_object(std::get<vk::UniqueImage>(m_image_variant).get(), name);
             device.name_vkhpp_object(*m_vk_image_view, name + "_image_view");
         }
+    }
+
+    static vk::ImageCreateInfo
+    GetVkImageCreateInfo(const Rhi::TextureCreateInfo & create_info)
+    {
+        // Assign create info
+        vk::ImageCreateInfo image_ci;
+        image_ci.setImageType(vk::ImageType::e2D);
+        image_ci.extent.setWidth(create_info.m_width);
+        image_ci.extent.setHeight(create_info.m_height);
+        image_ci.extent.setDepth(create_info.m_depth);
+        image_ci.setMipLevels(create_info.m_mip_levels);
+        image_ci.setArrayLayers(1);
+        image_ci.setFormat(GetVkFormat(create_info.m_format));
+        image_ci.setTiling(vk::ImageTiling::eOptimal);
+        image_ci.setInitialLayout(vk::ImageLayout::eUndefined);
+        image_ci.setUsage(GetVkUsageFlags(create_info.m_texture_usage) | vk::ImageUsageFlagBits::eSampled);
+        image_ci.setSamples(vk::SampleCountFlagBits::e1);
+        image_ci.setSharingMode(vk::SharingMode::eExclusive);
+        return image_ci;
     }
 
     vk::Image

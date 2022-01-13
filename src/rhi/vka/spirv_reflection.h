@@ -4,6 +4,7 @@
 
 #include "rhi/common/rhi_enums.h"
 #include "rhi/common/rhi_shader_src.h"
+#include "vka_constants.h"
 
 struct VkReflectionResult
 {
@@ -44,7 +45,7 @@ struct SpirvReflector
                          static_cast<int>(shader_srcs[i_spirv_code].m_shader_stage));
 
             vk::ShaderStageFlagBits shader_stage =
-                static_cast<vk::ShaderStageFlagBits>(shader_srcs[i_spirv_code].m_shader_stage);
+                Rhi::GetVkShaderStageFlagBits(shader_srcs[i_spirv_code].m_shader_stage);
             result.m_shader_stage_flags[i_spirv_code] = shader_stage;
 
             spv_reflect::ShaderModule shader_module(spirv_codes[i_spirv_code].size(),

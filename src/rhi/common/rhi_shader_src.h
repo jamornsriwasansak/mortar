@@ -7,32 +7,31 @@
 
 namespace Rhi
 {
-template <typename ShaderStageEnum>
-struct TShaderSrc
+struct ShaderSrc
 {
     std::filesystem::path    m_file_path = "";
     std::string              m_entry     = "";
     std::vector<std::string> m_defines;
     ShaderStageEnum          m_shader_stage;
 
-    TShaderSrc() {}
+    ShaderSrc() {}
 
-    TShaderSrc(const ShaderStageEnum            shader_stage,
-               const std::filesystem::path &    path    = "",
-               const std::string &              entry   = "",
-               const std::vector<std::string> & defines = {})
+    ShaderSrc(const ShaderStageEnum            shader_stage,
+              const std::filesystem::path &    path    = "",
+              const std::string &              entry   = "",
+              const std::vector<std::string> & defines = {})
     : m_shader_stage(shader_stage), m_file_path(path), m_entry(entry), m_defines(defines)
     {
     }
 
-    TShaderSrc &
+    ShaderSrc &
     set_file_path(const std::filesystem::path & path)
     {
         m_file_path = path;
         return *this;
     }
 
-    TShaderSrc &
+    ShaderSrc &
     set_entry(const std::string & entry)
     {
         m_entry = entry;

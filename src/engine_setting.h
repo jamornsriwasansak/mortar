@@ -6,6 +6,7 @@ struct EngineSetting
 {
     static const uint32_t MaxNumBindlessTextures         = 100;
     static const uint32_t MaxNumStandardMaterials        = 1000;
+    static const uint32_t MaxNumStandardEmissions        = 1000;
     static const uint32_t MaxNumVertices                 = 10000000;
     static const uint32_t MaxNumIndices                  = 30000000;
     static const uint32_t MaxNumGeometryOffsetTableEntry = 14000;

@@ -20,7 +20,6 @@ struct CompactVertex
     float3
     get_snormal()
     {
-        //const float z = sqrt(1.0f - m_snormal.x * m_snormal.x - m_snormal.y * m_snormal.y);
         return float3(m_snormal.x, m_snormal.y, m_snormal.z);
     }
 };

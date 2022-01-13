@@ -23,11 +23,6 @@
 
 namespace VKA_NAME
 {
-using ShaderSrc = Rhi::TShaderSrc<VKA_NAME::ShaderStageEnum>;
-
-using TextureCreateInfo =
-    RhiCommon::TTextureCreateInfo<VKA_NAME::FormatEnum, VKA_NAME::TextureUsageEnum, vk::ImageCreateInfo>;
-
 using DeviceSizeT = vk::DeviceSize;
 } // namespace VKA_NAME
 #endif

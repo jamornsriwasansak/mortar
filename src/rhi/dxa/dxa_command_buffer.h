@@ -152,7 +152,7 @@ struct CommandBuffer
         index_buffer_view.SizeInBytes = size_in_bytes == std::numeric_limits<size_t>::max()
                                             ? static_cast<UINT>(buffer.m_size_in_bytes)
                                             : static_cast<UINT>(size_in_bytes);
-        index_buffer_view.Format      = static_cast<DXGI_FORMAT>(index_type);
+        index_buffer_view.Format      = GetDXGI_FORMAT(index_type);
 
         m_dx_command_list->IASetIndexBuffer(&index_buffer_view);
     }
@@ -246,8 +246,7 @@ struct CommandBuffer
                            const uint3     dst_offset,
                            const Buffer &  src_buffer,
                            const size_t    src_offset_in_bytes,
-                           const size_t    row_pitch_in_bytes,
-                           const size_t    size_in_bytes)
+                           const size_t    row_pitch_in_bytes)
     {
         D3D12_SUBRESOURCE_FOOTPRINT pitched_desc{};
         pitched_desc.Format   = dst_texture.m_dx_format;
@@ -397,8 +396,8 @@ struct CommandBuffer
     {
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Transition.pResource   = buffer.m_allocation->GetResource();
-        barrier.Transition.StateBefore = static_cast<D3D12_RESOURCE_STATES>(pre_enum);
-        barrier.Transition.StateAfter  = static_cast<D3D12_RESOURCE_STATES>(post_enum);
+        barrier.Transition.StateBefore = GetD3D12_RESOURCE_STATES(pre_enum);
+        barrier.Transition.StateAfter  = GetD3D12_RESOURCE_STATES(post_enum);
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         m_dx_command_list->ResourceBarrier(1, &barrier);
     }
@@ -408,8 +407,8 @@ struct CommandBuffer
     {
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Transition.pResource   = texture.m_dx_resource;
-        barrier.Transition.StateBefore = static_cast<D3D12_RESOURCE_STATES>(pre_enum);
-        barrier.Transition.StateAfter  = static_cast<D3D12_RESOURCE_STATES>(post_enum);
+        barrier.Transition.StateBefore = GetD3D12_RESOURCE_STATES(pre_enum);
+        barrier.Transition.StateAfter  = GetD3D12_RESOURCE_STATES(post_enum);
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         m_dx_command_list->ResourceBarrier(1, &barrier);
     }

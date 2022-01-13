@@ -18,7 +18,7 @@ struct QueryPool
     : m_dx_query_heap(construct_query_heap(device, query_type, num_queries)),
       m_query_result_readback_buffer(name + "_readback_buffer",
                                      device,
-                                     static_cast<BufferUsageEnum>(D3D12_RESOURCE_STATE_COPY_DEST),
+                                     BufferUsageEnum::TransferDst,
                                      MemoryUsageEnum::GpuToCpu,
                                      num_queries * sizeof(uint64_t))
     {

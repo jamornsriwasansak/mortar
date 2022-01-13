@@ -25,7 +25,7 @@ struct RasterPipelineState
 
     RasterPipelineState(const int2 & resolution) : m_resolution(resolution)
     {
-        const vk::SampleCountFlagBits num_msaa_samples = vk::SampleCountFlagBits::e1;
+        constexpr vk::SampleCountFlagBits num_msaa_samples = vk::SampleCountFlagBits::e1;
 
         vk::Viewport();
         {
@@ -59,7 +59,7 @@ struct RasterPipelineState
 
         m_multi_sample = vk::PipelineMultisampleStateCreateInfo();
         {
-            bool use_msaa = num_msaa_samples != vk::SampleCountFlagBits::e1;
+            constexpr bool use_msaa = num_msaa_samples != vk::SampleCountFlagBits::e1;
             m_multi_sample.setSampleShadingEnable(use_msaa);
             m_multi_sample.setRasterizationSamples(num_msaa_samples);
             m_multi_sample.setMinSampleShading(1.0f);

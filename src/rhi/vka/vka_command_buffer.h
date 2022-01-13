@@ -6,6 +6,7 @@
 
     #include "rhi/common/rhi_copy_region.h"
     #include "vka_common.h"
+    #include "vka_constants.h"
     #include "vka_descriptor.h"
     #include "vka_device.h"
     #include "vka_fence.h"
@@ -140,7 +141,7 @@ struct CommandBuffer
     void
     bind_index_buffer(const Buffer & index_buffer, const IndexType index_type)
     {
-        m_vk_command_buffer.bindIndexBuffer(index_buffer.get_vk_buffer(), 0, static_cast<vk::IndexType>(index_type));
+        m_vk_command_buffer.bindIndexBuffer(index_buffer.get_vk_buffer(), 0, GetVkIndexType(index_type));
     }
 
     void
@@ -164,8 +165,7 @@ struct CommandBuffer
                            const uint3     dst_offset,
                            const Buffer &  src_buffer,
                            const size_t    src_offset_in_bytes,
-                           const size_t    row_pitch_in_bytes,
-                           const size_t    size_in_bytes)
+                           [[maybe_unused]] const size_t    row_pitch_in_bytes)
     {
         // copy
         vk::BufferImageCopy copy_region = {};
@@ -304,8 +304,8 @@ struct CommandBuffer
     void
     transition_texture(const Texture & texture, const TextureStateEnum pre_enum, const TextureStateEnum post_enum)
     {
-        vk::ImageLayout old_vk_image_layout = static_cast<vk::ImageLayout>(pre_enum);
-        vk::ImageLayout new_vk_image_layout = static_cast<vk::ImageLayout>(post_enum);
+        vk::ImageLayout old_vk_image_layout = GetVkImageLayout(pre_enum);
+        vk::ImageLayout new_vk_image_layout = GetVkImageLayout(post_enum);
 
         vk::AccessFlags        src_access_mask = access_flags_for_layout(old_vk_image_layout);
         vk::AccessFlags        dst_access_mask = access_flags_for_layout(new_vk_image_layout);

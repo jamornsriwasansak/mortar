@@ -44,13 +44,13 @@ struct QueryPool
     {
         std::vector<uint64_t> result(num_queries);
         if (num_queries == 0) return result;
-        m_device.m_vk_ldevice->getQueryPoolResults(m_vk_query_pool.get(),
-                                                   0,
-                                                   num_queries,
-                                                   sizeof(result[0]) * result.size(),
-                                                   result.data(),
-                                                   0,
-                                                   vk::QueryResultFlagBits::e64);
+        VKCK(m_device.m_vk_ldevice->getQueryPoolResults(m_vk_query_pool.get(),
+                                                        0,
+                                                        num_queries,
+                                                        sizeof(result[0]) * result.size(),
+                                                        result.data(),
+                                                        0,
+                                                        vk::QueryResultFlagBits::e64));
         return result;
     }
 };
