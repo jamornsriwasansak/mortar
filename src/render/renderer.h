@@ -3,7 +3,6 @@
 #include "core/vmath.h"
 #include "gpu_profiler.h"
 #include "passes/final_composite.h"
-#include "passes/gbuffer_generation.h"
 #include "passes/path_tracing.h"
 #include "render_context.h"
 #include "rhi/rhi.h"

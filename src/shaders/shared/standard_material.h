@@ -1,6 +1,8 @@
 #ifndef STANDARD_MATERIAL_REF_H
 #define STANDARD_MATERIAL_REF_H
 
+#include "../cpp_compatible.h"
+
 struct StandardMaterial
 {
     // tex_id can be either texture id or value

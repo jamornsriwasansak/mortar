@@ -165,8 +165,7 @@ struct CommandBuffer
                            const uint3     dst_offset,
                            const Buffer &  src_buffer,
                            const size_t    src_offset_in_bytes,
-                           const size_t    row_pitch_in_bytes,
-                           const size_t    size_in_bytes)
+                           [[maybe_unused]] const size_t    row_pitch_in_bytes)
     {
         // copy
         vk::BufferImageCopy copy_region = {};

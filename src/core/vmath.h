@@ -77,6 +77,7 @@ struct rangeT
 };
 using urange32_t = rangeT<uint32_t>;
 using urange64_t = rangeT<uint64_t>;
+using urange_size_t = rangeT<size_t>;
 
 template <typename T>
 constexpr const T

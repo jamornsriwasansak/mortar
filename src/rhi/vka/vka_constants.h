@@ -32,9 +32,8 @@ GetVkShaderStageFlagBits(const Rhi::ShaderStageEnum shader_stage_enum)
     case Rhi::ShaderStageEnum::Miss:
         return vk::ShaderStageFlagBits::eMissKHR;
     default:
-        vk::ShaderStageFlagBits result;
         assert(false && "Program should not reach this line");
-        return result;
+        return vk::ShaderStageFlagBits::eAll;
     }
 }
 

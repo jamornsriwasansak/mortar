@@ -22,11 +22,11 @@ struct TextureCreateInfo
     TextureCreateInfo(const uint32_t              width,
                       const uint32_t              height,
                       const uint16_t              depth,
-                      const size_t                mip_levels,
+                      const uint32_t              mip_levels,
                       const Rhi::FormatEnum       format,
                       const Rhi::TextureUsageEnum texture_usage)
     : m_width(width), m_height(height), m_depth(depth), m_mip_levels(mip_levels), m_format(format), m_texture_usage(texture_usage)
     {
     }
 };
-} // namespace RhiCommon
+} // namespace Rhi

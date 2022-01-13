@@ -253,7 +253,7 @@ struct MainLoop
                 const float4x4 scale = glm::scale(glm::identity<float4x4>(), float3(1.0f));
                 const float4x4 translate =
                     glm::translate(glm::identity<float4x4>(), float3(40.0f * j, 0.0f, 40.0f * i));
-                SceneInstance instance2 = { sponza_instance_id, translate * scale };
+                SceneInstance instance2 = { static_cast<uint32_t>(sponza_instance_id), 0, translate * scale };
                 scene_desc.m_instances.push_back(instance2);
             }
         }

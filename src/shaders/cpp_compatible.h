@@ -6,6 +6,7 @@
     #define MISS_SHADER [shader("miss")]
     #define RAY_PAYLOAD
     #define INOUT(NAME) inout NAME
+    #define CONST_FUNC
 
     #define REGISTER(SPACE, VARIABLE_NAME, TYPE, BINDING) \
     VARIABLE_NAME:                                        \
@@ -23,8 +24,8 @@
     #define CLOSEST_HIT_SHADER
     #define MISS_SHADER
     #define RAY_PAYLOAD
-
     #define INOUT(NAME) NAME &
+    #define CONST_FUNC const
 
     #include "pch/pch.h"
     #include "rhi/rhi.h"

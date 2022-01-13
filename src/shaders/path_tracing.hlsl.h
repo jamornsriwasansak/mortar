@@ -88,14 +88,14 @@ ClosestHit(INOUT(PathTracingPayload) payload, const PathTracingAttributes attrib
     const GeometryTableEntry geometry_entry  = u_geometry_table[geometry_offset];
 
     // Index into subbuffer
-    const uint index0 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx];
-    const uint index1 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx + 1];
-    const uint index2 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_idx + 2];
+    const uint index0 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_index];
+    const uint index1 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_index + 1];
+    const uint index2 = u_indices[PrimitiveIndex() * 3 + geometry_entry.m_index_base_index + 2];
 
     // Shading Normal & Texcoord
-    const CompactVertex cv0 = u_compact_vertices[index0 + geometry_entry.m_vertex_base_idx];
-    const CompactVertex cv1 = u_compact_vertices[index1 + geometry_entry.m_vertex_base_idx];
-    const CompactVertex cv2 = u_compact_vertices[index2 + geometry_entry.m_vertex_base_idx];
+    const CompactVertex cv0 = u_compact_vertices[index0 + geometry_entry.m_vertex_base_index];
+    const CompactVertex cv1 = u_compact_vertices[index1 + geometry_entry.m_vertex_base_index];
+    const CompactVertex cv2 = u_compact_vertices[index2 + geometry_entry.m_vertex_base_index];
 
     // Interpolate Shading Normal
     const float3 snormal0 = cv0.get_snormal();
@@ -103,6 +103,13 @@ ClosestHit(INOUT(PathTracingPayload) payload, const PathTracingAttributes attrib
     const float3 snormal2 = cv2.get_snormal();
     float3       snormal  = normalize(snormal0 * (1.0f - barycentric.x - barycentric.y) +
                                snormal1 * barycentric.x + snormal2 * barycentric.y);
+
+    if (payload.m_is_first_bounce)
+    {
+        const uint2 pixel_pos               = DispatchRaysIndex().xy;
+        u_gbuffer_depth[pixel_pos]          = RayTCurrent();
+        u_gbuffer_shading_normal[pixel_pos] = snormal;
+    }
 
     // Interpolate Texcoord
     const float2 texcoord0 = cv0.m_texcoord;
@@ -113,31 +120,54 @@ ClosestHit(INOUT(PathTracingPayload) payload, const PathTracingAttributes attrib
 
     // TODO:: Add material graph evaluation here
 
-    // Standard Material
-    const StandardMaterial mat = u_materials[geometry_entry.m_material_idx];
+    float3 diffuse_reflectance;
+    float3 specular_reflectance;
+    float  roughness;
+    if (geometry_entry.m_material_index == 0)
+    {
+        diffuse_reflectance  = 0.0f.xxx;
+        specular_reflectance = 0.0f.xxx;
+        roughness            = 0.0f;
+    }
+    else
+    {
+        // Standard Material
+        const StandardMaterial mat = u_materials[geometry_entry.m_material_index];
 
-    // Material Reflectance / Roughness
-    const float3 diffuse_reflectance =
-        mat.has_diffuse_texture()
-            ? u_textures[mat.m_diffuse_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb
-            : mat.decode_rgb(mat.m_diffuse_tex_id);
-    const float3 specular_reflectance =
-        mat.has_specular_texture()
-            ? u_textures[mat.m_specular_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb
-            : mat.decode_rgb(mat.m_specular_tex_id);
-    const float roughness =
-        mat.has_roughness_texture()
-            ? u_textures[mat.m_roughness_tex_id].SampleLevel(u_sampler, texcoord, 0).r
-            : mat.decode_rgb(mat.m_roughness_tex_id).r;
+        // Material Reflectance / Roughness
+        diffuse_reflectance =
+            mat.has_diffuse_texture()
+                ? u_textures[mat.m_diffuse_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb
+                : mat.decode_rgb(mat.m_diffuse_tex_id);
+        specular_reflectance =
+            mat.has_specular_texture()
+                ? u_textures[mat.m_specular_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb
+                : mat.decode_rgb(mat.m_specular_tex_id);
+        roughness = mat.has_roughness_texture()
+                        ? u_textures[mat.m_roughness_tex_id].SampleLevel(u_sampler, texcoord, 0).r
+                        : mat.decode_rgb(mat.m_roughness_tex_id).r;
+    }
 
     if (payload.m_is_first_bounce)
     {
         const uint2 pixel_pos                     = DispatchRaysIndex().xy;
-        u_gbuffer_depth[pixel_pos]                = RayTCurrent();
-        u_gbuffer_shading_normal[pixel_pos]       = snormal;
         u_gbuffer_diffuse_reflectance[pixel_pos]  = diffuse_reflectance;
         u_gbuffer_specular_reflectance[pixel_pos] = specular_reflectance;
         u_gbuffer_roughness[pixel_pos]            = roughness;
+    }
+
+    float3 emission;
+    if (geometry_entry.m_emission_index == 0)
+    {
+        emission = 1.0f.xxx;
+    }
+    else
+    {
+        const StandardEmission emissive_mat = u_emissions[geometry_entry.m_emission_index];
+        emission =
+            emissive_mat.is_emission_texture()
+                ? u_textures[emissive_mat.m_emission_tex_id].SampleLevel(u_sampler, texcoord, 0).rgb
+                : emissive_mat.decode_rgb(emissive_mat.m_emission_tex_id);
     }
 
     // Construct Orthonormal basis

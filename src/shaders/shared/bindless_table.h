@@ -14,10 +14,10 @@
 
 struct GeometryTableEntry
 {
-    uint32_t m_vertex_base_idx;
-    uint32_t m_index_base_idx;
-    uint32_t m_material_idx;
-    uint32_t m_padding;
+    uint32_t m_vertex_base_index;
+    uint32_t m_index_base_index;
+    uint32_t m_material_index;
+    uint32_t m_emission_index;
 };
 
 struct BaseInstanceTableEntry

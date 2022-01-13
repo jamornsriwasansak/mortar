@@ -237,7 +237,7 @@ struct Device
             alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
             alloc_info.setCommandPool(command_pool.get());
             alloc_info.setCommandBufferCount(1);
-            m_vk_ldevice->allocateCommandBuffers(&alloc_info, &command_buffer);
+            VKCK(m_vk_ldevice->allocateCommandBuffers(&alloc_info, &command_buffer));
         }
         name_vkhpp_object(command_pool.get(), "tmp_command_buffer_for" __FUNCTION__);
 
@@ -309,7 +309,7 @@ struct Device
     }
 
     std::pair<uint64_t, uint64_t>
-    get_sync_calibrate_cpu_gpu_time(const QueueType queue_type) const
+    get_sync_calibrate_cpu_gpu_time([[maybe_unused]] const QueueType queue_type) const
     {
         std::array<vk::CalibratedTimestampInfoEXT, 2> timestamp_infos;
         timestamp_infos[0].setTimeDomain(vk::TimeDomainEXT::eQueryPerformanceCounter);

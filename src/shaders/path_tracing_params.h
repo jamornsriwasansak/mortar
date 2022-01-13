@@ -4,6 +4,7 @@
 #include "shared/bindless_table.h"
 #include "shared/camera_params.h"
 #include "shared/compact_vertex.h"
+#include "shared/standard_emission.h"
 #include "shared/standard_material.h"
 
 struct PathTracingCbParams
@@ -16,9 +17,9 @@ struct PathTracingCbParams
 
 struct RAY_PAYLOAD PathTracingPayload
 {
-    int   m_is_first_bounce;
-    int   m_is_last_bounce;
-    int   m_miss;
+    int    m_is_first_bounce;
+    int    m_is_last_bounce;
+    int    m_miss;
     float  m_hit_dist;
     float2 m_rnd2;
     float3 m_next_dir;
@@ -48,11 +49,12 @@ RWTexture2D<float>                  REGISTER(0, u_gbuffer_roughness, u, 6);
 
 // Set 1
 SamplerState                             REGISTER(1, u_sampler, s, 0);
+RaytracingAccelerationStructure          REGISTER(1, u_scene_bvh, t, 0);
 StructuredBuffer<BaseInstanceTableEntry> REGISTER(1, u_base_instance_table, t, 1);
 StructuredBuffer<GeometryTableEntry>     REGISTER(1, u_geometry_table, t, 2);
 StructuredBuffer<uint16_t>               REGISTER(1, u_indices, t, 3);
 StructuredBuffer<CompactVertex>          REGISTER(1, u_compact_vertices, t, 4);
 StructuredBuffer<StandardMaterial>       REGISTER(1, u_materials, t, 5);
-Texture2D<float4>                        REGISTER_ARRAY(1, u_textures, 100, t, 6);
-RaytracingAccelerationStructure          REGISTER(1, u_scene_bvh, t, 0);
+StructuredBuffer<StandardEmission>       REGISTER(1, u_emissions, t, 6);
+Texture2D<float4>                        REGISTER_ARRAY(1, u_textures, 100, t, 7);
 REGISTER_WRAP_END
