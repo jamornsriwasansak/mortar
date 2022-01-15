@@ -81,7 +81,7 @@ using urange_size_t = rangeT<size_t>;
 
 template <typename T>
 constexpr const T
-digit(const T num, const uint32_t i_digit)
+get_digit(const T num, const uint32_t i_digit)
 {
     T p0 = 1;
     for (size_t i = 0; i < i_digit; i++) p0 *= T(10);

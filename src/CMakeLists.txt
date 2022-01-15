@@ -14,6 +14,7 @@ target_link_libraries(
     assimp
     ${DXC_LIB}
     ${Vulkan_LIBRARY}
+    ${PXR_LIBRARIES}
     DirectX-Headers d3d12 dxgi dxguid d3dcompiler)
 
 target_include_directories(
@@ -27,7 +28,8 @@ target_include_directories(
     ${Vulkan_INCLUDE_DIR}
     ${SPIRV_REFLECT_INCLUDE_DIRS}
     ${STBIMAGE_INCLUDE_DIRS}
-    ${D3D12_MEM_ALLOCATOR_INCLUDE_DIRS})
+    ${D3D12_MEM_ALLOCATOR_INCLUDE_DIRS}
+    ${PXR_INCLUDE_DIRS})
 
 set_target_properties(
     mortar
@@ -42,7 +44,7 @@ add_custom_command(
 
 target_compile_features(mortar PRIVATE cxx_std_20)
 target_compile_definitions(mortar PRIVATE IMGUI_USER_CONFIG="pch/imgui_config.h")
-target_compile_definitions(mortar PRIVATE __STDC_WANT_SECURE_LIB__=1 _SCL_SECURE_NO_WARNINGS NOMINMAX)
+target_compile_definitions(mortar PRIVATE __STDC_WANT_SECURE_LIB__=1 _SCL_SECURE_NO_WARNINGS)
 target_precompile_headers(mortar PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/pch/pch.h>")
 if (MSVC)
     #target_compile_options(mortar PRIVATE /W4 /WX)

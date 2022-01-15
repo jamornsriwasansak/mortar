@@ -17,12 +17,6 @@
          #DESTINATION
          #${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-# vulkan
-    find_package(Vulkan REQUIRED)
-
-# vulkan
-    #find_package(Vulkan REQUIRED)
-
 # vulkan memory allocator
     set(VMA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/VulkanMemoryAllocator/include PARENT_SCOPE)
 

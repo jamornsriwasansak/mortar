@@ -7,6 +7,7 @@
 
 #pragma warning(push, 0)
 #ifndef CODE_ANALYSIS
+    #define NOMINMAX
     #ifdef RHI_VKA
         #ifdef HAS_RHI
             #define VKA_NAME RhiVka
@@ -76,6 +77,22 @@
     #include <assimp/postprocess.h>
     #include <assimp/scene.h>
 
+    // Pixar's USD
+    #include <pxr/usd/sdf/types.h>
+    #include <pxr/usd/usd/editContext.h>
+    #include <pxr/usd/usd/modelApi.h>
+    #include <pxr/usd/usd/primRange.h>
+    #include <pxr/usd/usd/stage.h>
+    #include <pxr/usd/usd/variantSets.h>
+    #include <pxr/usd/usdGeom/mesh.h>
+    #include <pxr/usd/usdGeom/metrics.h>
+    #include <pxr/usd/usdGeom/sphere.h>
+    #include <pxr/usd/usdGeom/tokens.h>
+    #include <pxr/usd/usdGeom/xform.h>
+    #include <pxr/usd/usdGeom/xformCommonAPI.h>
+    #include <pxr/usd/usdShade/material.h>
+    #include <pxr/usd/usdShade/materialBindingAPI.h>
+
     // stb image
     #include <stb_image.h>
 
@@ -100,5 +117,6 @@
     #include <variant>
     #include <vector>
 
+    #undef NOMINMAX
 #endif
 #pragma warning(pop)

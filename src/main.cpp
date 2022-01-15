@@ -3,6 +3,21 @@
 int
 main()
 {
+    /* const auto stage = PXR_INTERNAL_NS::UsdStage::CreateNew("Helloworld.usda")t;
+    PXR_INTERNAL_NS::UsdGeomXform::Define(stage, PXR_INTERNAL_NS::SdfPath("/hello"));
+    PXR_INTERNAL_NS::UsdGeomSphere::Define(stage, PXR_INTERNAL_NS::SdfPath("/hello/sphere"));
+    PXR_INTERNAL_NS::UsdGeomSphere::Define(stage, PXR_INTERNAL_NS::SdfPath("/sphere"));
+    stage->Save();*/
+    const auto stage = PXR_INTERNAL_NS::UsdStage::Open("Helloworld.usda");
+    const auto range = stage->Traverse();
+    for (auto p = range.begin(); p != range.end(); p++)
+    {
+        const auto sdfPath = p->GetPath();
+        const auto object  = stage->GetObjectAtPath(sdfPath);
+        std::cout << object.GetDescription() << std::endl;
+    }
+    return 0;
+
 #ifdef NDEBUG
     constexpr bool is_debug = false;
 #else

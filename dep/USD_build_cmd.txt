@@ -1,0 +1,4 @@
+Install Visual Studio version 2019
+Install Python Version 2.7
+
+python USD\build_scripts\build_usd.py --build-variant release --no-tests --no-examples --no-tutorials --no-docs "C:\USD\release" && python USD\build_scripts\build_usd.py --build-variant debug --no-tests --no-examples --no-tutorials --no-docs "C:\USD\debug"

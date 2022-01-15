@@ -87,9 +87,9 @@ struct Entry
 
         // vk version
         m_vk_api_version      = DefaultApiVersion;
-        m_vk_api_made_version = VK_MAKE_VERSION(digit<uint32_t>(m_vk_api_version, 2),
-                                                digit<uint32_t>(m_vk_api_version, 1),
-                                                digit<uint32_t>(m_vk_api_version, 0));
+        m_vk_api_made_version = VK_MAKE_VERSION(get_digit<uint32_t>(m_vk_api_version, 2),
+                                                get_digit<uint32_t>(m_vk_api_version, 1),
+                                                get_digit<uint32_t>(m_vk_api_version, 0));
 
         assert(m_vk_api_version > 0);
         assert(m_vk_api_made_version > 0);

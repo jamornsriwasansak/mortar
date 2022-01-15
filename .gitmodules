@@ -28,3 +28,6 @@
 [submodule "dep/imgui"]
 	path = dep/imgui
 	url = https://github.com/ocornut/imgui
+[submodule "dep/USD"]
+	path = dep/USD
+	url = https://github.com/PixarAnimationStudios/USD
