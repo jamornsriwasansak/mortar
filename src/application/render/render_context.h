@@ -1,10 +1,10 @@
 #pragma once
 
-#include "per_flight_resource.h"
-#include "per_swap_resource.h"
+#include "application/scene_resource.h"
+#include "application/per_flight_resource.h"
+#include "application/per_swap_resource.h"
 #include "rhi/rhi.h"
 #include "rhi/shadercompiler/shader_binary_manager.h"
-#include "scene_resource.h"
 
 struct RenderContext
 {

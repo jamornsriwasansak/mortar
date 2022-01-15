@@ -1,8 +1,8 @@
 #pragma once
 
-#include "render/shader_path.h"
+#include "application/render/shader_path.h"
+#include "application/scene_resource.h"
 #include "rhi/rhi.h"
-#include "scene_resource.h"
 
 struct RenderToFramebufferPass
 {

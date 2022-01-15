@@ -1,12 +1,12 @@
 #pragma once
 
+#include "application/gpu_profiler.h"
+#include "application/scene_resource.h"
 #include "core/vmath.h"
-#include "gpu_profiler.h"
 #include "passes/final_composite.h"
 #include "passes/path_tracing.h"
 #include "render_context.h"
 #include "rhi/rhi.h"
-#include "scene_resource.h"
 
 struct Renderer
 {
@@ -85,8 +85,8 @@ struct Renderer
     GpuProfilerGui        m_gpu_profiler_gui;
 
     // Render passes
-    PathTracingPass             m_pass_path_tracing;
-    RenderToFramebufferPass     m_pass_render_to_framebuffer;
+    PathTracingPass         m_pass_path_tracing;
+    RenderToFramebufferPass m_pass_render_to_framebuffer;
 
     Renderer(Rhi::Device &                               device,
              ShaderBinaryManager &                       shader_binary_manager,

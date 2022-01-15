@@ -18,7 +18,6 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <filesystem>
-#include <scene_graph.h>
 
 struct SceneGeometry
 {
@@ -92,8 +91,6 @@ struct SceneResource
     // camera
     FpsCamera m_camera;
 
-    // scene graph
-    SceneGraphNode                 m_scene_graph_root = SceneGraphNode(false);
     std::vector<SceneGeometry>     m_geometries;
     std::vector<SceneBaseInstance> m_base_instances;
 
