@@ -1,8 +1,8 @@
 #pragma once
 
 #if !defined(RHI_VKA) && !defined(RHI_DXA)
-    #define RHI_VKA
-    //#define RHI_DXA
+    //#define RHI_VKA
+    #define RHI_DXA
 #endif
 
 #pragma warning(push, 0)
@@ -103,6 +103,7 @@
     #include <cstddef>
     #include <cstdint>
     #include <filesystem>
+    #include <fstream>
     #include <functional>
     #include <iostream>
     #include <map>

@@ -1,8 +1,6 @@
 #pragma once
 
 #include "pch/pch.h"
-
-#include "core/file.h"
 #include "rhi_enums.h"
 
 namespace Rhi
@@ -41,7 +39,17 @@ struct ShaderSrc
     std::string
     source() const
     {
-        return File::LoadFile(m_file_path.c_str());
+        std::ifstream         ifs;
+        std::filesystem::path full_path = std::filesystem::absolute(m_file_path);
+        ifs.open(full_path);
+        if (!ifs.is_open())
+        {
+            Logger::Error<true>("cannot open file : " + full_path.string());
+        }
+        Logger::Info("loaded file : " + full_path.string());
+        std::stringstream buffer;
+        buffer << ifs.rdbuf();
+        return buffer.str();
     }
 };
 } // namespace Rhi
