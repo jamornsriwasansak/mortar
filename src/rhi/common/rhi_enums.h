@@ -232,7 +232,7 @@ GetIndexType()
         return IndexType::Uint32;
     }
 
-    throw std::runtime_error("unknown type")
+    throw std::runtime_error("unknown type");
     return IndexType::Uint32;
 }
 
