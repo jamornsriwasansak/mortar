@@ -56,7 +56,7 @@ struct HlslDxcCompiler
         case ShaderStageEnum::Fragment:
             return { L"ps_6_2", false };
         default:
-            return { L"lib_6_5", true };
+            return { L"lib_6_6", true };
         }
     }
 
