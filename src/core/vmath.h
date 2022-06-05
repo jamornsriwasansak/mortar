@@ -19,6 +19,7 @@ struct halfN
     {
         static_assert(sizeof(uint16_t) == sizeof(short),
                       "To use glm::toFloat16, sizeof uint16_t must strictly equals to short");
+        static_assert((NumElements > 0) && (NumElements <= 4), "halfN only support 4 >= NumElements >= 0");
 
         if constexpr (NumElements == 1)
         {
@@ -41,10 +42,6 @@ struct halfN
             val[1] = glm::detail::toFloat16(v[1]);
             val[2] = glm::detail::toFloat16(v[2]);
             val[3] = glm::detail::toFloat16(v[3]);
-        }
-        else
-        {
-            static_assert(false, "halfN only support 4 >= NumElements >= 0");
         }
     }
 };

@@ -219,22 +219,21 @@ template <typename Index>
 constexpr inline IndexType
 GetIndexType()
 {
-    if constexpr (std::is_same<Index, uint8_t>::value)
+    if constexpr (sizeof(Index) == 1)
     {
         return IndexType::Uint8;
     }
-    else if constexpr (std::is_same<Index, uint16_t>::value)
+    else if constexpr (sizeof(Index) == 2)
     {
         return IndexType::Uint16;
     }
-    else if constexpr (std::is_same<Index, uint32_t>::value)
+    else if constexpr (sizeof(Index) == 4)
     {
         return IndexType::Uint32;
     }
-    else
-    {
-        static_assert(false, "unknown index type");
-    }
+
+    throw std::runtime_error("unknown type")
+    return IndexType::Uint32;
 }
 
 template <typename Format>
@@ -245,10 +244,9 @@ GetVertexType()
     {
         return FormatEnum::R32G32B32_SFloat;
     }
-    else
-    {
-        static_assert(false, "unknown index type");
-    }
+
+    throw std::runtime_error("unknown type");
+    return FormatEnum::R32G32B32_SFloat;
 }
 } // namespace Rhi
 
